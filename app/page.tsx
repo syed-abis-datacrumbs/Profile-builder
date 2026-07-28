@@ -16,6 +16,7 @@ import { AuthModal } from '../components/AuthModal';
 import { ATSScoreModal } from '../components/ATSScoreModal';
 import { ImportModal } from '../components/ImportModal';
 import { UpgradeModal } from '../components/UpgradeModal';
+import { AskExpertModal } from '../components/AskExpertModal';
 
 import { ActiveTab, ResumeData, GithubProfileData, LinkedinProfileData, SavedProfile } from '../types';
 import { defaultResumeData, defaultGithubData, defaultLinkedinData } from '../lib/defaultData';
@@ -40,6 +41,7 @@ export default function Home() {
   const [isATSOpen, setIsATSOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+  const [isAskExpertOpen, setIsAskExpertOpen] = useState(false);
 
   // User Auth State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -90,6 +92,7 @@ export default function Home() {
         userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis Hussain Syed" : "Abis Hussain Syed"}
         planName={isLoggedIn ? "Pro Plan" : "Free Plan"}
         onOpenUpgrade={() => setIsUpgradeOpen(true)}
+        onOpenAskExpert={() => setIsAskExpertOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -277,6 +280,11 @@ export default function Home() {
       <UpgradeModal
         isOpen={isUpgradeOpen}
         onClose={() => setIsUpgradeOpen(false)}
+      />
+
+      <AskExpertModal
+        isOpen={isAskExpertOpen}
+        onClose={() => setIsAskExpertOpen(false)}
       />
 
     </div>

@@ -21,6 +21,7 @@ interface ImagineSidebarProps {
   userName?: string;
   planName?: string;
   onOpenUpgrade?: () => void;
+  onOpenAskExpert?: () => void;
 }
 
 export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
@@ -29,7 +30,8 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   onNewChat,
   userName = "Abis Hussain Syed",
   planName = "Free Plan",
-  onOpenUpgrade
+  onOpenUpgrade,
+  onOpenAskExpert
 }) => {
   return (
     <aside className="w-64 shrink-0 hidden md:flex flex-col h-screen border-r border-slate-200 bg-[#FAFAFA] p-3 text-slate-800 justify-between select-none">
@@ -163,7 +165,7 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
             </p>
           </div>
           <button
-            onClick={onOpenUpgrade}
+            onClick={onOpenAskExpert || onOpenUpgrade}
             className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition-all text-center"
           >
             Ask Expert
