@@ -26,12 +26,12 @@ interface LinkedinLandingViewProps {
 // assets: cover banner = cover/<id>/background.png, sample avatar = a pfp
 // gradient. Mirrors the LMS COVER_TEMPLATES.
 const linkedinCovers = [
-  { id: 'ideas-inspire', name: 'Ideas That Inspire', desc: 'Bold tagline cover' },
-  { id: 'lets-work-together', name: "Let's Work Together", desc: 'Contact-forward cover' },
-  { id: 'helping-businesses', name: 'Helping Businesses Scale', desc: 'Headline + value prop' },
-  { id: 'stunning-websites', name: 'Stunning Websites', desc: 'Portfolio-style cover' },
-  { id: 'purple-geometric', name: 'Purple Geometric', desc: 'Geometric accent design' },
-  { id: 'blue-blocks', name: 'Blue Blocks', desc: 'Blocky modern layout' },
+  { id: 'ideas-inspire', name: 'Ideas That Inspire', desc: 'Bold tagline cover', thumbnail: '/images/linkedin-templates/thumbnails/First.PNG' },
+  { id: 'lets-work-together', name: "Let's Work Together", desc: 'Contact-forward cover', thumbnail: '/images/linkedin-templates/thumbnails/Second.png' },
+  { id: 'helping-businesses', name: 'Helping Businesses Scale', desc: 'Headline + value prop', thumbnail: '/images/linkedin-templates/thumbnails/third.png' },
+  { id: 'stunning-websites', name: 'Stunning Websites', desc: 'Portfolio-style cover', thumbnail: '/images/linkedin-templates/thumbnails/fourth.png' },
+  { id: 'purple-geometric', name: 'Purple Geometric', desc: 'Geometric accent design', thumbnail: '/images/linkedin-templates/thumbnails/fifth.png' },
+  { id: 'blue-blocks', name: 'Blue Blocks', desc: 'Blocky modern layout', thumbnail: '/images/linkedin-templates/thumbnails/sixth.png' },
   { id: 'yellow-wave', name: 'Yellow Wave', desc: 'Warm wave background' },
   { id: 'ai-engineer-badge', name: 'AI Engineer Badge', desc: 'Tech badge cover' },
 ];
@@ -243,31 +243,53 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
               onClick={onSelectTemplate}
               className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
             >
-              {/* Real LMS cover banner (4:1) above a sample avatar, mimicking a
-                  LinkedIn profile header. */}
-              <div className="w-full h-56 bg-slate-50 rounded-xl overflow-hidden border border-slate-200 group-hover:scale-[1.01] transition-transform flex flex-col">
-                <div className="flex-1 relative overflow-hidden bg-slate-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`/images/linkedin-templates/cover/${cover.id}/background.png`}
-                    alt={cover.name}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                </div>
-                <div className="bg-white px-3 pb-3 pt-0 relative">
-                  <div className="absolute -top-5 left-3 w-10 h-10 rounded-full border-2 border-white overflow-hidden bg-slate-200">
+              {/* Template Thumbnail Graphic */}
+              <div className="w-full h-56 bg-slate-50 rounded-xl overflow-hidden border border-slate-200 group-hover:scale-[1.01] transition-transform flex flex-col relative">
+                {cover.thumbnail ? (
+                  <div className="w-full h-full relative bg-slate-900">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={`/images/linkedin-templates/pfp/gradient-${(index % 10) + 1}/background.jpg`}
-                      alt=""
-                      className="w-full h-full object-cover"
+                      src={cover.thumbnail}
+                      alt={cover.name}
+                      className="w-full h-full object-cover object-top"
                     />
                   </div>
-                  <div className="pt-6 space-y-1.5">
-                    <div className="h-2 bg-slate-200 rounded-full w-1/2" />
-                    <div className="h-1.5 bg-slate-100 rounded-full w-3/4" />
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex-1 relative overflow-hidden bg-slate-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/images/linkedin-templates/thumbnails/${cover.id}.png`}
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (!target.dataset.fallbackTried) {
+                            target.dataset.fallbackTried = 'true';
+                            target.src = `/images/linkedin-templates/cover/${cover.id}/thumbnail.png`;
+                          } else if (target.dataset.fallbackTried === 'true') {
+                            target.dataset.fallbackTried = 'done';
+                            target.src = `/images/linkedin-templates/cover/${cover.id}/background.png`;
+                          }
+                        }}
+                        alt={cover.name}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="bg-white px-3 pb-3 pt-0 relative">
+                      <div className="absolute -top-5 left-3 w-10 h-10 rounded-full border-2 border-white overflow-hidden bg-slate-200">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`/images/linkedin-templates/pfp/gradient-${(index % 10) + 1}/background.jpg`}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="pt-6 space-y-1.5">
+                        <div className="h-2 bg-slate-200 rounded-full w-1/2" />
+                        <div className="h-1.5 bg-slate-100 rounded-full w-3/4" />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center justify-between px-1">

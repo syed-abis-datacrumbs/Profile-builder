@@ -181,6 +181,13 @@ export default function Home() {
                   <GithubLandingView
                     userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
                     onOpenRolePicker={() => setIsGithubRolePickerOpen(true)}
+                    onSelectPreset={(preset, theme) => {
+                      setGithubData((prev) => ({
+                        ...applyRolePresetToGithub(prev, preset),
+                        theme: theme || prev.theme
+                      }));
+                      setGithubMode('editor');
+                    }}
                     onUsePrompt={(promptText) => {
                       setAssistantPrompt(promptText);
                       setActiveTab('assistant');

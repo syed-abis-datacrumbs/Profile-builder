@@ -8,26 +8,184 @@ import {
   Check, 
   ChevronDown, 
   ArrowUpRight, 
-  Send
+  Send,
+  Sparkles,
+  Layers,
+  Terminal,
+  Code
 } from 'lucide-react';
 import { GithubIcon } from './icons';
+import { GITHUB_ROLE_PRESETS, GithubRolePreset } from '../lib/githubRolePresets';
+import { GithubProfileData } from '../types';
 
 interface GithubLandingViewProps {
   userName?: string;
-  /** Opens the "which field?" role picker (from the Minimal template card). */
+  /** Opens the "which field?" role picker modal. */
   onOpenRolePicker: () => void;
+  /** Selects a specific preset and theme directly to launch editor. */
+  onSelectPreset?: (preset: GithubRolePreset, theme?: GithubProfileData['theme']) => void;
   onUsePrompt: (promptText: string) => void;
   onOpenEditorDirectly: () => void;
 }
 
+export interface GithubTemplateCard {
+  id: string;
+  presetId: string;
+  category: 'all' | 'data-ai' | 'web' | 'devops' | 'mobile';
+  name: string;
+  tagline: string;
+  badge: string;
+  theme: GithubProfileData['theme'];
+  bgClass: string;
+  borderClass: string;
+  accentText: string;
+  badges: string[];
+  features: string[];
+  headline: string;
+  subhead: string;
+}
+
+const GITHUB_TEMPLATES: GithubTemplateCard[] = [
+  {
+    id: 'minimal-ds',
+    presetId: 'data-science',
+    category: 'data-ai',
+    name: 'Minimalist Data Science',
+    tagline: 'Clean, centered & to the point',
+    badge: 'Popular',
+    theme: 'dark',
+    bgClass: 'bg-slate-950',
+    borderClass: 'border-slate-800',
+    accentText: 'text-indigo-400',
+    badges: ['Python', 'PyTorch', 'SQL'],
+    features: ['📊 GitHub Stats', '🔥 Streak Counter'],
+    headline: "Hi, I'm Your Name 👋",
+    subhead: 'Data Scientist · Turning data into decisions'
+  },
+  {
+    id: 'cyberpunk-ai',
+    presetId: 'ai-ml-engineer',
+    category: 'data-ai',
+    name: 'Cyberpunk Neon AI',
+    tagline: 'Futuristic terminal & neon badges',
+    badge: 'Trending',
+    theme: 'cyberpunk',
+    bgClass: 'bg-gradient-to-br from-yellow-950/60 via-slate-950 to-cyan-950/60',
+    borderClass: 'border-cyan-500/40 shadow-cyan-500/10',
+    accentText: 'text-cyan-400',
+    badges: ['PyTorch', 'TensorFlow', 'FastAPI', 'CUDA'],
+    features: ['⚡ Neon Badges', '🤖 LLM Benchmarks', '🔥 Cyber Streak'],
+    headline: '> root@cyber-dev:~$ bio',
+    subhead: 'AI/ML Engineer · Quantized models & Triton serving'
+  },
+  {
+    id: 'fullstack-showcase',
+    presetId: 'full-stack',
+    category: 'web',
+    name: 'Full-Stack Showcase',
+    tagline: 'Rich tech grid & project showcases',
+    badge: 'Featured',
+    theme: 'tokyonight',
+    bgClass: 'bg-gradient-to-br from-indigo-950 via-slate-950 to-purple-950',
+    borderClass: 'border-indigo-500/30 shadow-indigo-500/10',
+    accentText: 'text-indigo-400',
+    badges: ['TypeScript', 'Next.js', 'React', 'PostgreSQL'],
+    features: ['🛠️ Tech Badges', '🚀 Featured Projects', '📈 Top Languages'],
+    headline: 'Full-Stack Software Engineer 🚀',
+    subhead: 'Building scalable web products & distributed services'
+  },
+  {
+    id: 'cloud-devops',
+    presetId: 'devops',
+    category: 'devops',
+    name: 'Cloud & DevOps Architect',
+    tagline: 'Infrastructure as Code & CI/CD workflows',
+    badge: 'Infrastructure',
+    theme: 'radial',
+    bgClass: 'bg-gradient-to-br from-emerald-950/60 via-slate-950 to-teal-950/60',
+    borderClass: 'border-emerald-500/30 shadow-emerald-500/10',
+    accentText: 'text-emerald-400',
+    badges: ['Terraform', 'Kubernetes', 'AWS', 'Docker'],
+    features: ['☁️ Cloud Badges', '⚙️ CI/CD Status', '📊 Infra Metrics'],
+    headline: 'DevOps & Cloud Systems Lead ☁️',
+    subhead: 'Automating multi-cloud platforms & K8s clusters'
+  },
+  {
+    id: 'opensource-maintainer',
+    presetId: 'backend',
+    category: 'devops',
+    name: 'Open-Source Maintainer',
+    tagline: 'Metrics, sponsor links & release info',
+    badge: 'Open Source',
+    theme: 'dracula',
+    bgClass: 'bg-gradient-to-br from-purple-950/60 via-slate-950 to-pink-950/50',
+    borderClass: 'border-purple-500/30 shadow-purple-500/10',
+    accentText: 'text-pink-400',
+    badges: ['Go', 'Node.js', 'Redis', 'Kafka'],
+    features: ['💖 Sponsor Button', '📦 Package Stats', '📊 Contributor Graph'],
+    headline: 'Open-Source Maintainer 💖',
+    subhead: 'Building high-throughput backend services & tools'
+  },
+  {
+    id: 'vision-edge-ai',
+    presetId: 'computer-vision',
+    category: 'data-ai',
+    name: 'Vision & Edge AI',
+    tagline: 'Real-time models, OpenCV & TensorRT',
+    badge: 'Specialized',
+    theme: 'dark',
+    bgClass: 'bg-gradient-to-br from-blue-950/60 via-slate-950 to-slate-900',
+    borderClass: 'border-blue-500/30 shadow-blue-500/10',
+    accentText: 'text-blue-400',
+    badges: ['C++', 'PyTorch', 'OpenCV', 'TensorRT'],
+    features: ['👁️ Vision Demos', '⚡ Edge FPS Benchmarks', '📊 Live Stats'],
+    headline: 'Computer Vision Engineer 👁️',
+    subhead: 'Edge model optimization & 3D camera geometry'
+  },
+  {
+    id: 'mobile-app-dev',
+    presetId: 'mobile-app',
+    category: 'mobile',
+    name: 'Mobile App Specialist',
+    tagline: 'iOS & Android native & cross-platform',
+    badge: 'Mobile',
+    theme: 'tokyonight',
+    bgClass: 'bg-gradient-to-br from-sky-950/60 via-slate-950 to-indigo-950/50',
+    borderClass: 'border-sky-500/30 shadow-sky-500/10',
+    accentText: 'text-sky-400',
+    badges: ['Swift', 'Kotlin', 'Flutter', 'React Native'],
+    features: ['📱 App Store Badges', '📲 TestFlight Links', '🔥 Streak Counter'],
+    headline: 'Mobile Product Developer 📱',
+    subhead: 'Native Swift/Kotlin & Flutter apps for store releases'
+  },
+  {
+    id: 'executive-lead',
+    presetId: 'software-engineer',
+    category: 'web',
+    name: 'Executive Tech Lead',
+    tagline: 'System architecture & team impact',
+    badge: 'Leadership',
+    theme: 'radial',
+    bgClass: 'bg-gradient-to-br from-slate-900 via-slate-950 to-zinc-900',
+    borderClass: 'border-slate-700/60 shadow-slate-700/10',
+    accentText: 'text-amber-400',
+    badges: ['TypeScript', 'Python', 'Kubernetes', 'PostgreSQL'],
+    features: ['🏛️ System Architecture', '📈 Impact Metrics', '🌐 Connect Badges'],
+    headline: 'Staff Software Engineer & Lead 🏛️',
+    subhead: 'Architecting resilient cloud systems & leading dev teams'
+  }
+];
+
 export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
   userName = "Abis",
   onOpenRolePicker,
+  onSelectPreset,
   onUsePrompt,
   onOpenEditorDirectly
 }) => {
   const [promptInput, setPromptInput] = useState('');
   const [selectedModel, setSelectedModel] = useState('Flash');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'data-ai' | 'web' | 'devops' | 'mobile'>('all');
 
   // Typewriter Animation
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -82,6 +240,19 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
       prompt: "Build an ML engineer GitHub profile featuring PyTorch badges, Kaggle accomplishments, and paper citations."
     }
   ];
+
+  const filteredTemplates = GITHUB_TEMPLATES.filter(
+    (tmpl) => activeCategory === 'all' || tmpl.category === activeCategory
+  );
+
+  const handleSelectTemplate = (template: GithubTemplateCard) => {
+    const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === template.presetId);
+    if (preset && onSelectPreset) {
+      onSelectPreset(preset, template.theme);
+    } else {
+      onOpenRolePicker();
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,49 +377,136 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
         </div>
       </div>
 
-      {/* Section 2: Try a README Template */}
-      <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700">
-            Try a GitHub README Template
-          </h3>
-          <button
-            onClick={onOpenEditorDirectly}
-            className="text-xs font-semibold text-blue-600 hover:underline"
-          >
-            Open README Editor →
-          </button>
+      {/* Section 2: Try a GitHub README Template */}
+      <div className="space-y-4 pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+              <span>Try a GitHub README Template</span>
+              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                {GITHUB_TEMPLATES.length} Designs
+              </span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Select a visual README layout preset tailored to your developer persona.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onOpenRolePicker}
+              className="text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl border border-slate-200/80 transition-colors flex items-center gap-1.5"
+            >
+              <Code className="w-3.5 h-3.5" />
+              <span>Browse All Roles</span>
+            </button>
+
+            <button
+              onClick={onOpenEditorDirectly}
+              className="text-xs font-semibold text-blue-600 hover:underline"
+            >
+              Open Editor →
+            </button>
+          </div>
         </div>
 
-        {/* The single design template the LMS ships: "Minimal". Clicking it
-            opens the "which field?" picker, then loads that role's README. */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div
-            onClick={onOpenRolePicker}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-950 text-slate-100 rounded-xl p-4 overflow-hidden flex flex-col items-center justify-center text-center gap-2 group-hover:scale-[1.01] transition-transform border border-slate-800">
-              <div className="font-bold text-sm text-white">Hi, I&apos;m Your Name 👋</div>
-              <div className="text-[9px] text-slate-400">Data Scientist · Turning data into decisions</div>
-              <div className="flex flex-wrap gap-1 justify-center pt-1">
-                <span className="bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[8px]">Python</span>
-                <span className="bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[8px]">PyTorch</span>
-                <span className="bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[8px]">SQL</span>
-              </div>
-              <div className="text-[8px] text-slate-500 pt-1">📊 GitHub Stats · 🔥 Streak</div>
-            </div>
+        {/* Category Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
+          {[
+            { id: 'all', label: 'All Templates' },
+            { id: 'data-ai', label: 'Data Science & AI' },
+            { id: 'web', label: 'Web & Full Stack' },
+            { id: 'devops', label: 'DevOps & Systems' },
+            { id: 'mobile', label: 'Mobile App' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveCategory(tab.id as any)}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all whitespace-nowrap ${
+                activeCategory === tab.id
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Minimal</div>
-                <div className="text-[11px] text-slate-500">Data Science · Clean, centered, to the point</div>
+        {/* Templates Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredTemplates.map((template) => (
+            <div
+              key={template.id}
+              onClick={() => handleSelectTemplate(template)}
+              className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group flex flex-col justify-between"
+            >
+              {/* Card Code/README Graphic Preview */}
+              <div className={`w-full h-52 ${template.bgClass} text-slate-100 rounded-xl p-4 overflow-hidden flex flex-col items-center justify-between text-center gap-2 group-hover:scale-[1.01] transition-transform border ${template.borderClass} relative`}>
+                
+                {/* Theme Tag Header */}
+                <div className="w-full flex items-center justify-between border-b border-white/10 pb-2 text-[10px]">
+                  <span className="flex items-center gap-1 text-slate-400 font-mono">
+                    <Terminal className="w-3 h-3 text-slate-400" />
+                    <span>README.md</span>
+                  </span>
+                  <span className="bg-white/10 text-slate-200 px-2 py-0.5 rounded-full font-mono uppercase tracking-wider text-[8px]">
+                    {template.theme} theme
+                  </span>
+                </div>
+
+                {/* Content Preview */}
+                <div className="my-auto space-y-2 max-w-xs">
+                  <div className="font-bold text-sm text-white tracking-tight leading-snug">
+                    {template.headline}
+                  </div>
+                  <div className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">
+                    {template.subhead}
+                  </div>
+                  
+                  {/* Badges Preview */}
+                  <div className="flex flex-wrap gap-1 justify-center pt-1">
+                    {template.badges.map((b) => (
+                      <span
+                        key={b}
+                        className="bg-slate-900/80 border border-slate-700/60 text-slate-200 px-2 py-0.5 rounded text-[9px] font-mono shadow-2xs"
+                      >
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Features Footer Pill */}
+                <div className="w-full pt-1 text-[9px] text-slate-400 font-mono border-t border-white/5 flex items-center justify-center gap-3">
+                  {template.features.map((feat, idx) => (
+                    <span key={idx}>{feat}</span>
+                  ))}
+                </div>
               </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
+
+              {/* Card Meta & CTA */}
+              <div className="flex items-center justify-between px-1 pt-1">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs text-slate-900">{template.name}</span>
+                    <span className="text-[9px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                      {template.badge}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{template.tagline}</div>
+                </div>
+                <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform shrink-0">
+                  Use Template →
+                </span>
+              </div>
+
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
     </div>
   );
 };
+
