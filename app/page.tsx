@@ -20,9 +20,12 @@ import { ATSScoreModal } from '../components/ATSScoreModal';
 import { ImportModal } from '../components/ImportModal';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { AskExpertModal } from '../components/AskExpertModal';
+import { GithubRolePickerModal } from '../components/GithubRolePickerModal';
 
 import { ActiveTab, ResumeData, GithubProfileData, LinkedinProfileData, SavedProfile } from '../types';
 import { defaultResumeData, defaultGithubData, defaultLinkedinData } from '../lib/defaultData';
+import { applyRolePresetToGithub, GithubRolePreset } from '../lib/githubRolePresets';
+import { lmsSampleToResumeData, LmsResumeSample } from '../lib/resumeSamples';
 import { ArrowLeft, Sparkles, FileText, Download, Award } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '../components/icons';
 
@@ -45,6 +48,7 @@ export default function Home() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isAskExpertOpen, setIsAskExpertOpen] = useState(false);
+  const [isGithubRolePickerOpen, setIsGithubRolePickerOpen] = useState(false);
 
   // User Auth State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -71,6 +75,20 @@ export default function Home() {
     setAssistantPrompt(promptText);
     setActiveTab('assistant');
     setViewMode('studio');
+  };
+
+  // Loads a role's ready-made README (from the picker popup or a role chip)
+  // onto the GitHub data, then jumps into the editor.
+  const loadGithubRole = (preset: GithubRolePreset) => {
+    setGithubData((prev) => applyRolePresetToGithub(prev, preset));
+    setGithubMode('editor');
+    setIsGithubRolePickerOpen(false);
+  };
+
+  // Loads a field's ready-made resume (from the picker), then opens the editor.
+  const loadResumeField = (sample: LmsResumeSample) => {
+    setResumeData(lmsSampleToResumeData(sample));
+    setResumeMode('editor');
   };
 
   const handleExportAll = () => {
@@ -128,10 +146,7 @@ export default function Home() {
                 resumeMode === 'landing' ? (
                   <ResumeLandingView
                     userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
-                    onSelectTemplate={(templateId) => {
-                      setResumeData(prev => ({ ...prev, template: templateId }));
-                      setResumeMode('editor');
-                    }}
+                    onSelectField={loadResumeField}
                     onUsePrompt={(promptText) => {
                       setAssistantPrompt(promptText);
                       setActiveTab('assistant');
@@ -165,10 +180,7 @@ export default function Home() {
                 githubMode === 'landing' ? (
                   <GithubLandingView
                     userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
-                    onSelectTemplate={(styleId) => {
-                      setGithubData(prev => ({ ...prev, style: styleId }));
-                      setGithubMode('editor');
-                    }}
+                    onOpenRolePicker={() => setIsGithubRolePickerOpen(true)}
                     onUsePrompt={(promptText) => {
                       setAssistantPrompt(promptText);
                       setActiveTab('assistant');
@@ -331,6 +343,12 @@ export default function Home() {
       <AskExpertModal
         isOpen={isAskExpertOpen}
         onClose={() => setIsAskExpertOpen(false)}
+      />
+
+      <GithubRolePickerModal
+        isOpen={isGithubRolePickerOpen}
+        onClose={() => setIsGithubRolePickerOpen(false)}
+        onSelect={loadGithubRole}
       />
 
     </div>

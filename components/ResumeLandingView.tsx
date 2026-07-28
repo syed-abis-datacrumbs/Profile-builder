@@ -14,18 +14,22 @@ import {
   Sliders,
   Send
 } from 'lucide-react';
-import { ResumeData } from '../types';
+import { LMS_RESUME_SAMPLES, LmsResumeSample } from '../lib/resumeSamples';
+
+// Accent colours cycled across the preview cards (like the original design).
+const ACCENTS = ['#dc2626', '#1e3a8a', '#059669', '#7c3aed', '#d97706', '#0891b2', '#db2777', '#4338ca'];
 
 interface ResumeLandingViewProps {
   userName?: string;
-  onSelectTemplate: (templateId: 'modern' | 'minimal' | 'executive') => void;
+  /** Loads the chosen field's ready-made resume. */
+  onSelectField: (sample: LmsResumeSample) => void;
   onUsePrompt: (promptText: string) => void;
   onOpenEditorDirectly: () => void;
 }
 
 export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
   userName = "Abis",
-  onSelectTemplate,
+  onSelectField,
   onUsePrompt,
   onOpenEditorDirectly
 }) => {
@@ -210,11 +214,12 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
         </div>
       </div>
 
-      {/* Section 2: Try a Template */}
+      {/* Section 2: Field templates — pick a field, load its ready-made resume
+          (shown directly here, no popup). Switch Professional/Student in the editor. */}
       <div className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-700">
-            Try a Template
+            Try a Template <span className="text-slate-400 font-normal">({LMS_RESUME_SAMPLES.length} fields)</span>
           </h3>
           <button
             onClick={onOpenEditorDirectly}
@@ -224,197 +229,63 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          
-          {/* Template Card 1: Elena Vasquez */}
-          <div
-            onClick={() => onSelectTemplate('modern')}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            {/* Visual Paper Thumbnail */}
-            <div className="w-full h-56 bg-slate-50 border border-slate-200 rounded-xl p-4 overflow-hidden relative font-sans text-[9px] text-slate-600 space-y-2 group-hover:scale-[1.01] transition-transform">
-              <div className="border-b-2 border-red-500 pb-1">
-                <div className="font-extrabold text-xs text-red-600">ELENA VASQUEZ</div>
-                <div className="text-[9px] font-semibold text-slate-700">Senior UX/UI Designer</div>
-                <div className="text-[8px] text-slate-400">elena.v@design.io • San Francisco, CA</div>
-              </div>
-              <div className="space-y-1">
-                <div className="font-bold text-[8px] uppercase text-slate-800 border-b border-slate-200 pb-0.5">Professional Experience</div>
-                <div className="font-bold text-slate-800">Lead Product Designer — Stripe</div>
-                <div className="text-slate-500 leading-tight">Led end-to-end design systems serving 2M+ active developers globally.</div>
-              </div>
-              <div className="space-y-1">
-                <div className="font-bold text-[8px] uppercase text-slate-800 border-b border-slate-200 pb-0.5">Core Skills</div>
-                <div className="flex flex-wrap gap-1">
-                  <span className="bg-red-50 text-red-700 px-1 py-0.5 rounded">Figma</span>
-                  <span className="bg-slate-200 text-slate-700 px-1 py-0.5 rounded">Design Systems</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {LMS_RESUME_SAMPLES.map((sample, i) => {
+            const cv = sample.data;
+            const accent = ACCENTS[i % ACCENTS.length];
+            const jobTitle = sample.label.replace(/\s*\(\d+\s*pages?\)\s*$/i, '').trim();
+            const exp = (cv.workExperience || [])[0];
+            const firstBullet = exp && exp.bullets
+              ? String(exp.bullets).split('\n')[0].replace(/\*\*/g, '').trim()
+              : '';
+            const skills: string[] = ((cv.additional && cv.additional.skills) || '')
+              .split(',').map((s: string) => s.trim()).filter(Boolean).slice(0, 4);
+            const fullName = (cv.personalInfo && cv.personalInfo.fullName) || 'Your Name';
+            return (
+              <div
+                key={sample.label}
+                onClick={() => onSelectField(sample)}
+                className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
+              >
+                {/* Mini resume preview, filled from this field's real content */}
+                <div className="w-full h-56 bg-slate-50 border border-slate-200 rounded-xl p-4 overflow-hidden font-sans text-[9px] text-slate-600 space-y-2 group-hover:scale-[1.01] transition-transform">
+                  <div className="border-b-2 pb-1" style={{ borderColor: accent }}>
+                    <div className="font-extrabold text-xs" style={{ color: accent }}>{fullName}</div>
+                    <div className="text-[9px] font-semibold text-slate-700">{jobTitle}</div>
+                    <div className="text-[8px] text-slate-400 truncate">
+                      {(cv.personalInfo && cv.personalInfo.email) || ''}
+                      {cv.personalInfo && cv.personalInfo.phone ? ` • ${cv.personalInfo.phone}` : ''}
+                    </div>
+                  </div>
+                  {exp && (
+                    <div className="space-y-1">
+                      <div className="font-bold text-[8px] uppercase text-slate-800 border-b border-slate-200 pb-0.5">Experience</div>
+                      <div className="font-bold text-slate-800">{exp.title}{exp.company ? ` — ${exp.company}` : ''}</div>
+                      {firstBullet && <div className="text-slate-500 leading-tight line-clamp-2">{firstBullet}</div>}
+                    </div>
+                  )}
+                  {skills.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="font-bold text-[8px] uppercase text-slate-800 border-b border-slate-200 pb-0.5">Skills</div>
+                      <div className="flex flex-wrap gap-1">
+                        {skills.map((s, k) => (
+                          <span key={k} className="bg-slate-200 text-slate-700 px-1 py-0.5 rounded">{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between px-1">
+                  <div className="min-w-0">
+                    <div className="font-bold text-xs text-slate-900 truncate">{fullName}</div>
+                    <div className="text-[11px] text-slate-500 truncate">{sample.label}</div>
+                  </div>
+                  <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform shrink-0 ml-2">Use Template →</span>
                 </div>
               </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Elena Vasquez</div>
-                <div className="text-[11px] text-slate-500">Modern Red Accent Classic</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
-            </div>
-          </div>
-
-          {/* Template Card 2: Marcus Feld */}
-          <div
-            onClick={() => onSelectTemplate('minimal')}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            {/* Visual Paper Thumbnail */}
-            <div className="w-full h-56 bg-slate-50 border border-slate-200 rounded-xl p-4 overflow-hidden relative font-serif text-[9px] text-slate-600 space-y-2 group-hover:scale-[1.01] transition-transform">
-              <div className="border-b border-slate-400 pb-1 text-center">
-                <div className="font-serif font-extrabold text-sm text-slate-900">MARCUS FELD</div>
-                <div className="text-[8px] tracking-wider text-slate-600 uppercase font-sans">Financial Analyst & Strategist</div>
-                <div className="text-[8px] text-slate-500 font-sans">m.feld@finance.com | New York, NY</div>
-              </div>
-              <div className="space-y-1">
-                <div className="font-sans font-bold text-[8px] uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-0.5">Executive Experience</div>
-                <div className="font-bold text-slate-800">Senior Financial Analyst — Morgan Stanley</div>
-                <div className="text-slate-600 leading-tight">Managed $120M portfolio risk analysis and M&A quantitative modeling.</div>
-              </div>
-              <div className="space-y-1">
-                <div className="font-sans font-bold text-[8px] uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-0.5">Education</div>
-                <div className="text-slate-800">B.S. Finance — Columbia University</div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Marcus Feld</div>
-                <div className="text-[11px] text-slate-500">Minimalist Serif ATS Standard</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
-            </div>
-          </div>
-
-          {/* Template Card 3: OLIVIA SANCHEZ */}
-          <div
-            onClick={() => onSelectTemplate('executive')}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            {/* Visual Paper Thumbnail */}
-            <div className="w-full h-56 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden relative font-sans text-[9px] text-slate-600 space-y-2 group-hover:scale-[1.01] transition-transform">
-              <div className="bg-blue-900 text-white p-3 text-center">
-                <div className="font-black text-xs tracking-wider">OLIVIA SANCHEZ</div>
-                <div className="text-[8px] font-medium text-blue-200 uppercase tracking-widest mt-0.5">VP of Enterprise Operations</div>
-              </div>
-              <div className="p-3 space-y-2">
-                <div className="space-y-1">
-                  <div className="font-bold text-[8px] uppercase text-blue-900 border-b border-blue-200 pb-0.5">Leadership Experience</div>
-                  <div className="font-bold text-slate-900">VP of Operations — Salesforce</div>
-                  <div className="text-slate-600 leading-tight">Scaled global operations across 14 markets driving 34% margin growth.</div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Olivia Sanchez</div>
-                <div className="text-[11px] text-slate-500">Executive Dark Blue Banner</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
-            </div>
-          </div>
-
-          {/* Template Card 4: Sophia Chen */}
-          <div
-            onClick={() => onSelectTemplate('modern')}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            {/* Visual Paper Thumbnail */}
-            <div className="w-full h-56 bg-slate-50 border border-slate-200 rounded-xl p-4 overflow-hidden relative font-sans text-[9px] text-slate-600 space-y-2 group-hover:scale-[1.01] transition-transform">
-              <div className="border-b-2 border-emerald-600 pb-1">
-                <div className="font-extrabold text-xs text-emerald-700">SOPHIA CHEN</div>
-                <div className="text-[9px] font-semibold text-slate-700">Staff AI Systems Engineer</div>
-                <div className="text-[8px] text-slate-400">sophia.chen@ai-labs.org • Seattle, WA</div>
-              </div>
-              <div className="space-y-1">
-                <div className="font-bold text-[8px] uppercase text-slate-800 border-b border-slate-200 pb-0.5">Engineering Leadership</div>
-                <div className="font-bold text-slate-800">Staff Engineer — OpenAI</div>
-                <div className="text-slate-500 leading-tight">Architected distributed LLM inference clusters serving 50M daily requests.</div>
-              </div>
-              <div className="space-y-1">
-                <div className="font-bold text-[8px] uppercase text-slate-800 border-b border-slate-200 pb-0.5">Key Stack</div>
-                <div className="flex flex-wrap gap-1">
-                  <span className="bg-emerald-50 text-emerald-700 px-1 py-0.5 rounded">Python</span>
-                  <span className="bg-emerald-50 text-emerald-700 px-1 py-0.5 rounded">PyTorch</span>
-                  <span className="bg-slate-200 text-slate-700 px-1 py-0.5 rounded">CUDA</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Sophia Chen</div>
-                <div className="text-[11px] text-slate-500">Tech Lead Emerald Modern</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
-            </div>
-          </div>
-
-          {/* Template Card 5: David Miller */}
-          <div
-            onClick={() => onSelectTemplate('minimal')}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            {/* Visual Paper Thumbnail */}
-            <div className="w-full h-56 bg-slate-50 border border-slate-200 rounded-xl p-4 overflow-hidden relative font-sans text-[9px] text-slate-600 space-y-2 group-hover:scale-[1.01] transition-transform">
-              <div className="border-b-2 border-purple-600 pb-1">
-                <div className="font-extrabold text-xs text-purple-700">DAVID MILLER</div>
-                <div className="text-[9px] font-semibold text-slate-700">Creative Brand Director</div>
-                <div className="text-[8px] text-slate-400">david.miller@studio.com • Austin, TX</div>
-              </div>
-              <div className="space-y-1">
-                <div className="font-bold text-[8px] uppercase text-slate-800 border-b border-slate-200 pb-0.5">Creative Direction</div>
-                <div className="font-bold text-slate-800">Global Brand Lead — Figma</div>
-                <div className="text-slate-500 leading-tight">Spearheaded international brand positioning for 2025 global product rollouts.</div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">David Miller</div>
-                <div className="text-[11px] text-slate-500">Creative Studio Purple</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
-            </div>
-          </div>
-
-          {/* Template Card 6: Alex Rivera */}
-          <div
-            onClick={() => onSelectTemplate('executive')}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            {/* Visual Paper Thumbnail */}
-            <div className="w-full h-56 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden relative font-sans text-[9px] text-slate-600 space-y-2 group-hover:scale-[1.01] transition-transform">
-              <div className="bg-amber-600 text-white p-3 text-center">
-                <div className="font-black text-xs tracking-wider">ALEX RIVERA</div>
-                <div className="text-[8px] font-medium text-amber-100 uppercase tracking-widest mt-0.5">Chief Product Officer</div>
-              </div>
-              <div className="p-3 space-y-2">
-                <div className="space-y-1">
-                  <div className="font-bold text-[8px] uppercase text-amber-800 border-b border-amber-200 pb-0.5">Executive Accomplishments</div>
-                  <div className="font-bold text-slate-900">CPO — TechCraft AI</div>
-                  <div className="text-slate-600 leading-tight">Expanded annual recurring revenue from $4M to $48M in 36 months.</div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Alex Rivera</div>
-                <div className="text-[11px] text-slate-500">High-Impact Amber Executive</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
-            </div>
-          </div>
-
+            );
+          })}
         </div>
       </div>
 

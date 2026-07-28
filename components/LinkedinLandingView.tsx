@@ -19,6 +19,23 @@ interface LinkedinLandingViewProps {
   onOpenEditorDirectly: () => void;
 }
 
+// The LinkedIn COVER (banner) templates the DataCrumbs (LMS) builder actually
+// offers — its LinkedIn tool is a cover + profile-picture studio. The real
+// banner artwork + gradient profile-picture backdrops were copied from the LMS
+// into public/images/linkedin-templates/, so these previews use the actual
+// assets: cover banner = cover/<id>/background.png, sample avatar = a pfp
+// gradient. Mirrors the LMS COVER_TEMPLATES.
+const linkedinCovers = [
+  { id: 'ideas-inspire', name: 'Ideas That Inspire', desc: 'Bold tagline cover' },
+  { id: 'lets-work-together', name: "Let's Work Together", desc: 'Contact-forward cover' },
+  { id: 'helping-businesses', name: 'Helping Businesses Scale', desc: 'Headline + value prop' },
+  { id: 'stunning-websites', name: 'Stunning Websites', desc: 'Portfolio-style cover' },
+  { id: 'purple-geometric', name: 'Purple Geometric', desc: 'Geometric accent design' },
+  { id: 'blue-blocks', name: 'Blue Blocks', desc: 'Blocky modern layout' },
+  { id: 'yellow-wave', name: 'Yellow Wave', desc: 'Warm wave background' },
+  { id: 'ai-engineer-badge', name: 'AI Engineer Badge', desc: 'Tech badge cover' },
+];
+
 export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
   userName = "Abis",
   onSelectTemplate,
@@ -209,7 +226,7 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
       <div className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-700">
-            Try a LinkedIn Profile Preset
+            Try a LinkedIn Cover Template
           </h3>
           <button
             onClick={onOpenEditorDirectly}
@@ -220,185 +237,48 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          
-          {/* Preset Card 1: Tech Leadership */}
-          <div
-            onClick={onSelectTemplate}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-50 text-slate-800 rounded-xl overflow-hidden relative font-sans text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-slate-200">
-              <div className="bg-blue-900 h-16 relative">
-                <div className="absolute -bottom-4 left-3 w-10 h-10 rounded-full bg-teal-700 border-2 border-white text-white font-bold text-xs flex items-center justify-center">
-                  A
+          {linkedinCovers.map((cover, index) => (
+            <div
+              key={cover.id}
+              onClick={onSelectTemplate}
+              className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
+            >
+              {/* Real LMS cover banner (4:1) above a sample avatar, mimicking a
+                  LinkedIn profile header. */}
+              <div className="w-full h-56 bg-slate-50 rounded-xl overflow-hidden border border-slate-200 group-hover:scale-[1.01] transition-transform flex flex-col">
+                <div className="flex-1 relative overflow-hidden bg-slate-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/images/linkedin-templates/cover/${cover.id}/background.png`}
+                    alt={cover.name}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+                <div className="bg-white px-3 pb-3 pt-0 relative">
+                  <div className="absolute -top-5 left-3 w-10 h-10 rounded-full border-2 border-white overflow-hidden bg-slate-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/images/linkedin-templates/pfp/gradient-${(index % 10) + 1}/background.jpg`}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="pt-6 space-y-1.5">
+                    <div className="h-2 bg-slate-200 rounded-full w-1/2" />
+                    <div className="h-1.5 bg-slate-100 rounded-full w-3/4" />
+                  </div>
                 </div>
               </div>
-              <div className="pt-3 px-3 space-y-1">
-                <div className="font-extrabold text-xs text-slate-900">Abis Hussain Syed</div>
-                <div className="text-[8.5px] font-semibold text-slate-700 leading-tight">
-                  Senior Staff Software Engineer | Ex-Google | Distributed Systems & AI Systems Architect
-                </div>
-                <div className="text-[8px] text-slate-400">Greater Seattle Area • 500+ connections</div>
-                <div className="pt-1 flex flex-wrap gap-1">
-                  <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full font-semibold text-[7.5px]">#OpenToWork</span>
-                  <span className="bg-slate-200 text-slate-700 px-1 py-0.5 rounded text-[7.5px]">Distributed AI</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Tech Leadership Archetype</div>
-                <div className="text-[11px] text-slate-500">Recruiter Keyword Indexing 98%</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Preset →</span>
-            </div>
-          </div>
 
-          {/* Preset Card 2: Product & UX Strategist */}
-          <div
-            onClick={onSelectTemplate}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-50 text-slate-800 rounded-xl overflow-hidden relative font-sans text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-slate-200">
-              <div className="bg-indigo-900 h-16 relative">
-                <div className="absolute -bottom-4 left-3 w-10 h-10 rounded-full bg-purple-700 border-2 border-white text-white font-bold text-xs flex items-center justify-center">
-                  S
+              <div className="flex items-center justify-between px-1">
+                <div>
+                  <div className="font-bold text-xs text-slate-900">{cover.name}</div>
+                  <div className="text-[11px] text-slate-500">{cover.desc}</div>
                 </div>
-              </div>
-              <div className="pt-3 px-3 space-y-1">
-                <div className="font-extrabold text-xs text-slate-900">Sarah Jenkins</div>
-                <div className="text-[8.5px] font-semibold text-slate-700 leading-tight">
-                  Lead Product Strategist @ Stripe • Scaling 0→1 B2B Fintech Products
-                </div>
-                <div className="text-[8px] text-slate-400">San Francisco, CA • 500+ connections</div>
-                <div className="pt-1 text-slate-600 leading-tight">
-                  Building intuitive user experiences driving $40M ARR growth...
-                </div>
+                <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
               </div>
             </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Product & UX Storyteller</div>
-                <div className="text-[11px] text-slate-500">Storytelling About & Metrics</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Preset →</span>
-            </div>
-          </div>
-
-          {/* Preset Card 3: Executive VP */}
-          <div
-            onClick={onSelectTemplate}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-50 text-slate-800 rounded-xl overflow-hidden relative font-sans text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-slate-200">
-              <div className="bg-slate-900 h-16 relative">
-                <div className="absolute -bottom-4 left-3 w-10 h-10 rounded-full bg-amber-600 border-2 border-white text-white font-bold text-xs flex items-center justify-center">
-                  R
-                </div>
-              </div>
-              <div className="pt-3 px-3 space-y-1">
-                <div className="font-extrabold text-xs text-slate-900">Robert Vance</div>
-                <div className="text-[8.5px] font-semibold text-slate-700 leading-tight">
-                  VP of Global Operations • Angel Investor & Board Member
-                </div>
-                <div className="text-[8px] text-slate-400">New York, NY • 1,200+ connections</div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Executive & Board Member</div>
-                <div className="text-[11px] text-slate-500">High-Impact Executive Portfolio</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Preset →</span>
-            </div>
-          </div>
-
-          {/* Preset Card 4: Growth Marketer */}
-          <div
-            onClick={onSelectTemplate}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-50 text-slate-800 rounded-xl overflow-hidden relative font-sans text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-slate-200">
-              <div className="bg-emerald-900 h-16 relative">
-                <div className="absolute -bottom-4 left-3 w-10 h-10 rounded-full bg-emerald-600 border-2 border-white text-white font-bold text-xs flex items-center justify-center">
-                  M
-                </div>
-              </div>
-              <div className="pt-3 px-3 space-y-1">
-                <div className="font-extrabold text-xs text-slate-900">Maya Lin</div>
-                <div className="text-[8.5px] font-semibold text-slate-700 leading-tight">
-                  Director of Growth Marketing • Performance & Paid Acquisition Specialist
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Growth Marketer</div>
-                <div className="text-[11px] text-slate-500">Quantified ROI Bullet Points</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Preset →</span>
-            </div>
-          </div>
-
-          {/* Preset Card 5: AI Research Scientist */}
-          <div
-            onClick={onSelectTemplate}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-50 text-slate-800 rounded-xl overflow-hidden relative font-sans text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-slate-200">
-              <div className="bg-purple-900 h-16 relative">
-                <div className="absolute -bottom-4 left-3 w-10 h-10 rounded-full bg-purple-600 border-2 border-white text-white font-bold text-xs flex items-center justify-center">
-                  D
-                </div>
-              </div>
-              <div className="pt-3 px-3 space-y-1">
-                <div className="font-extrabold text-xs text-slate-900">Dr. David Zhang</div>
-                <div className="text-[8.5px] font-semibold text-slate-700 leading-tight">
-                  Principal AI Scientist @ DeepMind • LLM Research & Reinforcement Learning
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">AI Research Scientist</div>
-                <div className="text-[11px] text-slate-500">Publications & Patent Badges</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Preset →</span>
-            </div>
-          </div>
-
-          {/* Preset Card 6: Creative Director */}
-          <div
-            onClick={onSelectTemplate}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-50 text-slate-800 rounded-xl overflow-hidden relative font-sans text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-slate-200">
-              <div className="bg-rose-900 h-16 relative">
-                <div className="absolute -bottom-4 left-3 w-10 h-10 rounded-full bg-rose-600 border-2 border-white text-white font-bold text-xs flex items-center justify-center">
-                  C
-                </div>
-              </div>
-              <div className="pt-3 px-3 space-y-1">
-                <div className="font-extrabold text-xs text-slate-900">Clara Moreau</div>
-                <div className="text-[8.5px] font-semibold text-slate-700 leading-tight">
-                  Global Creative Director • Brand Identity & Design Systems
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Creative Director</div>
-                <div className="text-[11px] text-slate-500">Featured Media & Design Portfolio</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Preset →</span>
-            </div>
-          </div>
-
+          ))}
         </div>
       </div>
 

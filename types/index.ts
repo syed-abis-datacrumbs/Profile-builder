@@ -52,6 +52,9 @@ export interface ResumeData {
   certifications: string[];
   template: 'modern' | 'minimal' | 'executive' | 'creative';
   accentColor: string;
+  /** LMS-style layout switch. Professional leads with Work Experience; Student
+   *  leads with Education. Optional for back-compat (absent = professional). */
+  resumeType?: 'professional' | 'student';
 }
 
 export interface GithubProfileData {

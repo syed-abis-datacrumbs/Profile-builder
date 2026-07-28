@@ -38,6 +38,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
   onAIRefine
 }) => {
   const [activeSection, setActiveSection] = useState<'personal' | 'experience' | 'education' | 'skills' | 'projects' | 'template'>('personal');
+  // LMS-style layout switch: Student leads with Education, Professional with Work Experience.
+  const isStudent = data.resumeType === 'student';
   const [copiedPDF, setCopiedPDF] = useState(false);
 
   // Update sub-objects cleanly
@@ -518,6 +520,26 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
             </span>
           </div>
 
+          {/* LMS-style "Resume type" toggle — switches the layout live. */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden sm:inline">Type</span>
+            <div className="flex items-center gap-0.5 bg-slate-800/80 rounded-lg p-0.5 border border-slate-700">
+              {(['professional', 'student'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => onChange({ ...data, resumeType: t })}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold capitalize transition-colors ${
+                    (data.resumeType ?? 'professional') === t
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             onClick={handlePrintPDF}
             className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/30"
@@ -534,7 +556,9 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
             className="w-full max-w-[800px] min-h-[1050px] bg-white text-slate-900 p-8 sm:p-12 shadow-2xl rounded-sm text-sm font-sans flex flex-col justify-between"
             style={{ fontFamily: 'Georgia, serif' }}
           >
-            <div>
+            {/* flex-col so the sections below can be reordered by CSS `order`
+                depending on Professional vs Student, without moving markup. */}
+            <div className="flex flex-col">
               {/* Header */}
               <div className="border-b-2 border-indigo-600 pb-4 mb-6">
                 <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
@@ -575,7 +599,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
               {/* Bio Summary */}
               {data.personalInfo.bio && (
-                <div className="mb-6">
+                <div className="mb-6 order-1">
                   <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1 mb-2 font-sans">
                     Executive Summary
                   </h2>
@@ -587,7 +611,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
               {/* Work Experience */}
               {data.experiences.length > 0 && (
-                <div className="mb-6">
+                <div className={`mb-6 ${isStudent ? 'order-4' : 'order-2'}`}>
                   <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1 mb-3 font-sans">
                     Work Experience
                   </h2>
@@ -616,7 +640,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
               {/* Technical Skills */}
               {data.skills.length > 0 && (
-                <div className="mb-6">
+                <div className="mb-6 order-3">
                   <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1 mb-2 font-sans">
                     Technical Expertise & Tools
                   </h2>
@@ -632,7 +656,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
               {/* Education */}
               {data.education.length > 0 && (
-                <div className="mb-6">
+                <div className={`mb-6 ${isStudent ? 'order-2' : 'order-4'}`}>
                   <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1 mb-2 font-sans">
                     Education
                   </h2>

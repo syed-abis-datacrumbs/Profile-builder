@@ -81,7 +81,8 @@ export const defaultResumeData: ResumeData = {
     "Certified Kubernetes Application Developer (CKAD)"
   ],
   template: 'modern',
-  accentColor: '#6366f1'
+  accentColor: '#6366f1',
+  resumeType: 'professional'
 };
 
 export const defaultGithubData: GithubProfileData = {

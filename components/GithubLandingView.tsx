@@ -8,22 +8,21 @@ import {
   Check, 
   ChevronDown, 
   ArrowUpRight, 
-  Send,
-  Code,
-  Terminal
+  Send
 } from 'lucide-react';
 import { GithubIcon } from './icons';
 
 interface GithubLandingViewProps {
   userName?: string;
-  onSelectTemplate: (styleId: 'modern' | 'cyberpunk' | 'minimalist') => void;
+  /** Opens the "which field?" role picker (from the Minimal template card). */
+  onOpenRolePicker: () => void;
   onUsePrompt: (promptText: string) => void;
   onOpenEditorDirectly: () => void;
 }
 
 export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
   userName = "Abis",
-  onSelectTemplate,
+  onOpenRolePicker,
   onUsePrompt,
   onOpenEditorDirectly
 }) => {
@@ -221,169 +220,32 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
           </button>
         </div>
 
+        {/* The single design template the LMS ships: "Minimal". Clicking it
+            opens the "which field?" picker, then loads that role's README. */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          
-          {/* Template Card 1: Modern Developer */}
           <div
-            onClick={() => onSelectTemplate('modern')}
+            onClick={onOpenRolePicker}
             className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
           >
-            <div className="w-full h-56 bg-slate-950 text-slate-100 rounded-xl p-4 overflow-hidden relative font-mono text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-slate-800">
-              <div className="border-b border-slate-800 pb-1">
-                <div className="font-bold text-xs text-blue-400"># Hi there, I'm Abis 👋</div>
-                <div className="text-[8px] text-slate-400">Senior Full-Stack Engineer • Open Source Enthusiast</div>
+            <div className="w-full h-56 bg-slate-950 text-slate-100 rounded-xl p-4 overflow-hidden flex flex-col items-center justify-center text-center gap-2 group-hover:scale-[1.01] transition-transform border border-slate-800">
+              <div className="font-bold text-sm text-white">Hi, I&apos;m Your Name 👋</div>
+              <div className="text-[9px] text-slate-400">Data Scientist · Turning data into decisions</div>
+              <div className="flex flex-wrap gap-1 justify-center pt-1">
+                <span className="bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[8px]">Python</span>
+                <span className="bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[8px]">PyTorch</span>
+                <span className="bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[8px]">SQL</span>
               </div>
-              <div className="space-y-1">
-                <div className="text-emerald-400 font-semibold">## 🛠️ Tech Stack</div>
-                <div className="flex flex-wrap gap-1">
-                  <span className="bg-blue-900/80 text-blue-200 px-1 py-0.5 rounded border border-blue-700">React</span>
-                  <span className="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">Next.js</span>
-                  <span className="bg-cyan-900/80 text-cyan-200 px-1 py-0.5 rounded border border-cyan-700">TypeScript</span>
-                </div>
-              </div>
-              <div className="pt-1">
-                <div className="text-purple-400 font-semibold">## 📊 GitHub Stats</div>
-                <div className="bg-slate-900 p-1.5 rounded border border-slate-800 text-[8px] text-slate-300">
-                  ⚡ Total Commits: 1,420 • Stars: 380 • Streak: 42 days
-                </div>
-              </div>
+              <div className="text-[8px] text-slate-500 pt-1">📊 GitHub Stats · 🔥 Streak</div>
             </div>
-            
+
             <div className="flex items-center justify-between px-1">
               <div>
-                <div className="font-bold text-xs text-slate-900">Modern Full-Stack</div>
-                <div className="text-[11px] text-slate-500">Live Badges & Streak Counter</div>
+                <div className="font-bold text-xs text-slate-900">Minimal</div>
+                <div className="text-[11px] text-slate-500">Data Science · Clean, centered, to the point</div>
               </div>
               <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
             </div>
           </div>
-
-          {/* Template Card 2: Cyberpunk Glow */}
-          <div
-            onClick={() => onSelectTemplate('cyberpunk')}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-900 text-slate-100 rounded-xl p-4 overflow-hidden relative font-mono text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-cyan-500/30">
-              <div className="border-b border-cyan-500/40 pb-1">
-                <div className="font-bold text-xs text-cyan-400 drop-shadow-sm">⚡ SYSTEM_ONLINE // ABIS_DEV</div>
-                <div className="text-[8px] text-pink-400">[CYBERPUNK NEON EDITION]</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-pink-400 font-semibold">&gt; STACK_MATRIX:</div>
-                <div className="flex flex-wrap gap-1">
-                  <span className="bg-pink-950 text-pink-300 px-1 py-0.5 rounded border border-pink-500">Rust</span>
-                  <span className="bg-cyan-950 text-cyan-300 px-1 py-0.5 rounded border border-cyan-500">WebAssembly</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Cyberpunk Dark</div>
-                <div className="text-[11px] text-slate-500">Neon Glowing Terminal Style</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
-            </div>
-          </div>
-
-          {/* Template Card 3: Minimalist Clean */}
-          <div
-            onClick={() => onSelectTemplate('minimalist')}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-50 text-slate-800 rounded-xl p-4 overflow-hidden relative font-serif text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-slate-200">
-              <div className="border-b border-slate-300 pb-1 text-center">
-                <div className="font-serif font-bold text-sm text-slate-900">Abis Hussain Syed</div>
-                <div className="text-[8px] text-slate-500 font-sans">Software Architect & Researcher</div>
-              </div>
-              <div className="space-y-1 font-sans">
-                <div className="font-bold text-[8px] uppercase tracking-wider text-slate-700">About Me</div>
-                <div className="text-slate-600 text-[8.5px] leading-tight">Building distributed systems and open-source developer tooling.</div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Minimalist Academic</div>
-                <div className="text-[11px] text-slate-500">Serif Header & Centered Bio</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
-            </div>
-          </div>
-
-          {/* Template Card 4: Open Source Architect */}
-          <div
-            onClick={() => onSelectTemplate('modern')}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-900 text-slate-200 rounded-xl p-4 overflow-hidden relative font-mono text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-slate-700">
-              <div className="border-b border-slate-700 pb-1">
-                <div className="font-bold text-xs text-emerald-400">🚀 Open Source Architect</div>
-                <div className="text-[8px] text-slate-400">Maintainer of 5+ popular npm packages</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-slate-300 font-semibold">📌 Featured Repositories</div>
-                <div className="bg-slate-800/80 p-1.5 rounded border border-slate-700 text-[8px]">
-                  ⭐ 2.4k stars • react-fast-state
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Open Source Maintainer</div>
-                <div className="text-[11px] text-slate-500">Featured Repos & Metrics Grid</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
-            </div>
-          </div>
-
-          {/* Template Card 5: AI & Machine Learning */}
-          <div
-            onClick={() => onSelectTemplate('modern')}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-950 text-purple-200 rounded-xl p-4 overflow-hidden relative font-mono text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-purple-900/50">
-              <div className="border-b border-purple-800 pb-1">
-                <div className="font-bold text-xs text-purple-400">🧠 AI & ML Research Engineer</div>
-                <div className="text-[8px] text-slate-400">Deep Learning • LLM Infrastructure</div>
-              </div>
-              <div className="flex flex-wrap gap-1 pt-1">
-                <span className="bg-purple-900 text-purple-200 px-1 py-0.5 rounded border border-purple-700">PyTorch</span>
-                <span className="bg-slate-800 text-slate-200 px-1 py-0.5 rounded">HuggingFace</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">AI & ML Engineer</div>
-                <div className="text-[11px] text-slate-500">PyTorch Badges & Research Papers</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
-            </div>
-          </div>
-
-          {/* Template Card 6: Executive Tech Lead */}
-          <div
-            onClick={() => onSelectTemplate('cyberpunk')}
-            className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
-          >
-            <div className="w-full h-56 bg-slate-900 text-slate-100 rounded-xl p-4 overflow-hidden relative font-mono text-[9px] space-y-2 group-hover:scale-[1.01] transition-transform border border-amber-500/30">
-              <div className="bg-amber-900/40 text-amber-300 p-2 rounded border border-amber-600/40">
-                <div className="font-bold text-xs">👑 VP of Engineering</div>
-                <div className="text-[8px] text-amber-200">Scaling Engineering Teams & Cloud Infrastructure</div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <div className="font-bold text-xs text-slate-900">Executive Tech Lead</div>
-                <div className="text-[11px] text-slate-500">Architecture & Leadership Metrics</div>
-              </div>
-              <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
-            </div>
-          </div>
-
         </div>
       </div>
 
