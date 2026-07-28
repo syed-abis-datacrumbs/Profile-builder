@@ -1,0 +1,93 @@
+export type ActiveTab = 'resume' | 'github' | 'linkedin' | 'assistant';
+
+export interface PersonalInfo {
+  fullName: string;
+  jobTitle: string;
+  email: string;
+  phone: string;
+  location: string;
+  website: string;
+  linkedin: string;
+  github: string;
+  avatarUrl?: string;
+  bio: string;
+}
+
+export interface ExperienceItem {
+  id: string;
+  company: string;
+  role: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  current: boolean;
+  bullets: string[];
+}
+
+export interface EducationItem {
+  id: string;
+  institution: string;
+  degree: string;
+  field: string;
+  startDate: string;
+  endDate: string;
+  gpa?: string;
+}
+
+export interface ProjectItem {
+  id: string;
+  title: string;
+  description: string;
+  technologies: string[];
+  link?: string;
+  githubUrl?: string;
+}
+
+export interface ResumeData {
+  personalInfo: PersonalInfo;
+  experiences: ExperienceItem[];
+  education: EducationItem[];
+  skills: string[];
+  projects: ProjectItem[];
+  certifications: string[];
+  template: 'modern' | 'minimal' | 'executive' | 'creative';
+  accentColor: string;
+}
+
+export interface GithubProfileData {
+  username: string;
+  title: string;
+  about: string;
+  techStack: string[];
+  showStatsCard: boolean;
+  showStreakCard: boolean;
+  showTopLangsCard: boolean;
+  theme: 'dark' | 'tokyonight' | 'radial' | 'dracula' | 'cyberpunk';
+  socialLinks: {
+    linkedin?: string;
+    twitter?: string;
+    email?: string;
+    website?: string;
+  };
+  customSections: { title: string; content: string }[];
+}
+
+export interface LinkedinProfileData {
+  headline: string;
+  about: string;
+  industry: string;
+  targetRole: string;
+  experienceHighlights: string[];
+  keySkills: string[];
+  featuredPost: string;
+  openToWork: boolean;
+}
+
+export interface SavedProfile {
+  id: string;
+  name: string;
+  updatedAt: string;
+  resume: ResumeData;
+  github: GithubProfileData;
+  linkedin: LinkedinProfileData;
+}
