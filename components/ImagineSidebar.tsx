@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Sparkles, 
   Plus, 
@@ -9,7 +9,14 @@ import {
   FileText,
   Bot,
   MessageSquare,
-  Home
+  Home,
+  DollarSign,
+  Briefcase,
+  Globe,
+  Palette,
+  HelpCircle,
+  LogOut,
+  CreditCard
 } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from './icons';
 import { ActiveTab } from '../types';
@@ -33,6 +40,8 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   onOpenUpgrade,
   onOpenAskExpert
 }) => {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
   return (
     <aside className="w-64 shrink-0 hidden md:flex flex-col h-screen border-r border-slate-200 bg-[#FAFAFA] p-3 text-slate-800 justify-between select-none">
       
@@ -62,14 +71,6 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
               </span>
             </div>
           </div>
-          <button 
-            type="button"
-            className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200/60 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-            </svg>
-          </button>
         </div>
 
         {/* Main Nav Items */}
@@ -134,19 +135,35 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
             </div>
           </button>
 
-        </nav>
-
-        {/* Projects Section */}
-        <div className="px-2 pt-2 border-t border-slate-200 space-y-1">
-          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            <span>Projects</span>
-            <button className="hover:text-slate-600 text-sm">+</button>
-          </div>
-          <button className="w-full flex items-center gap-2 text-xs text-slate-600 hover:text-slate-900 py-1 font-medium">
-            <span>📂</span>
-            <span>New Project</span>
+          <button
+            onClick={() => setActiveTab('jobhunting')}
+            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all ${
+              activeTab === 'jobhunting'
+                ? 'bg-slate-200/80 text-slate-900 font-bold'
+                : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Briefcase className="w-4 h-4 text-emerald-600" />
+              <span>Job Hunting</span>
+            </div>
           </button>
-        </div>
+
+          <button
+            onClick={() => setActiveTab('freelancing')}
+            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all ${
+              activeTab === 'freelancing'
+                ? 'bg-slate-200/80 text-slate-900 font-bold'
+                : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Globe className="w-4 h-4 text-purple-600" />
+              <span>Freelancing</span>
+            </div>
+          </button>
+
+        </nav>
 
       </div>
 
@@ -183,24 +200,131 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
           </div>
         </div>
 
-        {/* User Profile Bar */}
-        <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
-              A
-            </div>
-            <div className="truncate">
-              <div className="font-bold text-xs text-slate-900 truncate">
-                {userName}
+        {/* User Profile Bar & Popover */}
+        <div className="relative w-full">
+          
+          {/* Settings Popover Dropdown (Width set to w-full matching sidebar padding) */}
+          {isSettingsOpen && (
+            <div className="absolute bottom-full mb-2 left-0 right-0 w-full bg-white rounded-2xl border border-slate-200 shadow-2xl p-3 space-y-3 z-50 animate-in fade-in slide-in-from-bottom-2 text-slate-900">
+              
+              {/* Account Info Header */}
+              <div>
+                <div 
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-100/80 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      AH
+                    </div>
+                    <div className="truncate">
+                      <div className="font-bold text-xs text-slate-900 truncate">
+                        Abishussainsyed&apos;s Personal
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-medium">
+                        {planName}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                </div>
               </div>
-              <div className="text-[10px] text-slate-400 font-medium">
-                {planName}
+
+              {/* Action Buttons Row */}
+              <div className="flex items-center gap-2 pt-0.5">
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(false);
+                    if (onOpenUpgrade) onOpenUpgrade();
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs transition-colors text-center"
+                >
+                  Upgrade
+                </button>
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(false);
+                    if (onOpenAskExpert) {
+                      onOpenAskExpert();
+                    } else if (onOpenUpgrade) {
+                      onOpenUpgrade();
+                    }
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-900 font-semibold text-xs transition-colors text-center truncate"
+                >
+                  Support
+                </button>
+              </div>
+
+              {/* Menu List: Theme, Help Center, Log out */}
+              <div className="pt-2 border-t border-slate-200 space-y-0.5 text-xs font-semibold text-slate-700">
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-slate-100/80 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Palette className="w-4 h-4 text-slate-600 shrink-0" />
+                    <span>Theme</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-slate-100/80 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <HelpCircle className="w-4 h-4 text-slate-600 shrink-0" />
+                    <span>Help Center</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(false);
+                    alert('Successfully logged out.');
+                  }}
+                  className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors text-left"
+                >
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  <span>Log out</span>
+                </button>
+              </div>
+
+            </div>
+          )}
+
+          {/* User Profile Bar (Trigger) */}
+          <div 
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 cursor-pointer hover:bg-slate-100/80 transition-colors"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                A
+              </div>
+              <div className="truncate">
+                <div className="font-bold text-xs text-slate-900 truncate">
+                  {userName}
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium">
+                  {planName}
+                </div>
               </div>
             </div>
+            <button 
+              type="button"
+              className="text-slate-400 hover:text-slate-700 p-1 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
           </div>
-          <button className="text-slate-400 hover:text-slate-600 p-1">
-            <Settings className="w-4 h-4" />
-          </button>
+
         </div>
 
       </div>

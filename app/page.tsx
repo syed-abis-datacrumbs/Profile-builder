@@ -11,6 +11,8 @@ import { GithubLandingView } from '../components/GithubLandingView';
 import { GithubEditor } from '../components/GithubEditor';
 import { LinkedinLandingView } from '../components/LinkedinLandingView';
 import { LinkedinEditor } from '../components/LinkedinEditor';
+import { JobHuntingLandingView } from '../components/JobHuntingLandingView';
+import { FreelancingLandingView } from '../components/FreelancingLandingView';
 import { AIChatStudio } from '../components/AIChatStudio';
 import { AuthModal } from '../components/AuthModal';
 import { ATSScoreModal } from '../components/ATSScoreModal';
@@ -227,6 +229,34 @@ export default function Home() {
                     />
                   </div>
                 )
+              )}
+
+              {activeTab === 'jobhunting' && (
+                <JobHuntingLandingView
+                  userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
+                  onUsePrompt={(promptText) => {
+                    setAssistantPrompt(promptText);
+                    setActiveTab('assistant');
+                  }}
+                  onOpenEditorDirectly={() => {
+                    setActiveTab('assistant');
+                    setAssistantPrompt("Find top tech jobs & auto-apply");
+                  }}
+                />
+              )}
+
+              {activeTab === 'freelancing' && (
+                <FreelancingLandingView
+                  userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
+                  onUsePrompt={(promptText) => {
+                    setAssistantPrompt(promptText);
+                    setActiveTab('assistant');
+                  }}
+                  onOpenEditorDirectly={() => {
+                    setActiveTab('assistant');
+                    setAssistantPrompt("Generate client proposal contract");
+                  }}
+                />
               )}
 
               {activeTab === 'assistant' && (
