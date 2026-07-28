@@ -37,13 +37,20 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
         
         {/* Brand Header */}
         <div className="flex items-center justify-between px-2 pt-1 pb-1">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-black flex items-center justify-center text-white font-bold text-xs">
-              P
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img 
+              src="/logo.png" 
+              alt="MOMENTUM Logo" 
+              className="w-8 h-8 object-contain shrink-0 rounded-md"
+            />
+            <div className="flex flex-col min-w-0">
+              <span className="font-extrabold text-base tracking-tight text-slate-900 leading-tight uppercase">
+                MOMENTUM
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium tracking-tight truncate">
+                Accelerate your career journey.
+              </span>
             </div>
-            <span className="font-extrabold text-base tracking-tight text-slate-900">
-              ProfileArchitect
-            </span>
           </div>
           <button className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200/60 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
