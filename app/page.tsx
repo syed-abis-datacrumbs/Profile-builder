@@ -13,6 +13,7 @@ import { LinkedinLandingView } from '../components/LinkedinLandingView';
 import { LinkedinEditor } from '../components/LinkedinEditor';
 import { JobHuntingLandingView } from '../components/JobHuntingLandingView';
 import { FreelancingLandingView } from '../components/FreelancingLandingView';
+import { InterviewPrepView } from '../components/InterviewPrepView';
 import { AIChatStudio } from '../components/AIChatStudio';
 import { AuthModal } from '../components/AuthModal';
 import { ATSScoreModal } from '../components/ATSScoreModal';
@@ -242,6 +243,7 @@ export default function Home() {
                     setActiveTab('assistant');
                     setAssistantPrompt("Find top tech jobs & auto-apply");
                   }}
+                  onNavigateToTab={(tab) => setActiveTab(tab)}
                 />
               )}
 
@@ -255,6 +257,20 @@ export default function Home() {
                   onOpenEditorDirectly={() => {
                     setActiveTab('assistant');
                     setAssistantPrompt("Generate client proposal contract");
+                  }}
+                />
+              )}
+
+              {activeTab === 'interview' && (
+                <InterviewPrepView
+                  userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
+                  onUsePrompt={(promptText) => {
+                    setAssistantPrompt(promptText);
+                    setActiveTab('assistant');
+                  }}
+                  onLaunchMockInterview={(role, jdText) => {
+                    setActiveTab('assistant');
+                    setAssistantPrompt(`Act as a Hiring Manager at a top tech company interviewing me for the ${role} position. Here is the job context: ${jdText}. Start by asking me the first technical or behavioral question.`);
                   }}
                 />
               )}

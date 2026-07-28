@@ -13,6 +13,7 @@ import {
   DollarSign,
   Briefcase,
   Globe,
+  Brain,
   Palette,
   HelpCircle,
   LogOut,
@@ -160,6 +161,20 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
             <div className="flex items-center gap-2.5">
               <Globe className="w-4 h-4 text-purple-600" />
               <span>Freelancing</span>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('interview')}
+            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all ${
+              activeTab === 'interview'
+                ? 'bg-slate-200/80 text-slate-900 font-bold'
+                : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Brain className="w-4 h-4 text-amber-600" />
+              <span>Interview Prep</span>
             </div>
           </button>
 

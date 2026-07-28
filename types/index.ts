@@ -1,4 +1,4 @@
-export type ActiveTab = 'home' | 'resume' | 'github' | 'linkedin' | 'jobhunting' | 'freelancing' | 'assistant';
+export type ActiveTab = 'home' | 'resume' | 'github' | 'linkedin' | 'jobhunting' | 'freelancing' | 'interview' | 'assistant';
 
 export interface PersonalInfo {
   fullName: string;
