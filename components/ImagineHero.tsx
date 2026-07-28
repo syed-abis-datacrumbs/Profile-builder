@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Sparkles, 
-  Mic, 
   ChevronDown,
   FileText, 
   Bot, 
@@ -106,19 +104,12 @@ export const ImagineHero: React.FC<ImagineHeroProps> = ({
           />
 
           {/* Bottom Tool Row Inside Box */}
-          <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1.5 border border-slate-200">
-                <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-                <span>Auto</span>
-              </span>
-            </div>
-
+          <div className="flex items-center justify-end border-t border-slate-100 pt-3">
             <button
               type="submit"
               className="w-8 h-8 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-all shadow-md"
             >
-              {promptText.trim() ? <Send className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              <Send className="w-4 h-4" />
             </button>
           </div>
         </form>

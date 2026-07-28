@@ -8,7 +8,8 @@ import {
   Settings,
   FileText,
   Bot,
-  MessageSquare
+  MessageSquare,
+  Home
 } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from './icons';
 import { ActiveTab } from '../types';
@@ -35,16 +36,23 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
       
       <div className="space-y-4">
         
-        {/* Brand Header */}
-        <div className="flex items-center justify-between px-2 pt-1 pb-1">
+        {/* Brand Header (Clickable Logo to open homepage) */}
+        <div 
+          onClick={() => {
+            setActiveTab('home');
+            onNewChat();
+          }}
+          className="flex items-center justify-between px-2 pt-1 pb-1 cursor-pointer group hover:bg-slate-200/50 rounded-xl transition-all"
+          title="Go to Homepage"
+        >
           <div className="flex items-center gap-2.5 min-w-0">
             <img 
               src="/logo.png" 
               alt="MOMENTUM Logo" 
-              className="w-8 h-8 object-contain shrink-0 rounded-md"
+              className="w-8 h-8 object-contain shrink-0 rounded-md group-hover:scale-105 transition-transform"
             />
             <div className="flex flex-col min-w-0">
-              <span className="font-extrabold text-base tracking-tight text-slate-900 leading-tight uppercase">
+              <span className="font-extrabold text-base tracking-tight text-slate-900 leading-tight uppercase group-hover:text-blue-600 transition-colors">
                 MOMENTUM
               </span>
               <span className="text-[10px] text-slate-500 font-medium tracking-tight truncate">
@@ -52,38 +60,33 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
               </span>
             </div>
           </div>
-          <button className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200/60 transition-colors">
+          <button 
+            type="button"
+            className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200/60 transition-colors"
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
             </svg>
           </button>
         </div>
 
-        {/* New Chat Button */}
-        <div className="px-1">
-          <button
-            onClick={onNewChat}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-200/70 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-all"
-          >
-            <Plus className="w-4 h-4 text-slate-600" />
-            <span>New Chat</span>
-          </button>
-        </div>
-
         {/* Main Nav Items */}
         <nav className="space-y-0.5 text-xs font-medium px-1">
-          
+
           <button
-            onClick={() => setActiveTab('assistant')}
+            onClick={() => {
+              setActiveTab('home');
+              onNewChat();
+            }}
             className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all ${
-              activeTab === 'assistant'
+              activeTab === 'home'
                 ? 'bg-slate-200/80 text-slate-900 font-bold'
                 : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <Bot className="w-4 h-4 text-slate-500" />
-              <span>AI Agent Studio</span>
+              <Home className="w-4 h-4 text-slate-700" />
+              <span>Home</span>
             </div>
           </button>
 

@@ -33,6 +33,7 @@ export const ImagineHeader: React.FC<ImagineHeaderProps> = ({
         <span>Upgrade</span>
       </button>
 
+
       {/* Auth Account Button */}
       <button
         onClick={onOpenAuth}
