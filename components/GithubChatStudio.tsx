@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Send, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Download, Check } from 'lucide-react';
 import { GithubProfileData } from '../types';
 import { GithubIcon } from './icons';
+import { generateGithubMarkdown } from '../lib/githubMarkdown';
 
 interface Msg {
   role: 'user' | 'assistant';
@@ -98,6 +99,23 @@ export const GithubChatStudio: React.FC<{
     }
   };
 
+  const [copied, setCopied] = useState(false);
+  const downloadReadme = () => {
+    const md = generateGithubMarkdown(github);
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'README.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+  const copyReadme = async () => {
+    await navigator.clipboard.writeText(generateGithubMarkdown(github));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
   const set = (patch: Partial<GithubProfileData>) => onChange({ ...github, ...patch });
   const setSection = (i: number, patch: Partial<GithubProfileData['customSections'][number]>) =>
     set({ customSections: github.customSections.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
@@ -155,10 +173,26 @@ export const GithubChatStudio: React.FC<{
       <div className="lg:flex-1 flex flex-col bg-slate-100 border border-slate-200 rounded-2xl overflow-hidden min-h-0">
         <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border-b border-slate-200">
           <GithubIcon className="w-4 h-4 text-slate-700" />
-          <span className="text-xs font-bold text-slate-700">github.com/{github.username || 'your-username'}</span>
-          <span className="hidden md:block ml-auto text-[11px] text-slate-400">Click text to edit · badges & cards via chat</span>
+          <span className="text-xs font-bold text-slate-700 truncate">github.com/{github.username || 'your-username'}</span>
+          <span className="hidden lg:block text-[11px] text-slate-400">Click text to edit · badges & cards via chat</span>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={copyReadme}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : null}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+            <button
+              onClick={downloadReadme}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              README.md
+            </button>
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex justify-center">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex justify-center items-start">
           <div className="w-full max-w-[820px] bg-slate-950 text-slate-200 rounded-xl border border-slate-800 p-6 space-y-6 font-sans">
             {/* Header */}
             <div className="border-b border-slate-800 pb-4">
@@ -180,15 +214,28 @@ export const GithubChatStudio: React.FC<{
               </div>
             )}
 
-            {/* Analytics cards */}
+            {/* Analytics cards — live github-readme-stats images (need a real
+                GitHub username to resolve). */}
             {(github.showStatsCard || github.showStreakCard || github.showTopLangsCard) && (
               <div className="space-y-3 pt-3 border-t border-slate-800">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">📊 GitHub Analytics</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {github.showStatsCard && <Card label={`📊 Stats card for @${github.username || 'you'}`} />}
-                  {github.showTopLangsCard && <Card label={`⚡ Top languages for @${github.username || 'you'}`} />}
-                  {github.showStreakCard && <Card label={`🔥 Streak stats for @${github.username || 'you'}`} />}
-                </div>
+                {github.username ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {github.showStatsCard && (
+                      <StatImg src={`https://github-readme-stats-ten-kohl-77.vercel.app/api?username=${encodeURIComponent(github.username)}&show_icons=true&theme=${github.theme}`} alt="GitHub Stats" />
+                    )}
+                    {github.showTopLangsCard && (
+                      <StatImg src={`https://github-readme-stats-ten-kohl-77.vercel.app/api/top-langs/?username=${encodeURIComponent(github.username)}&layout=compact&theme=${github.theme}`} alt="Top Languages" />
+                    )}
+                    {github.showStreakCard && (
+                      <StatImg src={`https://github-readme-streak-stats.herokuapp.com/?user=${encodeURIComponent(github.username)}&theme=${github.theme}`} alt="GitHub Streak" />
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Add your GitHub username (ask the chat: &quot;my username is …&quot;) to load your live stats cards.
+                  </p>
+                )}
               </div>
             )}
 
@@ -219,14 +266,10 @@ export const GithubChatStudio: React.FC<{
   );
 };
 
-function Card({ label }: { label: string }) {
-  return (
-    <div className="p-4 rounded-xl bg-slate-900 border border-slate-800">
-      <div className="h-24 rounded bg-slate-800/80 flex items-center justify-center text-xs text-slate-400 border border-slate-700/50 text-center px-2">
-        {label}
-      </div>
-    </div>
-  );
+function StatImg({ src, alt }: { src: string; alt: string }) {
+  // Live github-readme-stats image — renders the user's real stats.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt={alt} loading="lazy" className="w-full rounded-lg border border-slate-800 bg-slate-900" />;
 }
 
 function Social({ label, color }: { label: string; color: string }) {

@@ -150,7 +150,7 @@ export const LinkedinChatStudio: React.FC<{
           <span className="text-xs font-bold text-slate-700">LinkedIn profile</span>
           <span className="hidden md:block ml-auto text-[11px] text-slate-400">Click text to edit · Open-to-Work & structure via chat</span>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex justify-center">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex justify-center items-start">
           <div className="w-full max-w-[720px] bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             {/* Cover + avatar */}
             <div className="h-24 bg-gradient-to-r from-[#0A66C2] to-indigo-500" />

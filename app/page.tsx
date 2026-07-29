@@ -86,7 +86,16 @@ export default function Home() {
   // onto the GitHub data, then jumps into the editor.
   // Loads a preset's content into the GitHub data and opens the chat Studio.
   const openGithubStudio = (preset: GithubRolePreset, theme?: GithubProfileData['theme']) => {
-    setGithubData((prev) => ({ ...applyRolePresetToGithub(prev, preset), theme: theme || prev.theme }));
+    setGithubData((prev) => {
+      const g = applyRolePresetToGithub(prev, preset);
+      return {
+        ...g,
+        theme: theme || prev.theme,
+        // LMS presets mark headings with **bold**; the README preview renders
+        // plain text, so drop the markers instead of showing raw "**".
+        customSections: g.customSections.map((s) => ({ ...s, content: s.content.replace(/\*\*/g, '') })),
+      };
+    });
     setGithubMode('studio');
   };
 
