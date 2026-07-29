@@ -11,6 +11,7 @@ import { GithubLandingView } from '../components/GithubLandingView';
 import { GithubEditor } from '../components/GithubEditor';
 import { LinkedinLandingView } from '../components/LinkedinLandingView';
 import { LinkedinEditor } from '../components/LinkedinEditor';
+import { LinkedinTemplatePreview } from '../components/LinkedinTemplatePreview';
 import { JobHuntingLandingView } from '../components/JobHuntingLandingView';
 import { FreelancingLandingView } from '../components/FreelancingLandingView';
 import { InterviewPrepView } from '../components/InterviewPrepView';
@@ -22,6 +23,7 @@ import { UpgradeModal } from '../components/UpgradeModal';
 import { AskExpertModal } from '../components/AskExpertModal';
 import { GithubChatStudio } from '../components/GithubChatStudio';
 import { LinkedinChatStudio } from '../components/LinkedinChatStudio';
+import { LinkedinRichProfile, buildInitialRichProfile } from '../lib/linkedinRichProfile';
 
 import { ActiveTab, ResumeData, GithubProfileData, LinkedinProfileData, SavedProfile } from '../types';
 import { defaultResumeData, defaultGithubData, defaultLinkedinData } from '../lib/defaultData';
@@ -37,7 +39,9 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('resume');
   const [resumeMode, setResumeMode] = useState<'landing' | 'editor' | 'studio'>('landing');
   const [githubMode, setGithubMode] = useState<'landing' | 'editor' | 'studio'>('landing');
-  const [linkedinMode, setLinkedinMode] = useState<'landing' | 'editor' | 'studio'>('landing');
+  const [linkedinMode, setLinkedinMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
+  const [linkedinPreviewTemplateId, setLinkedinPreviewTemplateId] = useState<string | null>(null);
+  const [linkedinRichProfile, setLinkedinRichProfile] = useState<LinkedinRichProfile | null>(null);
   const [selectedModel, setSelectedModel] = useState('Flash');
   
   // Profile Data State
@@ -244,23 +248,7 @@ export default function Home() {
               )}
 
               {activeTab === 'linkedin' && (
-                linkedinMode === 'landing' ? (
-                  <LinkedinLandingView
-                    userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
-                    onSelectTemplate={() => setLinkedinMode('studio')}
-                    onUsePrompt={(promptText) => {
-                      setAssistantPrompt(promptText);
-                      setActiveTab('assistant');
-                    }}
-                    onOpenEditorDirectly={() => setLinkedinMode('editor')}
-                  />
-                ) : linkedinMode === 'studio' ? (
-                  <LinkedinChatStudio
-                    linkedin={linkedinData}
-                    onChange={setLinkedinData}
-                    onBack={() => setLinkedinMode('landing')}
-                  />
-                ) : (
+                linkedinMode === 'editor' ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between no-print">
                       <button
@@ -280,6 +268,48 @@ export default function Home() {
                       }}
                     />
                   </div>
+                ) : linkedinMode === 'studio' && linkedinRichProfile ? (
+                  // Full page, same as the GitHub builder's studio — not a modal.
+                  <LinkedinChatStudio
+                    profile={linkedinRichProfile}
+                    onChange={setLinkedinRichProfile}
+                    onBack={() => setLinkedinMode('landing')}
+                  />
+                ) : (
+                  <>
+                    <LinkedinLandingView
+                      userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
+                      onSelectTemplate={(templateId) => {
+                        setLinkedinPreviewTemplateId(templateId);
+                        setLinkedinMode('preview');
+                      }}
+                      onUsePrompt={(promptText) => {
+                        setAssistantPrompt(promptText);
+                        setActiveTab('assistant');
+                      }}
+                      onOpenEditorDirectly={() => setLinkedinMode('editor')}
+                    />
+
+                    {linkedinMode === 'preview' && linkedinPreviewTemplateId && (
+                      <div
+                        className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm p-4 sm:p-8"
+                        onClick={(e) => {
+                          if (e.target === e.currentTarget) setLinkedinMode('landing');
+                        }}
+                      >
+                        <div className="w-full max-w-3xl mx-auto my-4">
+                          <LinkedinTemplatePreview
+                            templateId={linkedinPreviewTemplateId}
+                            onBack={() => setLinkedinMode('landing')}
+                            onEdit={() => {
+                              setLinkedinRichProfile(buildInitialRichProfile(linkedinPreviewTemplateId));
+                              setLinkedinMode('studio');
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )
               )}
 

@@ -11,30 +11,14 @@ import {
   Send
 } from 'lucide-react';
 import { LinkedinIcon } from './icons';
+import { linkedinCovers, getDefaultPfpGradientId } from '../lib/linkedinCovers';
 
 interface LinkedinLandingViewProps {
   userName?: string;
-  onSelectTemplate: () => void;
+  onSelectTemplate: (templateId: string) => void;
   onUsePrompt: (promptText: string) => void;
   onOpenEditorDirectly: () => void;
 }
-
-// The LinkedIn COVER (banner) templates the DataCrumbs (LMS) builder actually
-// offers — its LinkedIn tool is a cover + profile-picture studio. The real
-// banner artwork + gradient profile-picture backdrops were copied from the LMS
-// into public/images/linkedin-templates/, so these previews use the actual
-// assets: cover banner = cover/<id>/background.png, sample avatar = a pfp
-// gradient. Mirrors the LMS COVER_TEMPLATES.
-const linkedinCovers = [
-  { id: 'ideas-inspire', name: 'Ideas That Inspire', desc: 'Bold tagline cover', thumbnail: '/images/linkedin-templates/thumbnails/First.PNG' },
-  { id: 'lets-work-together', name: "Let's Work Together", desc: 'Contact-forward cover', thumbnail: '/images/linkedin-templates/thumbnails/Second.png' },
-  { id: 'helping-businesses', name: 'Helping Businesses Scale', desc: 'Headline + value prop', thumbnail: '/images/linkedin-templates/thumbnails/third.png' },
-  { id: 'stunning-websites', name: 'Stunning Websites', desc: 'Portfolio-style cover', thumbnail: '/images/linkedin-templates/thumbnails/fourth.png' },
-  { id: 'purple-geometric', name: 'Purple Geometric', desc: 'Geometric accent design', thumbnail: '/images/linkedin-templates/thumbnails/fifth.png' },
-  { id: 'blue-blocks', name: 'Blue Blocks', desc: 'Blocky modern layout', thumbnail: '/images/linkedin-templates/thumbnails/sixth.png' },
-  { id: 'yellow-wave', name: 'Yellow Wave', desc: 'Warm wave background' },
-  { id: 'ai-engineer-badge', name: 'AI Engineer Badge', desc: 'Tech badge cover' },
-];
 
 export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
   userName = "Abis",
@@ -240,7 +224,7 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
           {linkedinCovers.map((cover, index) => (
             <div
               key={cover.id}
-              onClick={onSelectTemplate}
+              onClick={() => onSelectTemplate(cover.id)}
               className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
             >
               {/* Template Thumbnail Graphic */}
@@ -278,7 +262,7 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
                       <div className="absolute -top-5 left-3 w-10 h-10 rounded-full border-2 border-white overflow-hidden bg-slate-200">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={`/images/linkedin-templates/pfp/gradient-${(index % 10) + 1}/background.jpg`}
+                          src={`/images/linkedin-templates/pfp/${getDefaultPfpGradientId(index)}/background.jpg`}
                           alt=""
                           className="w-full h-full object-cover"
                         />
