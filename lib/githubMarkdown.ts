@@ -20,7 +20,14 @@ const BADGES: Record<string, { color: string; logo: string }> = {
 /** Builds the GitHub profile README.md from the profile data (same output as
  *  the classic editor's generator). */
 export function generateGithubMarkdown(data: GithubProfileData): string {
-  let md = `# ${data.title}\n\n${data.about}\n\n`;
+  let md = '';
+
+  // Full-width banner at the top of the README (like the LMS GitHub builder).
+  if (data.bannerUrl) {
+    md += `<img width="100%" src="${data.bannerUrl}" alt="Banner" />\n\n`;
+  }
+
+  md += `# ${data.title}\n\n${data.about}\n\n`;
 
   if (data.techStack.length > 0) {
     md += `### 🛠️ Tech Stack & Skills\n\n`;

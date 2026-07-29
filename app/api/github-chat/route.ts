@@ -16,6 +16,7 @@ Profile JSON schema (keep this exact shape and keys):
   "username": "",
   "title": "",                 // the "# Hi, I'm …" headline
   "about": "",                 // the About Me paragraph
+  "bannerUrl": "",             // full-width cover image URL at the top of the README (set to "" or omit to remove)
   "techStack": ["Python", "React", ...],   // readable tech names -> rendered as badges
   "showStatsCard": true,       // GitHub stats card
   "showStreakCard": true,      // streak card
@@ -31,6 +32,7 @@ Rules:
 - "enable/disable the streak/stats/top-languages card" -> toggle the matching boolean.
 - "use the <x> theme" -> set theme to one of the allowed values.
 - "add my LinkedIn/Twitter/email/website <value>" -> set the matching socialLinks entry.
+- "change/set/add banner" -> set bannerUrl to the user's image URL. If the user says "remove banner", set bannerUrl to "".
 - Keep the writing sharp and professional. Output valid JSON only.`;
 
 interface ChatMessage {

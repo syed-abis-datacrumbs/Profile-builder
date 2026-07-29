@@ -61,6 +61,10 @@ export interface GithubProfileData {
   username: string;
   title: string;
   about: string;
+  /** Full-width cover/banner image URL displayed at the top of the README. */
+  bannerUrl?: string;
+  /** Profile picture URL shown overlapping the banner (LinkedIn-style). Preview-only — not part of the README. */
+  avatarUrl?: string;
   techStack: string[];
   showStatsCard: boolean;
   showStreakCard: boolean;

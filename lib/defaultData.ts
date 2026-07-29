@@ -89,6 +89,8 @@ export const defaultGithubData: GithubProfileData = {
   username: "alexrivera-ai",
   title: "🚀 Building Next-Gen AI Agents & Scalable Web Apps",
   about: "👋 Hi, I'm Alex! I build autonomous AI tools, reactive full-stack interfaces, and high-performance distributed systems. Currently exploring Agentic Workflows, Vector Databases, and LLM fine-tuning.",
+  bannerUrl: "https://res.cloudinary.com/dnqk2jlds/image/upload/f_auto,q_auto,w_1400/v1784892308/lms-assets/github-builder-banner.png",
+  avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg",
   techStack: [
     "TypeScript", "JavaScript", "React", "Next.js", "Python", "PyTorch", 
     "FastAPI", "Node.js", "TailwindCSS", "PostgreSQL", "Docker", "Git"
