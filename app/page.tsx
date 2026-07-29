@@ -20,25 +20,31 @@ import { ATSScoreModal } from '../components/ATSScoreModal';
 import { ImportModal } from '../components/ImportModal';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { AskExpertModal } from '../components/AskExpertModal';
-import { GithubRolePickerModal } from '../components/GithubRolePickerModal';
+import { GithubChatStudio } from '../components/GithubChatStudio';
+import { LinkedinChatStudio } from '../components/LinkedinChatStudio';
 
 import { ActiveTab, ResumeData, GithubProfileData, LinkedinProfileData, SavedProfile } from '../types';
 import { defaultResumeData, defaultGithubData, defaultLinkedinData } from '../lib/defaultData';
-import { applyRolePresetToGithub, GithubRolePreset } from '../lib/githubRolePresets';
-import { lmsSampleToResumeData, LmsResumeSample } from '../lib/resumeSamples';
+import { applyRolePresetToGithub, GithubRolePreset, GITHUB_ROLE_PRESETS } from '../lib/githubRolePresets';
+import { LmsResumeSample } from '../lib/resumeSamples';
+import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
+import { ResumeChatStudio } from '../components/ResumeChatStudio';
 import { ArrowLeft, Sparkles, FileText, Download, Award } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '../components/icons';
 
 export default function Home() {
   const [viewMode, setViewMode] = useState<'home' | 'studio'>('home');
   const [activeTab, setActiveTab] = useState<ActiveTab>('resume');
-  const [resumeMode, setResumeMode] = useState<'landing' | 'editor'>('landing');
-  const [githubMode, setGithubMode] = useState<'landing' | 'editor'>('landing');
-  const [linkedinMode, setLinkedinMode] = useState<'landing' | 'editor'>('landing');
+  const [resumeMode, setResumeMode] = useState<'landing' | 'editor' | 'studio'>('landing');
+  const [githubMode, setGithubMode] = useState<'landing' | 'editor' | 'studio'>('landing');
+  const [linkedinMode, setLinkedinMode] = useState<'landing' | 'editor' | 'studio'>('landing');
   const [selectedModel, setSelectedModel] = useState('Flash');
   
   // Profile Data State
   const [resumeData, setResumeData] = useState<ResumeData>(defaultResumeData);
+  // Resume Studio (chat + live LMS-format CV) works in the LMS CvData shape.
+  const [studioCv, setStudioCv] = useState<CvData | null>(null);
+  const [studioLabel, setStudioLabel] = useState('');
   const [githubData, setGithubData] = useState<GithubProfileData>(defaultGithubData);
   const [linkedinData, setLinkedinData] = useState<LinkedinProfileData>(defaultLinkedinData);
 
@@ -48,7 +54,6 @@ export default function Home() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isAskExpertOpen, setIsAskExpertOpen] = useState(false);
-  const [isGithubRolePickerOpen, setIsGithubRolePickerOpen] = useState(false);
 
   // User Auth State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -79,16 +84,17 @@ export default function Home() {
 
   // Loads a role's ready-made README (from the picker popup or a role chip)
   // onto the GitHub data, then jumps into the editor.
-  const loadGithubRole = (preset: GithubRolePreset) => {
-    setGithubData((prev) => applyRolePresetToGithub(prev, preset));
-    setGithubMode('editor');
-    setIsGithubRolePickerOpen(false);
+  // Loads a preset's content into the GitHub data and opens the chat Studio.
+  const openGithubStudio = (preset: GithubRolePreset, theme?: GithubProfileData['theme']) => {
+    setGithubData((prev) => ({ ...applyRolePresetToGithub(prev, preset), theme: theme || prev.theme }));
+    setGithubMode('studio');
   };
 
-  // Loads a field's ready-made resume (from the picker), then opens the editor.
+  // Loads a field's ready-made resume (LMS CvData) into the chat Studio.
   const loadResumeField = (sample: LmsResumeSample) => {
-    setResumeData(lmsSampleToResumeData(sample));
-    setResumeMode('editor');
+    setStudioCv(cvMarkdownToHtml(sample.data as CvData));
+    setStudioLabel(sample.label);
+    setResumeMode('studio');
   };
 
   const handleExportAll = () => {
@@ -137,7 +143,11 @@ export default function Home() {
             />
           </div>
         ) : (
-          <div className="flex-1 p-4 sm:p-6 flex flex-col gap-4 max-w-7xl w-full mx-auto">
+          <div
+            className={`flex-1 p-4 sm:p-6 flex flex-col gap-4 w-full mx-auto ${
+              activeTab === 'resume' && resumeMode === 'studio' ? 'max-w-[1700px]' : 'max-w-7xl'
+            }`}
+          >
             {/* Active Editor Component */}
 
             {/* Active Editor Component */}
@@ -152,6 +162,13 @@ export default function Home() {
                       setActiveTab('assistant');
                     }}
                     onOpenEditorDirectly={() => setResumeMode('editor')}
+                  />
+                ) : resumeMode === 'studio' && studioCv ? (
+                  <ResumeChatStudio
+                    cv={studioCv}
+                    onChange={(v) => setStudioCv(v)}
+                    fieldLabel={studioLabel}
+                    onBack={() => setResumeMode('landing')}
                   />
                 ) : (
                   <div className="space-y-4">
@@ -180,19 +197,19 @@ export default function Home() {
                 githubMode === 'landing' ? (
                   <GithubLandingView
                     userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
-                    onOpenRolePicker={() => setIsGithubRolePickerOpen(true)}
-                    onSelectPreset={(preset, theme) => {
-                      setGithubData((prev) => ({
-                        ...applyRolePresetToGithub(prev, preset),
-                        theme: theme || prev.theme
-                      }));
-                      setGithubMode('editor');
-                    }}
+                    onOpenRolePicker={() => openGithubStudio(GITHUB_ROLE_PRESETS[0])}
+                    onSelectPreset={(preset, theme) => openGithubStudio(preset, theme)}
                     onUsePrompt={(promptText) => {
                       setAssistantPrompt(promptText);
                       setActiveTab('assistant');
                     }}
                     onOpenEditorDirectly={() => setGithubMode('editor')}
+                  />
+                ) : githubMode === 'studio' ? (
+                  <GithubChatStudio
+                    github={githubData}
+                    onChange={setGithubData}
+                    onBack={() => setGithubMode('landing')}
                   />
                 ) : (
                   <div className="space-y-4">
@@ -221,12 +238,18 @@ export default function Home() {
                 linkedinMode === 'landing' ? (
                   <LinkedinLandingView
                     userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
-                    onSelectTemplate={() => setLinkedinMode('editor')}
+                    onSelectTemplate={() => setLinkedinMode('studio')}
                     onUsePrompt={(promptText) => {
                       setAssistantPrompt(promptText);
                       setActiveTab('assistant');
                     }}
                     onOpenEditorDirectly={() => setLinkedinMode('editor')}
+                  />
+                ) : linkedinMode === 'studio' ? (
+                  <LinkedinChatStudio
+                    linkedin={linkedinData}
+                    onChange={setLinkedinData}
+                    onBack={() => setLinkedinMode('landing')}
                   />
                 ) : (
                   <div className="space-y-4">
@@ -350,12 +373,6 @@ export default function Home() {
       <AskExpertModal
         isOpen={isAskExpertOpen}
         onClose={() => setIsAskExpertOpen(false)}
-      />
-
-      <GithubRolePickerModal
-        isOpen={isGithubRolePickerOpen}
-        onClose={() => setIsGithubRolePickerOpen(false)}
-        onSelect={loadGithubRole}
       />
 
     </div>
