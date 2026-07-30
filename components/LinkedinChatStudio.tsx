@@ -20,6 +20,7 @@ import {
   Camera,
   X,
   Check,
+  ChevronDown,
 } from 'lucide-react';
 import {
   LinkedinRichProfile,
@@ -76,14 +77,6 @@ function Edit({
 
 const cqw = (px: number, canvasWidthPx: number) => `${((px / canvasWidthPx) * 100).toFixed(3)}cqw`;
 
-// Cover text boxes are a fixed size and don't auto-shrink for fields without
-// `maxLines` — text past the LMS's own maxLength (or too many/too-long
-// pills) overflows into whatever sits below it on the banner. Enforced here
-// on manual edits too, mirroring the same caps the chat's server route
-// enforces on AI-driven edits: up to OVERAGE_ALLOWANCE_CHARS over is left
-// alone (the render above shrinks that field's font to compensate — see
-// computeFitScale), only overage beyond that gets backed off to the last
-// whole word within reach, never a chopped mid-word.
 const MAX_PILL_CHARS = 32;
 const truncateText = (value: string, max: number | undefined) => {
   if (!max) return value;
@@ -165,13 +158,6 @@ export const LinkedinChatStudio: React.FC<{
     }
   };
 
-  // Cover fields with a `defaultFrom` (name/title/company) are meant to stay
-  // in sync with the profile's own fullName/title/currentCompany — mirroring
-  // how the LMS's own templates work. coverFieldValues is otherwise just a
-  // plain snapshot, so without this, editing your name/title (from the chat
-  // OR by clicking the text) would silently leave the cover banner showing
-  // stale copy. Re-synced through every profile update, not just `set`, so
-  // a chat-driven bulk rewrite of the whole profile picks it up too.
   const updateProfile = (next: LinkedinRichProfile) => {
     const identityChanged =
       next.fullName !== profile.fullName || next.title !== profile.title || next.currentCompany !== profile.currentCompany;
@@ -254,36 +240,69 @@ export const LinkedinChatStudio: React.FC<{
   ];
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-150px)]">
-      {/* LEFT — chat */}
-      <div className="lg:w-[34%] xl:w-[30%] flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden min-h-0">
-        <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-slate-100">
-          <button onClick={onBack} className="w-7 h-7 rounded-lg text-slate-500 hover:bg-slate-100 flex items-center justify-center" title="Back">
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <Sparkles className="w-4 h-4 text-[#0A66C2]" />
-          <span className="font-bold text-sm text-slate-800">AI LinkedIn Assistant</span>
+    <div className="flex flex-col lg:flex-row h-full w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none">
+      {/* COLUMN 2 (AI CHAT - LEFT) */}
+      <div className="w-full lg:w-[500px] xl:w-[560px] 2xl:w-[600px] flex flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden">
+        
+        {/* Top Header of Chat Column */}
+        <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={onBack}
+              className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+              title="Back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <span className="font-bold text-sm text-slate-800 truncate">
+              Optimizing LinkedIn Profile...
+            </span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-200 text-xs font-bold">
+              Interface
+            </span>
+            <button
+              onClick={() => setMessages([{ role: 'assistant', content: 'Started a new chat session. How can I optimize your LinkedIn profile?' }])}
+              className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+            >
+              New chat
+            </button>
+          </div>
         </div>
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+
+        {/* Chat Scroll Container */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4 bg-white text-sm">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${m.role === 'user' ? 'bg-[#0A66C2] text-white' : 'bg-slate-100 text-slate-700'}`}>
+              <div
+                className={`rounded-2xl text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${
+                  m.role === 'user'
+                    ? 'bg-slate-100 text-slate-900 border border-slate-200/80 px-4 py-3 max-w-[85%] font-medium'
+                    : 'bg-white text-slate-800 p-4.5 max-w-[98%] border border-slate-200/60 shadow-2xs space-y-2'
+                }`}
+              >
                 {m.content}
               </div>
             </div>
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-slate-100 text-slate-500 rounded-2xl px-3 py-2 text-xs flex items-center gap-1.5">
-                <Loader2 className="w-3 h-3 animate-spin" /> Thinking…
+              <div className="bg-slate-50 border border-slate-200 text-slate-600 rounded-2xl px-4 py-2.5 text-sm font-medium flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                <span>Generating AI profile updates…</span>
               </div>
             </div>
           )}
         </div>
-        <div className="shrink-0 p-3 border-t border-slate-100">
-          <div className="flex items-end gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus-within:border-[#0A66C2] transition-colors">
+
+        {/* Bottom Input Area */}
+        <div className="shrink-0 p-3.5 bg-white border-t border-slate-200">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2 focus-within:border-slate-400 focus-within:bg-white transition-all">
             <textarea
-              rows={1}
+              rows={2}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -292,22 +311,64 @@ export const LinkedinChatStudio: React.FC<{
                   send();
                 }
               }}
-              placeholder="Ask the AI to optimize your profile…"
-              className="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none resize-none max-h-24"
+              placeholder="Ask anything..."
+              className="w-full bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal"
             />
-            <button onClick={send} disabled={loading || !input.trim()} className="w-8 h-8 rounded-full bg-[#0A66C2] hover:bg-[#0958A8] text-white flex items-center justify-center transition-colors disabled:opacity-40 shrink-0">
-              <Send className="w-4 h-4" />
-            </button>
+
+            {/* Bottom Bar inside Input Box */}
+            <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+              <div className="flex items-center gap-1.5">
+                <button type="button" className="w-6 h-6 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-700 flex items-center justify-center font-bold text-xs">
+                  +
+                </button>
+                <span className="px-2 py-0.5 rounded-full bg-slate-200/70 text-slate-700 text-[10px] font-semibold flex items-center gap-1 border border-slate-300/50">
+                  <Check className="w-2.5 h-2.5 text-slate-500" />
+                  <span>Auto</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-600 border border-slate-200">
+                  Flash
+                </span>
+                <button
+                  onClick={send}
+                  disabled={loading || !input.trim()}
+                  className="w-7 h-7 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-xs"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* RIGHT — the exact same layout/typography as the preview, editable in place */}
-      <div className="lg:flex-1 flex flex-col bg-slate-100 border border-slate-200 rounded-2xl overflow-hidden min-h-0">
-        <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white border-b border-slate-200">
-          <span className="text-xs font-bold text-slate-700">Live profile</span>
-          <span className="hidden md:block ml-auto text-[11px] text-slate-400">Click any text to edit · hover the cover/photo to swap them</span>
+      {/* COLUMN 3 (LINKEDIN PREVIEW - RIGHT) */}
+      <div className="flex-1 flex flex-col bg-slate-100/90 h-full overflow-hidden relative">
+        
+        {/* MacOS Window Top Header Bar */}
+        <div className="shrink-0 bg-white border-b border-slate-200/80 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2">
+            {/* MacOS Traffic Light Dots */}
+            <div className="flex items-center gap-1.5 pr-2">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <div className="w-3 h-3 rounded-full bg-amber-400" />
+              <div className="w-3 h-3 rounded-full bg-emerald-500" />
+            </div>
+
+            {/* Tab Title */}
+            <button className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-xs font-bold text-slate-800 border border-slate-200/80">
+              <span className="w-3.5 h-3.5 rounded bg-[#0A66C2] text-white flex items-center justify-center text-[9px] font-bold">in</span>
+              <span>LinkedIn Profile</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-700">Live Profile Editor</span>
+          </div>
         </div>
+
         <div className={`flex-1 overflow-y-auto p-4 sm:p-6 ${inter.className}`}>
           <div className="w-full max-w-3xl mx-auto space-y-4">
             {/* ── CARD 1: Profile Header ── */}

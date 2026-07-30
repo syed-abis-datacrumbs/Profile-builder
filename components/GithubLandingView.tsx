@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { 
   Plus, 
   Folder, 
@@ -24,6 +25,7 @@ interface GithubLandingViewProps {
   onOpenRolePicker: () => void;
   /** Selects a specific preset and theme directly to launch editor. */
   onSelectPreset?: (preset: GithubRolePreset, theme?: GithubProfileData['theme']) => void;
+  onSelectTemplate?: (template: GithubTemplateCard) => void;
   onUsePrompt: (promptText: string) => void;
   onOpenEditorDirectly: () => void;
 }
@@ -180,6 +182,7 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
   userName = "Abis",
   onOpenRolePicker,
   onSelectPreset,
+  onSelectTemplate,
   onUsePrompt,
   onOpenEditorDirectly
 }) => {
@@ -246,6 +249,7 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
   );
 
   const handleSelectTemplate = (template: GithubTemplateCard) => {
+    if (onSelectTemplate) return onSelectTemplate(template);
     const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === template.presetId);
     if (preset && onSelectPreset) {
       onSelectPreset(preset, template.theme);
@@ -264,7 +268,12 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-8 px-4 space-y-10 animate-in fade-in duration-300">
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="w-full max-w-5xl mx-auto py-8 px-4 space-y-10"
+    >
       
       {/* Title Greeting */}
       <div className="text-center pt-2">
@@ -341,12 +350,14 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.95 }}
                 type="submit"
                 className="w-8 h-8 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-all shadow-sm"
               >
                 <Send className="w-4 h-4" />
-              </button>
+              </motion.button>
             </div>
 
           </div>
@@ -361,8 +372,10 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           {starterPrompts.map((item, idx) => (
-            <div
+            <motion.div
               key={idx}
+              whileHover={{ y: -3, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => onUsePrompt(item.prompt)}
               className="p-3.5 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer flex items-center justify-between h-20 group"
             >
@@ -372,7 +385,7 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
               <div className="shrink-0">
                 <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" />
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -435,9 +448,14 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
 
         {/* Templates Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredTemplates.map((template) => (
-            <div
+          {filteredTemplates.map((template, idx) => (
+            <motion.div
               key={template.id}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: idx * 0.04 }}
+              whileHover={{ y: -4, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => handleSelectTemplate(template)}
               className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group flex flex-col justify-between"
             >
@@ -479,8 +497,8 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
 
                 {/* Features Footer Pill */}
                 <div className="w-full pt-1 text-[9px] text-slate-400 font-mono border-t border-white/5 flex items-center justify-center gap-3">
-                  {template.features.map((feat, idx) => (
-                    <span key={idx}>{feat}</span>
+                  {template.features.map((feat, idx2) => (
+                    <span key={idx2}>{feat}</span>
                   ))}
                 </div>
               </div>
@@ -501,12 +519,11 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
                 </span>
               </div>
 
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
 
-    </div>
+    </motion.div>
   );
 };
-

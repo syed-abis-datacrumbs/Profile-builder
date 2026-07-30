@@ -16,6 +16,7 @@ import {
   Sparkles,
   Zap,
   CheckCircle2,
+  XCircle,
   DollarSign,
   FileText,
   Users,
@@ -24,10 +25,21 @@ import {
   Target,
   ArrowRight,
   ChevronRight,
+  ChevronLeft,
   Copy,
   ExternalLink,
   UserCheck,
-  Award
+  Award,
+  Lightbulb,
+  Brain,
+  Filter,
+  Trash2,
+  Phone,
+  Calendar,
+  Clock,
+  UserPlus,
+  Download,
+  Table as TableIcon
 } from 'lucide-react';
 import { LinkedinIcon } from './icons';
 
@@ -38,19 +50,138 @@ interface JobHuntingLandingViewProps {
   onNavigateToTab?: (tab: 'resume' | 'linkedin') => void;
 }
 
+interface SheetRow {
+  id: string;
+  company: string;
+  contact: string;
+  role: string;
+  dateAdded: string;
+  lastStageDate: string;
+  status: 'Connection Request Sent' | 'Approached / Cold DM' | 'Following Up' | 'Recruiter Call' | 'Technical Interview' | 'Offer Received' | 'Rejected';
+  notes: string;
+}
+
+const formatDateOrdinal = (dateInput?: string): string => {
+  if (!dateInput) {
+    const todayObj = new Date();
+    const d = todayObj.getDate();
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const m = months[todayObj.getMonth()];
+    const s = ["th", "st", "nd", "rd"];
+    const v = d % 100;
+    const ord = s[(v - 20) % 10] || s[v] || s[0];
+    return `${d}${ord} ${m}`;
+  }
+
+  if (/^\d{1,2}(st|nd|rd|th)\s+[A-Za-z]+$/i.test(dateInput.trim())) {
+    return dateInput.trim();
+  }
+
+  const dateObj = new Date(dateInput);
+  if (isNaN(dateObj.getTime())) return dateInput;
+
+  const day = dateObj.getDate();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = monthNames[dateObj.getMonth()];
+
+  const s = ["th", "st", "nd", "rd"];
+  const v = day % 100;
+  const ord = s[(v - 20) % 10] || s[v] || s[0];
+
+  return `${day}${ord} ${month}`;
+};
+
 export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
   userName = "Abis",
   onUsePrompt,
   onOpenEditorDirectly,
   onNavigateToTab
 }) => {
-  const [jobRoleInput, setJobRoleInput] = useState('Senior Full Stack Engineer');
-  const [activeRole, setActiveRole] = useState('Senior Full Stack Engineer');
+  const [jobRoleInput, setJobRoleInput] = useState('Full Stack Software Engineer');
+  const [activeRole, setActiveRole] = useState('Full Stack Software Engineer');
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
+  // Interactive Quiz & Carousel State
+  const [userAnswers, setUserAnswers] = useState<{ [key: number]: number }>({});
+  const [revealedAnswers, setRevealedAnswers] = useState<{ [key: number]: boolean }>({});
+  const [currentMcqIndex, setCurrentMcqIndex] = useState(0);
+  const [mcqCategoryFilter, setMcqCategoryFilter] = useState<'All' | 'ATS & Resumes' | 'Networking' | 'Negotiation'>('All');
+
+  // Typed Written Exams State (Step 4)
+  const [typedTechCarouselIdx, setTypedTechCarouselIdx] = useState(0);
+  const [typedTechAnswers, setTypedTechAnswers] = useState<{ [key: number]: string }>({});
+  const [revealedTypedTech, setRevealedTypedTech] = useState<{ [key: number]: boolean }>({});
+
+  // SPREADSHEET SHEET TRACKER STATE (STEP 5)
+  const [sheetRows, setSheetRows] = useState<SheetRow[]>([
+    {
+      id: '1',
+      company: 'Stripe',
+      contact: 'Sarah Jenkins (Tech Recruiter)',
+      role: 'Senior Full Stack Engineer',
+      dateAdded: '15th July',
+      lastStageDate: '28th July',
+      status: 'Recruiter Call',
+      notes: 'Passed 20-min initial screen. System Architecture round scheduled for Friday 3 PM.'
+    },
+    {
+      id: '2',
+      company: 'Datadog',
+      contact: 'Michael Chen (Senior Recruiter)',
+      role: 'Backend Systems Engineer',
+      dateAdded: '30th July',
+      lastStageDate: '30th July',
+      status: 'Connection Request Sent',
+      notes: 'Sent LinkedIn connection note mentioning shared interest in eBPF kernel tooling.'
+    },
+    {
+      id: '3',
+      company: 'Vercel',
+      contact: 'Alex Rivera (Engineering Lead)',
+      role: 'Full Stack Engineer (Next.js)',
+      dateAdded: '20th July',
+      lastStageDate: '29th July',
+      status: 'Approached / Cold DM',
+      notes: 'Sent tailored 3-sentence LinkedIn DM with link to Next.js 15 showcase project.'
+    },
+    {
+      id: '4',
+      company: 'Figma',
+      contact: 'Jessica Alba (Talent Manager)',
+      role: 'Product Engineer',
+      dateAdded: '18th July',
+      lastStageDate: '27th July',
+      status: 'Following Up',
+      notes: 'Sent 7-day polite follow-up DM on LinkedIn after initial screening chat.'
+    },
+    {
+      id: '5',
+      company: 'Linear',
+      contact: 'Marcus Vance (Talent Acquisition)',
+      role: 'Product Engineer',
+      dateAdded: '10th July',
+      lastStageDate: '25th July',
+      status: 'Technical Interview',
+      notes: 'Completed live coding round. Recruiter mentioned positive feedback, awaiting team sync.'
+    },
+    {
+      id: '6',
+      company: 'OpenAI',
+      contact: 'Elena Rostova (Tech Sourcing Lead)',
+      role: 'AI Infrastructure Engineer',
+      dateAdded: '5th July',
+      lastStageDate: '22nd July',
+      status: 'Offer Received',
+      notes: 'Initial offer band shared ($185k base + equity). Reviewing compensation by Wednesday.'
+    }
+  ]);
+
+  const [sheetSearchQuery, setSheetSearchQuery] = useState('');
+  const [sheetStatusFilter, setSheetStatusFilter] = useState<'All' | SheetRow['status']>('All');
+
   const presetRoles = [
-    "Senior Full Stack Engineer",
+    "Full Stack Software Engineer",
     "Product Manager",
     "AI / ML Engineer",
     "DevOps & Cloud Architect",
@@ -65,6 +196,10 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
     setActiveRole(roleToUse);
     setTimeout(() => {
       setIsGenerating(false);
+      setUserAnswers({});
+      setRevealedAnswers({});
+      setCurrentMcqIndex(0);
+      setTypedTechCarouselIdx(0);
     }, 400);
   };
 
@@ -74,90 +209,197 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  // Structured Execution Plan data tailored to activeRole
+  const handleOptionSelect = (qId: number, optionIdx: number) => {
+    setUserAnswers(prev => ({ ...prev, [qId]: optionIdx }));
+    setRevealedAnswers(prev => ({ ...prev, [qId]: true }));
+  };
+
+  const toggleReveal = (qId: number) => {
+    setRevealedAnswers(prev => ({ ...prev, [qId]: !prev[qId] }));
+  };
+
+  // SPREADSHEET SHEET ACTIONS
+  const handleAddSheetRow = () => {
+    const todayFormatted = formatDateOrdinal();
+    const newRow: SheetRow = {
+      id: Date.now().toString(),
+      company: 'New Company',
+      contact: 'Recruiter Contact',
+      role: activeRole,
+      dateAdded: todayFormatted,
+      lastStageDate: todayFormatted,
+      status: 'Connection Request Sent',
+      notes: 'Sent connection request on LinkedIn.'
+    };
+    setSheetRows([newRow, ...sheetRows]);
+  };
+
+  const handleUpdateSheetCell = (id: string, field: keyof SheetRow, value: string) => {
+    const todayFormatted = formatDateOrdinal();
+    setSheetRows(sheetRows.map(row => {
+      if (row.id !== id) return row;
+      if (field === 'status') {
+        return { ...row, status: value as SheetRow['status'], lastStageDate: todayFormatted };
+      }
+      return { ...row, [field]: value };
+    }));
+  };
+
+  const handleDeleteSheetRow = (id: string) => {
+    setSheetRows(sheetRows.filter(row => row.id !== id));
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['Company', 'Contact', 'Role', 'Date Added', 'Last Stage Date', 'Status Stage', 'Notes'];
+    const csvRows = sheetRows.map(r => [
+      `"${r.company.replace(/"/g, '""')}"`,
+      `"${r.contact.replace(/"/g, '""')}"`,
+      `"${r.role.replace(/"/g, '""')}"`,
+      `"${r.dateAdded}"`,
+      `"${r.lastStageDate}"`,
+      `"${r.status}"`,
+      `"${r.notes.replace(/"/g, '""')}"`
+    ].join(','));
+    
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...csvRows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `job_hunting_outreach_tracker_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Job Hunting Specific MCQ Question Bank
+  const jobHuntingMcqs = [
+    {
+      id: 1,
+      category: "ATS & Resumes",
+      question: `When tailoring your resume for a ${activeRole} opening, what is the single most effective way to pass ATS keyword parsers?`,
+      options: [
+        "Include hidden white text at the bottom of the page with 100 random buzzwords",
+        "Mirror exact technical stack phrases and impact action verbs directly from the job description in your top experience bullets",
+        "Save your resume as an unparseable JPG image file",
+        "Write a 4-page detailed narrative biography without bullet points"
+      ],
+      correctIndex: 1,
+      explanation: "ATS scanners parse plain text and calculate semantic keyword density. Matching exact stack terminology in your accomplishment bullets ensures high relevance scores."
+    },
+    {
+      id: 2,
+      category: "Networking",
+      question: "Which outreach strategy yields the highest response rate when sending cold LinkedIn DMs to recruiters?",
+      options: [
+        "Sending a generic 'Hi, please refer me for any open job' message",
+        "Sending a concise 3-sentence message highlighting 2 specific accomplishments, a matching skill stack, and an offer to share a tailored 1-page PDF resume",
+        "Attaching a 50-page portfolio presentation without any text message",
+        "Repeatedly messaging the VP of HR 5 times a day until they reply"
+      ],
+      correctIndex: 1,
+      explanation: "Recruiters evaluate candidates in seconds. A concise 3-sentence value proposition showing clear alignment yields a 4x higher response rate than generic pleas."
+    },
+    {
+      id: 3,
+      category: "Negotiation",
+      question: "When a recruiter asks 'What is your current salary and expected range?' during the first screening call, what is the strongest response?",
+      options: [
+        "Give your minimum acceptable number immediately so you don't waste time",
+        "Refuse to answer angrily and demand they disclose the exact budget first",
+        "State that you are focused on finding the right role fit and ask for the benchmarked budget range for the position",
+        "Quote double your current salary without market research"
+      ],
+      correctIndex: 2,
+      explanation: "Anchoring your response to the company's established compensation band protects your leverage and prevents anchoring below market value early in the interview process."
+    },
+    {
+      id: 4,
+      category: "ATS & Resumes",
+      question: "What is the optimal length and metric density for an experienced candidate's resume?",
+      options: [
+        "3 to 4 pages with narrative paragraph descriptions",
+        "Strictly 1 to 2 pages, where 80%+ of bullet points include quantified metrics (e.g. %, $, time saved)",
+        "Half a page with only company logos and job titles",
+        "A list of hobbies and personal interests"
+      ],
+      correctIndex: 1,
+      explanation: "Executive recruiters spend 6-8 seconds on initial scans. Concise 1-2 page resumes with metric-heavy bullet points stand out immediately."
+    }
+  ];
+
+  // 10 SEPARATE TYPED JOB HUNTING & OUTREACH EXAM QUESTIONS
+  const typedJobTechQuestions = [
+    { id: 1, title: "Cold Outreach to Hiring Managers", prompt: "Draft a 3-sentence cold LinkedIn DM to an Engineering Director for an open position.", sampleAnswer: "Hi [Name], loved your recent engineering blog post on scaling microservices. I'm a Senior Engineer with 5+ YOE building high-throughput Node.js APIs (reduced latency by 40% at previous role). Would love to connect and share a tailored resume if you're building out the team!" },
+    { id: 2, title: "Salary Expectation Screening Defense", prompt: "How do you respond when an HR recruiter asks for your salary expectations on call #1?", sampleAnswer: "I'm primarily focused on finding the right long-term technical fit. Could you share the approved compensation band for this role so I can confirm alignment?" },
+    { id: 3, title: "Handling 7-Day Recruiter Ghosting", prompt: "Write a polite follow-up email after receiving no update 7 days after a successful technical interview.", sampleAnswer: "Hi [Recruiter Name], I really enjoyed my conversation with the team last week regarding the [Role] position. I remain very enthusiastic about the opportunity. Could you provide a quick update on the next steps in the hiring process?" },
+    { id: 4, title: "Explaining an Employment Gap", prompt: "How do you frame a 6-month employment gap constructively in an interview?", sampleAnswer: "During that period, I took dedicated time to upskill in cloud infrastructure and modern frontend systems while freelancing for two tech startups, delivering high-impact features." },
+    { id: 5, title: "Managing Multiple Competing Offers", prompt: "How do you leverage a pending offer from Company A to accelerate decision timelines with Company B?", sampleAnswer: "Hi [Company B Recruiter], I'm currently in the final decision window for an offer expiring Friday. However, Company B remains my top choice. Is it possible to expedite the feedback from my final round?" },
+    { id: 6, title: "Answering 'Why Our Company?'", prompt: "Structure a response explaining why you want to join a specific mid-stage tech startup.", sampleAnswer: "I've been following your product growth in [Industry], specifically your recent API release. My background in high-concurrency Node/React applications directly solves the scalability challenges your team is tackling." },
+    { id: 7, title: "Handling Rejection Gracefully for Future Roles", prompt: "Write a LinkedIn message after receiving a rejection email for a final interview round.", sampleAnswer: "Thank you for the update, [Recruiter Name]. I truly enjoyed meeting the engineering team. Please keep my profile in mind for future senior roles, as I'd love to stay connected!" },
+    { id: 8, title: "Requesting a Peer Referral on LinkedIn", prompt: "Draft a message asking a 2nd-degree connection for an internal job referral.", sampleAnswer: "Hi [Name], I noticed you're currently working on the core platform team at [Company]. I'm applying for the open [Role] position and would love to get your perspective on team culture over a quick 5-min chat!" },
+    { id: 9, title: "Overcoming Under-qualification Objections", prompt: "How do you answer when an interviewer notes you lack 1 specific framework requested in the JD?", sampleAnswer: "While my core expertise is in React/TypeScript, I have deep mastery of fundamental web architecture principles. In my last role, I onboarded onto Go within 2 weeks and shipped production features in Sprint 1." },
+    { id: 10, title: "Post-Interview Thank You Email Strategy", prompt: "Write a high-converting post-interview thank you note to the Hiring Manager within 24 hours.", sampleAnswer: "Hi [Hiring Manager], thank you for the insightful conversation today about your distributed caching architecture. Our discussion confirmed my excitement for the role. Attached is a quick 1-pager outlining how I'd approach the Q3 scaling bottleneck we discussed." }
+  ];
+
+  const filteredMcqs = jobHuntingMcqs.filter(q => 
+    mcqCategoryFilter === 'All' || q.category === mcqCategoryFilter
+  );
+  const activeMcq = filteredMcqs[currentMcqIndex] || filteredMcqs[0];
+  const activeTypedTech = typedJobTechQuestions[typedTechCarouselIdx] || typedJobTechQuestions[0];
+
+  const totalAnswered = Object.keys(userAnswers).length;
+  const correctCount = Object.entries(userAnswers).filter(([qId, val]) => {
+    const q = jobHuntingMcqs.find(item => item.id === Number(qId));
+    return q && q.correctIndex === val;
+  }).length;
+
+  const filteredSheetRows = sheetRows.filter(row => {
+    const matchesFilter = sheetStatusFilter === 'All' || row.status === sheetStatusFilter;
+    const matchesSearch = sheetSearchQuery === '' || 
+      row.company.toLowerCase().includes(sheetSearchQuery.toLowerCase()) ||
+      row.contact.toLowerCase().includes(sheetSearchQuery.toLowerCase()) ||
+      row.role.toLowerCase().includes(sheetSearchQuery.toLowerCase()) ||
+      row.notes.toLowerCase().includes(sheetSearchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
+  const getStatusBadge = (status: SheetRow['status']) => {
+    switch (status) {
+      case 'Connection Request Sent':
+        return 'bg-indigo-100 text-indigo-900 border-indigo-200';
+      case 'Approached / Cold DM':
+        return 'bg-blue-100 text-blue-900 border-blue-200';
+      case 'Following Up':
+        return 'bg-cyan-100 text-cyan-900 border-cyan-200 font-bold';
+      case 'Recruiter Call':
+        return 'bg-amber-100 text-amber-900 border-amber-200';
+      case 'Technical Interview':
+        return 'bg-purple-100 text-purple-900 border-purple-200';
+      case 'Offer Received':
+        return 'bg-emerald-100 text-emerald-900 border-emerald-300 font-bold';
+      case 'Rejected':
+        return 'bg-rose-100 text-rose-900 border-rose-200';
+    }
+  };
+
   const executionPlan = {
     roleTitle: activeRole,
-    // Step 1: Create Resume
     resume: {
       atsScoreTarget: "94%+ ATS Keyword Match",
       recommendedTitle: `${activeRole} | Technical Specialist`,
-      topKeywords: ["TypeScript", "Next.js 15 App Router", "Node.js", "Redis Caching", "GraphQL", "AWS/Cloud", "CI/CD Pipelines", "System Design"],
+      topKeywords: ["TypeScript", "Next.js 15", "Node.js", "Redis Caching", "GraphQL", "AWS/Cloud", "CI/CD Pipelines", "System Design"],
       bulletFormula: "Achieved [Metric X%] by re-architecting [System Y] using [Technology Z], resulting in $120k annual savings.",
       actionTip: "Customize your top 3 work experiences to echo exact tech stack terms found in the target job posting."
     },
-    // Step 2: Create LinkedIn
     linkedin: {
-      headlineFormula: `${activeRole} @ Scale | Building High-Performance Distributed Systems & Web Products | 5+ YOE`,
-      aboutSummary: `Results-driven ${activeRole} with a proven track record of scaling high-traffic web applications and leading technical features from zero to one. Passionate about developer tooling, performance engineering, and user-centric architecture.`,
-      profileTips: [
-        "Turn on #OpenToWork (visible to Recruiters only) for maximum privacy and 3.5x recruiter DMs.",
-        "Add key technical skills tags under your Experience entries so ATS parsers index your profile.",
-        "Request 2-3 recommendations from previous engineering leads or product managers."
-      ]
+      headlineFormula: `${activeRole} | Building High-Performance Distributed Systems & Web Products | 5+ YOE`,
+      aboutSummary: `Results-driven ${activeRole} with a proven track record of scaling high-traffic web applications and leading technical features from zero to one.`
     },
-    // Step 3: Add Relevant Personnel in Network
-    networking: {
-      targetRoles: ["Technical Recruiter / Talent Acquisition", "Engineering Manager / VP of Tech", "Staff Engineer / Tech Lead", "Founder / Co-founder"],
-      connectionNote: `Hi [Name], I noticed your team at [Company] is scaling [Domain/Engineering]. I recently architected a high-throughput [Project/System] and love what you're building. Would love to connect!`
-    },
-    // Step 4: Secure Internal Referrals on LinkedIn (NEW)
-    referrals: {
-      whyReferrals: "Referred candidates have a 400% higher interview callback rate and bypass automated ATS screening.",
-      searchFilterStrategy: "On LinkedIn Search, type [Target Company] -> People filter -> School/University Alumni OR Past Companies.",
-      threeStepStrategy: [
-        {
-          step: "Phase 1: Warm Connect",
-          desc: "Send a polite non-demanding connection request highlighting shared background (e.g. alumni, common past employer, shared group)."
-        },
-        {
-          step: "Phase 2: 10-Min Coffee Chat",
-          desc: "Ask for a brief 10-minute informational call to ask genuine questions about their team culture & tech stack."
-        },
-        {
-          step: "Phase 3: Referral Request",
-          desc: "Provide your target Job Req ID, resume link, and a 2-bullet summary they can easily copy into their internal referral portal."
-        }
-      ],
-      templateMessage: `Hi [Name], thanks so much for your insights earlier! I'm submitting my application for the ${activeRole} position (Job Req #[12345]) at [Company]. Since employees can submit internal referrals, would you be open to submitting my resume? I've attached my resume and a short 2-bullet summary of my fit below to make it effortless for you. Really appreciate your support!`
-    },
-    // Step 5: Platforms to Find Jobs Including Tips
-    platforms: [
-      {
-        name: "LinkedIn Jobs & Recruiter DMs",
-        tips: "Filter by 'Date Posted: Past 24 Hours' & 'Under 10 Applicants'. Message the job poster directly after applying."
-      },
-      {
-        name: "Wellfound (formerly AngelList)",
-        tips: "Best for early-stage to Series B tech startups. Apply with customized founder pitches & salary expectations."
-      },
-      {
-        name: "Y Combinator 'Work at a Startup'",
-        tips: "Direct access to YC-backed founders. Include portfolio links and short demo videos for 40% higher response."
-      },
-      {
-        name: "Otta & Hacker News ('Who is Hiring?')",
-        tips: "Otta matches high-growth tech roles. On HN, reply directly to top-level company comments posted on the 1st of every month."
-      }
-    ],
-    // Step 6: Best Messages to Send to HR / Managers
-    messages: [
-      {
-        recipient: "Technical Recruiter / HR Lead",
-        subject: `Application for ${activeRole} - [Your Name]`,
-        body: `Hi [Recruiter Name],\n\nI just submitted my application for the ${activeRole} position at [Company]. Over the past 4+ years, I've specialized in building high-scale React/Node infrastructure, achieving 99.9% uptime and accelerating feature shipping speeds by 40%.\n\nI'd love to connect and share my portfolio. Are you free for a brief 10-minute intro call this week?\n\nBest,\n[Your Name]`
-      },
-      {
-        recipient: "Hiring Manager / Tech Lead",
-        subject: `Quick thought on [Company]'s Engineering & ${activeRole}`,
-        body: `Hi [Manager Name],\n\nI’m a big fan of how [Company] handles [Product Feature]. As a ${activeRole}, I recently solved a similar architecture challenge involving real-time state synchronization and reduced latency by 30%.\n\nI applied for the ${activeRole} role and attached my resume here. Would love to share ideas on your tech roadmap if you have 10 minutes!\n\nBest,\n[Your Name]`
-      }
-    ],
-    // Step 7: Weekly Target
     weeklyTargets: [
-      { metric: "15 Roles", label: "Customized Applications", detail: "Tailored ATS resumes submitted weekly" },
-      { metric: "25 Invites", label: "Recruiter Connections", detail: "Personalized DMs to recruiters" },
-      { metric: "5 Referrals", label: "LinkedIn Referral Asks", detail: "Alumni & peer internal referral requests" },
-      { metric: "8 Direct DMs", label: "Hiring Manager Outreach", detail: "Pitching engineering managers" }
+      { metric: `${sheetRows.length} Sheet Rows`, label: "Target Outreaches", detail: "Tracked in Data Sheet" },
+      { metric: `${sheetRows.filter(e => e.status === 'Recruiter Call').length} Calls`, label: "Recruiter Screenings", detail: "Scheduled / Completed" },
+      { metric: `${sheetRows.filter(e => e.status === 'Technical Interview').length} Active`, label: "Technical Rounds", detail: "System Design & Code" },
+      { metric: `${sheetRows.filter(e => e.status === 'Offer Received').length} Offers`, label: "Pending Offers", detail: "Compensation Review" }
     ]
   };
 
@@ -166,17 +408,16 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
       
       {/* Title Greeting */}
       <div className="text-center pt-2 space-y-2">
-        <h1 className="text-4xl sm:text-5xl font-serif tracking-tight text-slate-900">
-          Job Hunting Execution Plan, {userName.split(' ')[0]}.
+        <h1 className="text-4xl sm:text-5xl font-serif tracking-tight text-slate-900 flex items-center justify-center gap-3">
+          <span>Job Hunting Blueprint, {userName.split(' ')[0]}.</span>
         </h1>
-        <p className="text-sm text-slate-500 font-medium max-w-xl mx-auto">
-          Enter your target job role below to generate a step-by-step strategy for resumes, LinkedIn optimization, internal referrals, outreach messages, and weekly targets.
+        <p className="text-sm text-slate-500 font-medium max-w-2xl mx-auto">
+          Step-by-step masterclass blueprint, recruiter outreach practice carousels, and an interactive Job & Recruiter Contact Spreadsheet.
         </p>
       </div>
 
-      {/* Role Input Box */}
+      {/* Target Role Input */}
       <div className="w-full bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
-        
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -187,8 +428,8 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleGeneratePlan();
               }}
-              placeholder="Enter target job role (e.g. Senior Full Stack Engineer, Product Manager...)"
-              className="w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+              placeholder="Enter target role (e.g. Full Stack Software Engineer, Product Manager...)"
+              className="w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-semibold text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all"
             />
           </div>
 
@@ -199,7 +440,10 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
             className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50"
           >
             {isGenerating ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Generating...</span>
+              </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4 text-white" />
@@ -209,329 +453,642 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
           </button>
         </div>
 
-        {/* Preset Roles Quick Chips */}
+        {/* Presets */}
         <div className="space-y-1.5 pt-1">
           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
             Popular Target Roles:
           </div>
           <div className="flex flex-wrap gap-2">
-            {presetRoles.map((role, idx) => (
+            {presetRoles.map((preset, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => {
-                  setJobRoleInput(role);
-                  handleGeneratePlan(role);
+                  setJobRoleInput(preset);
+                  handleGeneratePlan(preset);
                 }}
                 className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
-                  activeRole === role
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                    : 'bg-slate-100 text-slate-700 border-slate-200/60 hover:bg-slate-200'
+                  activeRole === preset
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                {role}
+                {preset}
               </button>
             ))}
           </div>
         </div>
-
       </div>
 
-      {/* STEP-BY-STEP JOB HUNTING ROADMAP */}
-      <div className="space-y-8">
-        
-        {/* Active Strategy Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-          <div>
-            <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2.5">
-              <Briefcase className="w-6 h-6 text-emerald-600" />
-              <span>Step-by-Step Blueprint for <span className="text-emerald-700">{executionPlan.roleTitle}</span></span>
-            </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Follow these 7 structured steps to land interviews 4x faster.
-            </p>
-          </div>
-          <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
-            7 Steps Active
-          </span>
-        </div>
+      {/* Plan Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 rounded-3xl p-6 text-white shadow-lg space-y-2 border border-emerald-900/40">
+        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-extrabold uppercase tracking-wider">
+          Job Hunting Masterclass
+        </span>
+        <h2 className="text-2xl font-extrabold tracking-tight">
+          Target Role: {activeRole}
+        </h2>
+      </div>
 
-        {/* STEP 1: Create Resume */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4 relative overflow-hidden">
-          <div className="flex items-start justify-between">
+      {/* EXECUTION PLAN STEPS */}
+      <div className="space-y-8">
+
+        {/* STEP 1: ATS Resume */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-blue-100 text-blue-700 font-black text-sm flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-2xl bg-emerald-100 text-emerald-800 font-black text-sm flex items-center justify-center">
                 01
               </div>
               <div>
-                <h4 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                  <span>Create Resume Strategy</span>
-                </h4>
-                <p className="text-xs text-slate-500">Target ATS score: <strong className="text-slate-800">{executionPlan.resume.atsScoreTarget}</strong></p>
+                <h3 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-emerald-600" />
+                  <span>Resume Optimization for ATS Systems</span>
+                </h3>
+                <p className="text-xs text-slate-500">{executionPlan.resume.atsScoreTarget}</p>
               </div>
             </div>
-
-            <button
-              onClick={() => {
-                if (onNavigateToTab) onNavigateToTab('resume');
-              }}
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
-            >
-              <span>Build Resume for {executionPlan.roleTitle.split(' ')[0]}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            {onNavigateToTab && (
+              <button
+                type="button"
+                onClick={() => onNavigateToTab('resume')}
+                className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center gap-1.5"
+              >
+                <span>Edit Resume →</span>
+              </button>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-              <strong className="text-slate-900 font-bold block">Top Required ATS Keywords:</strong>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-1">
+            <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-2">
+              <span className="font-extrabold text-emerald-900 uppercase tracking-wider block">Top Keywords:</span>
               <div className="flex flex-wrap gap-1.5">
                 {executionPlan.resume.topKeywords.map((kw, idx) => (
-                  <span key={idx} className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 font-bold text-[11px] border border-blue-200/60">
+                  <span key={idx} className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-900 font-bold shadow-2xs">
                     {kw}
                   </span>
                 ))}
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-              <strong className="text-slate-900 font-bold block">Quantified Impact Bullet Formula:</strong>
-              <p className="text-slate-700 leading-relaxed font-mono bg-white p-2.5 rounded-xl border border-slate-200 text-[11px]">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+              <span className="font-extrabold text-slate-900 uppercase tracking-wider block">Quantifiable Impact Formula:</span>
+              <p className="text-slate-700 leading-relaxed font-mono bg-white p-2.5 rounded-xl border border-slate-200">
                 {executionPlan.resume.bulletFormula}
               </p>
-              <p className="text-[11px] text-slate-500 italic">Tip: {executionPlan.resume.actionTip}</p>
             </div>
           </div>
         </div>
 
-        {/* STEP 2: Create LinkedIn */}
+        {/* STEP 2: LinkedIn Positioning */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-          <div className="flex items-start justify-between">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white font-black text-sm flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-2xl bg-blue-100 text-blue-800 font-black text-sm flex items-center justify-center">
                 02
               </div>
               <div>
-                <h4 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                  <LinkedinIcon className="w-4 h-4 text-blue-600" />
-                  <span>Create & Optimize LinkedIn Profile</span>
-                </h4>
-                <p className="text-xs text-slate-500">Recruiter search ranking & keyword indexing</p>
+                <h3 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+                  <LinkedinIcon className="w-5 h-5 text-blue-600" />
+                  <span>LinkedIn Profile Positioning</span>
+                </h3>
+                <p className="text-xs text-slate-500">Recruiter placement optimization</p>
               </div>
             </div>
-
-            <button
-              onClick={() => {
-                if (onNavigateToTab) onNavigateToTab('linkedin');
-              }}
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
-            >
-              <span>Optimize LinkedIn</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            {onNavigateToTab && (
+              <button
+                type="button"
+                onClick={() => onNavigateToTab('linkedin')}
+                className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold transition-all flex items-center gap-1.5"
+              >
+                <span>Edit LinkedIn →</span>
+              </button>
+            )}
           </div>
 
-          <div className="space-y-3 text-xs">
-            <div className="p-3.5 rounded-2xl bg-blue-50/50 border border-blue-100 space-y-1.5">
-              <span className="font-bold text-blue-900 block">Recommended Profile Headline Formula:</span>
-              <div className="font-mono text-slate-800 bg-white p-2.5 rounded-xl border border-blue-200 font-semibold text-[11px]">
-                {executionPlan.linkedin.headlineFormula}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {executionPlan.linkedin.profileTips.map((tip, idx) => (
-                <div key={idx} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-700 leading-relaxed font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mb-1.5" />
-                  {tip}
-                </div>
-              ))}
-            </div>
+          <div className="p-4 rounded-2xl bg-blue-50/40 border border-blue-200/80 space-y-2">
+            <span className="font-extrabold text-blue-950 uppercase tracking-wider block text-xs">High-Converting Headline:</span>
+            <p className="text-xs text-blue-950 font-bold bg-white p-3 rounded-xl border border-blue-200">
+              {executionPlan.linkedin.headlineFormula}
+            </p>
           </div>
         </div>
 
-        {/* STEP 3: Add Relevant Personnel in Network */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-emerald-100 text-emerald-800 font-black text-sm flex items-center justify-center shrink-0">
-              03
-            </div>
-            <div>
-              <h4 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                <Users className="w-4 h-4 text-emerald-600" />
-                <span>Add Relevant Personnel to Network</span>
-              </h4>
-              <p className="text-xs text-slate-500">Target key decision makers on LinkedIn & Twitter/X</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="space-y-2">
-              <span className="font-bold text-slate-900 block">Who to Connect With:</span>
-              <div className="grid grid-cols-2 gap-2">
-                {executionPlan.networking.targetRoles.map((role, idx) => (
-                  <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-semibold text-slate-800 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span>{role}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-emerald-950">Connection Note Template:</span>
-                <button
-                  onClick={() => copyToClipboard(executionPlan.networking.connectionNote, 99)}
-                  className="text-[11px] font-bold text-emerald-700 hover:underline flex items-center gap-1"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>{copiedIndex === 99 ? "Copied!" : "Copy Note"}</span>
-                </button>
-              </div>
-              <p className="text-slate-800 font-sans italic bg-white p-2.5 rounded-xl border border-emerald-200 leading-relaxed text-[11px]">
-                "{executionPlan.networking.connectionNote}"
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* STEP 4: How to Secure Internal Referrals / References via LinkedIn (NEW!) */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-          <div className="flex items-start justify-between">
+        {/* STEP 3: INTERACTIVE JOB HUNTING MCQ PRACTICE CAROUSEL */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs transition-all space-y-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-900 font-black text-sm flex items-center justify-center shrink-0">
-                04
-              </div>
+              <span className="w-9 h-9 rounded-2xl font-extrabold text-sm flex items-center justify-center bg-emerald-600 text-white">
+                03
+              </span>
               <div>
-                <h4 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                  <UserCheck className="w-4.5 h-4.5 text-amber-600" />
-                  <span>Secure Internal Referrals & References on LinkedIn</span>
-                </h4>
-                <p className="text-xs text-amber-700 font-semibold">{executionPlan.referrals.whyReferrals}</p>
-              </div>
-            </div>
-            <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold shrink-0">
-              4x Callback Rate
-            </span>
-          </div>
-
-          <div className="space-y-4 text-xs">
-            
-            {/* Search Filter Strategy Banner */}
-            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-1">
-              <span className="font-bold text-amber-950 block">Search & Filtering Technique:</span>
-              <p className="text-slate-800 font-medium leading-relaxed">
-                {executionPlan.referrals.searchFilterStrategy}
-              </p>
-            </div>
-
-            {/* 3-Step Strategy Columns */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {executionPlan.referrals.threeStepStrategy.map((st, idx) => (
-                <div key={idx} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
-                  <span className="font-extrabold text-slate-900 text-xs block">{st.step}</span>
-                  <p className="text-slate-600 leading-relaxed font-medium text-[11px]">{st.desc}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Referral Request Message Template */}
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900 text-xs">Proven Internal Referral Request Template:</span>
-                <button
-                  onClick={() => copyToClipboard(executionPlan.referrals.templateMessage, 88)}
-                  className="text-[11px] font-bold text-amber-700 hover:underline flex items-center gap-1"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>{copiedIndex === 88 ? "Copied!" : "Copy Template"}</span>
-                </button>
-              </div>
-              <pre className="text-slate-800 font-sans whitespace-pre-wrap leading-relaxed bg-white p-3 rounded-xl border border-slate-200 text-[11px]">
-                {executionPlan.referrals.templateMessage}
-              </pre>
-            </div>
-
-          </div>
-        </div>
-
-        {/* STEP 5: Top Platforms & Search Filtering Tips */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-purple-100 text-purple-800 font-black text-sm flex items-center justify-center shrink-0">
-              05
-            </div>
-            <div>
-              <h4 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                <Globe className="w-4 h-4 text-purple-600" />
-                <span>Top Platforms & Search Filtering Tips</span>
-              </h4>
-              <p className="text-xs text-slate-500">Where to find unadvertised high-paying positions</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            {executionPlan.platforms.map((plat, idx) => (
-              <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
-                <div className="font-bold text-slate-900 text-sm flex items-center justify-between">
-                  <span>{plat.name}</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                </div>
-                <p className="text-slate-600 leading-relaxed font-medium">
-                  <strong>Pro Tip:</strong> {plat.tips}
+                <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                  <span>Interactive Job Hunting & Recruiter Tactics MCQ Carousel</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Practice recruiter outreach, ATS formatting, and salary negotiation questions
                 </p>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* STEP 6: Best Messages to Send to HR/Managers */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-indigo-100 text-indigo-800 font-black text-sm flex items-center justify-center shrink-0">
-              06
             </div>
-            <div>
-              <h4 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-indigo-600" />
-                <span>High-Converting Outreach Templates</span>
-              </h4>
-              <p className="text-xs text-slate-500">Cold DMs & emails for HR recruiters and engineering directors</p>
+
+            <div className="px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-extrabold text-emerald-900 flex items-center gap-2">
+              <Award className="w-4 h-4 text-emerald-600" />
+              <span>Score: {correctCount} / {totalAnswered} Correct</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            {executionPlan.messages.map((msg, idx) => (
-              <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 font-extrabold text-[10px]">
-                    To: {msg.recipient}
-                  </span>
-                  <button
-                    onClick={() => copyToClipboard(msg.body, idx)}
-                    className="text-[11px] font-bold text-indigo-600 hover:underline flex items-center gap-1"
-                  >
-                    <Copy className="w-3 h-3" />
-                    <span>{copiedIndex === idx ? "Copied!" : "Copy Template"}</span>
-                  </button>
-                </div>
-                <div className="font-bold text-slate-900">Subject: {msg.subject}</div>
-                <pre className="text-slate-700 font-sans whitespace-pre-wrap leading-relaxed bg-white p-3 rounded-xl border border-slate-200 text-[11px]">
-                  {msg.body}
-                </pre>
+          {/* Carousel Controls */}
+          <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-xs font-bold text-slate-500">Filter:</span>
+              {(['All', 'ATS & Resumes', 'Networking', 'Negotiation'] as const).map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => {
+                    setMcqCategoryFilter(cat);
+                    setCurrentMcqIndex(0);
+                  }}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                    mcqCategoryFilter === cat
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {cat} ({jobHuntingMcqs.filter(q => cat === 'All' || q.category === cat).length})
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentMcqIndex(prev => Math.max(0, prev - 1))}
+                disabled={currentMcqIndex === 0}
+                className="p-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-700" />
+              </button>
+              <span className="text-xs font-extrabold text-slate-800 min-w-[75px] text-center">
+                Q {currentMcqIndex + 1} of {filteredMcqs.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentMcqIndex(prev => Math.min(filteredMcqs.length - 1, prev + 1))}
+                disabled={currentMcqIndex === filteredMcqs.length - 1}
+                className="p-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-700" />
+              </button>
+            </div>
+          </div>
+
+          {/* ACTIVE CAROUSEL MCQ CARD */}
+          {activeMcq && (
+            <div key={activeMcq.id} className="bg-slate-50/90 border border-slate-200/90 rounded-2xl p-5 shadow-2xs space-y-4 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between gap-3">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase bg-emerald-100 text-emerald-900 border border-emerald-200">
+                  {activeMcq.category}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => toggleReveal(activeMcq.id)}
+                  className="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1"
+                >
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{revealedAnswers[activeMcq.id] ? "Hide Rationale" : "Reveal Answer & Rationale"}</span>
+                </button>
               </div>
-            ))}
+
+              <h4 className="font-extrabold text-base text-slate-900 leading-snug">
+                {activeMcq.question}
+              </h4>
+
+              <div className="space-y-2.5 pt-1">
+                {activeMcq.options.map((opt, oIdx) => {
+                  const isSelected = userAnswers[activeMcq.id] === oIdx;
+                  const isCorrect = activeMcq.correctIndex === oIdx;
+                  const hasAnswered = userAnswers[activeMcq.id] !== undefined;
+
+                  let style = "border-slate-200 bg-white text-slate-800 hover:bg-emerald-50/60 hover:border-emerald-300 hover:scale-[1.005]";
+                  let badgeStyle = "bg-slate-100 border-slate-300 text-slate-700";
+
+                  if (hasAnswered) {
+                    if (isCorrect) {
+                      style = "border-emerald-500 bg-emerald-50/90 text-emerald-950 font-bold shadow-md ring-2 ring-emerald-400/40 animate-in fade-in scale-[1.01]";
+                      badgeStyle = "bg-emerald-600 border-emerald-600 text-white";
+                    } else if (isSelected) {
+                      style = "border-rose-500 bg-rose-50/90 text-rose-950 font-bold shadow-md ring-2 ring-rose-400/40 animate-in fade-in";
+                      badgeStyle = "bg-rose-600 border-rose-600 text-white";
+                    } else {
+                      style = "border-slate-200 bg-white/60 text-slate-400 opacity-60";
+                    }
+                  }
+
+                  return (
+                    <div
+                      key={oIdx}
+                      onClick={() => handleOptionSelect(activeMcq.id, oIdx)}
+                      className={`p-3.5 rounded-2xl border text-xs cursor-pointer transition-all duration-200 flex items-center justify-between ${style}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`w-6 h-6 rounded-full border flex items-center justify-center font-bold text-[11px] shrink-0 transition-colors ${badgeStyle}`}>
+                          {String.fromCharCode(65 + oIdx)}
+                        </span>
+                        <span className="leading-relaxed">{opt}</span>
+                      </div>
+
+                      {hasAnswered && isCorrect && (
+                        <span className="flex items-center gap-1 text-emerald-700 font-extrabold text-[11px] shrink-0">
+                          <span>Correct</span>
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 animate-bounce" />
+                        </span>
+                      )}
+
+                      {hasAnswered && isSelected && !isCorrect && (
+                        <span className="flex items-center gap-1 text-rose-700 font-extrabold text-[11px] shrink-0">
+                          <span>Incorrect</span>
+                          <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {revealedAnswers[activeMcq.id] && (
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 space-y-1 animate-in fade-in duration-300">
+                  <strong className="font-extrabold block text-emerald-950 flex items-center gap-1.5">
+                    <Brain className="w-4 h-4 text-emerald-600" />
+                    <span>AI Strategy Rationale:</span>
+                  </strong>
+                  <p className="leading-relaxed text-emerald-900">{activeMcq.explanation}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Pagination Pills */}
+          <div className="flex items-center justify-center gap-1.5 flex-wrap pt-2">
+            {filteredMcqs.map((q, qIdx) => {
+              const isAnswered = userAnswers[q.id] !== undefined;
+              const isCurrent = currentMcqIndex === qIdx;
+
+              return (
+                <button
+                  key={q.id}
+                  type="button"
+                  onClick={() => setCurrentMcqIndex(qIdx)}
+                  className={`w-7 h-7 rounded-xl text-xs font-bold transition-all flex items-center justify-center ${
+                    isCurrent
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : isAnswered
+                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {qIdx + 1}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* STEP 7: Weekly Target Dashboard */}
+        {/* STEP 4: OUTREACH & TECHNICAL TYPED EXAM CAROUSEL (10 QUESTIONS) */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs transition-all space-y-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-2xl font-extrabold text-sm flex items-center justify-center bg-emerald-600 text-white">
+                04
+              </span>
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                  <PenTool className="w-5 h-5 text-emerald-600" />
+                  <span>Outreach & Recruiter Strategy Typed Exam (Carousel)</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Type out cold DMs, follow-up messages, and salary negotiation tactics
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-1 border-b border-slate-100 pb-3">
+            <span className="text-xs font-extrabold text-emerald-950 uppercase tracking-wider">
+              Question {typedTechCarouselIdx + 1} of {typedJobTechQuestions.length}: {activeTypedTech.title}
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTypedTechCarouselIdx(prev => Math.max(0, prev - 1))}
+                disabled={typedTechCarouselIdx === 0}
+                className="p-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-700" />
+              </button>
+              <span className="text-xs font-extrabold text-slate-800 min-w-[70px] text-center">
+                {typedTechCarouselIdx + 1} / {typedJobTechQuestions.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setTypedTechCarouselIdx(prev => Math.min(typedJobTechQuestions.length - 1, prev + 1))}
+                disabled={typedTechCarouselIdx === typedJobTechQuestions.length - 1}
+                className="p-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-700" />
+              </button>
+            </div>
+          </div>
+
+          {activeTypedTech && (
+            <div key={activeTypedTech.id} className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-[10px] font-extrabold uppercase">
+                  Outreach Question {typedTechCarouselIdx + 1} of 10
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRevealedTypedTech(prev => ({ ...prev, [activeTypedTech.id]: !prev[activeTypedTech.id] }))}
+                  className="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1"
+                >
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{revealedTypedTech[activeTypedTech.id] ? "Hide Benchmark" : "Check AI Model Answer"}</span>
+                </button>
+              </div>
+
+              <p className="text-sm font-bold text-slate-900 leading-snug">{activeTypedTech.prompt}</p>
+
+              <textarea
+                rows={3}
+                value={typedTechAnswers[activeTypedTech.id] || ''}
+                onChange={(e) => setTypedTechAnswers(prev => ({ ...prev, [activeTypedTech.id]: e.target.value }))}
+                placeholder="Type your outreach message or response here..."
+                className="w-full text-xs text-slate-900 placeholder-slate-400 bg-white border border-slate-200 rounded-xl p-3.5 focus:outline-none focus:border-emerald-600 transition-all resize-none font-mono"
+              />
+
+              {revealedTypedTech[activeTypedTech.id] && (
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 space-y-1 animate-in fade-in">
+                  <strong className="font-extrabold block text-emerald-950 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span>AI High-Converting Benchmark:</span>
+                  </strong>
+                  <p className="text-emerald-900 leading-relaxed font-mono">{activeTypedTech.sampleAnswer}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center justify-center gap-1.5 flex-wrap pt-2">
+            {typedJobTechQuestions.map((q, qIdx) => {
+              const isTyped = typedTechAnswers[q.id] && typedTechAnswers[q.id].trim().length > 0;
+              const isCurrent = typedTechCarouselIdx === qIdx;
+
+              return (
+                <button
+                  key={q.id}
+                  type="button"
+                  onClick={() => setTypedTechCarouselIdx(qIdx)}
+                  className={`w-7 h-7 rounded-xl text-xs font-bold transition-all flex items-center justify-center ${
+                    isCurrent
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : isTyped
+                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {qIdx + 1}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* STEP 5: INTERACTIVE JOB HUNTING SPREADSHEET / SHEET TRACKER */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-5">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-2xl font-extrabold text-sm flex items-center justify-center bg-emerald-600 text-white">
+                05
+              </span>
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                  <TableIcon className="w-5 h-5 text-emerald-600" />
+                  <span>Recruiter Outreach & Call Data Sheet</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Spreadsheet tracker to edit, filter, and export contacts approached and recruiter screening calls
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                <span>Export CSV</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAddSheetRow}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Row</span>
+              </button>
+            </div>
+          </div>
+
+          {/* SPREADSHEET SHEET CONTROLS & FILTERS */}
+          <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-b border-slate-100 pb-3">
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search spreadsheet rows (Company, Recruiter, Role, Notes)..."
+                value={sheetSearchQuery}
+                onChange={(e) => setSheetSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Filter className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-xs font-bold text-slate-500">Status:</span>
+              {(['All', 'Connection Request Sent', 'Approached / Cold DM', 'Following Up', 'Recruiter Call', 'Technical Interview', 'Offer Received'] as const).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setSheetStatusFilter(st)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all border ${
+                    sheetStatusFilter === st
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                      : st === 'All'
+                      ? 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                      : getStatusBadge(st as SheetRow['status'])
+                  }`}
+                >
+                  {st === 'All' ? 'All' : st.split(' ')[0]} ({sheetRows.filter(e => st === 'All' || e.status === st).length})
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* SPREADSHEET TABLE GRID CONTAINER */}
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-2xs">
+            <table className="w-full text-left border-collapse font-sans text-xs">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 uppercase text-[10px] font-extrabold tracking-wider border-b border-slate-200">
+                  <th className="py-2.5 px-3 w-10 text-center border-r border-slate-200">#</th>
+                  <th className="py-2.5 px-3 min-w-[130px] border-r border-slate-200">Company</th>
+                  <th className="py-2.5 px-3 min-w-[150px] border-r border-slate-200">Contact / Recruiter</th>
+                  <th className="py-2.5 px-3 min-w-[140px] border-r border-slate-200">Role</th>
+                  <th className="py-2.5 px-3 min-w-[110px] border-r border-slate-200">Date Added</th>
+                  <th className="py-2.5 px-3 min-w-[125px] border-r border-slate-200">Last Stage Date</th>
+                  <th className="py-2.5 px-3 min-w-[170px] border-r border-slate-200">Status Stage</th>
+                  <th className="py-2.5 px-3 min-w-[220px] border-r border-slate-200">Call / Outreach Notes</th>
+                  <th className="py-2.5 px-2 text-center w-12">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 bg-white font-medium text-slate-800">
+                {filteredSheetRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="text-center py-8 text-slate-400 italic">
+                      No rows match the spreadsheet filter. Click "+ Add Row" above to add new data.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSheetRows.map((row, idx) => (
+                    <tr key={row.id} className="hover:bg-emerald-50/30 transition-colors group">
+                      {/* Row Index */}
+                      <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px] border-r border-slate-200 bg-slate-50/50">
+                        {idx + 1}
+                      </td>
+
+                      {/* Company Name Cell */}
+                      <td className="py-1.5 px-2 border-r border-slate-200">
+                        <input
+                          type="text"
+                          value={row.company}
+                          onChange={(e) => handleUpdateSheetCell(row.id, 'company', e.target.value)}
+                          className="w-full bg-transparent px-2 py-1 rounded font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </td>
+
+                      {/* Contact / Recruiter Cell */}
+                      <td className="py-1.5 px-2 border-r border-slate-200">
+                        <input
+                          type="text"
+                          value={row.contact}
+                          onChange={(e) => handleUpdateSheetCell(row.id, 'contact', e.target.value)}
+                          className="w-full bg-transparent px-2 py-1 rounded text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </td>
+
+                      {/* Role Title Cell */}
+                      <td className="py-1.5 px-2 border-r border-slate-200">
+                        <input
+                          type="text"
+                          value={row.role}
+                          onChange={(e) => handleUpdateSheetCell(row.id, 'role', e.target.value)}
+                          className="w-full bg-transparent px-2 py-1 rounded text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </td>
+
+                      {/* Date Added Cell */}
+                      <td className="py-1.5 px-2 border-r border-slate-200">
+                        <input
+                          type="text"
+                          value={row.dateAdded}
+                          onChange={(e) => handleUpdateSheetCell(row.id, 'dateAdded', e.target.value)}
+                          className="w-full bg-transparent px-1 py-1 rounded text-slate-700 font-semibold text-[11px] focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          placeholder="e.g. 24th June"
+                        />
+                      </td>
+
+                      {/* Last Stage Date Cell */}
+                      <td className="py-1.5 px-2 border-r border-slate-200">
+                        <input
+                          type="text"
+                          value={row.lastStageDate}
+                          onChange={(e) => handleUpdateSheetCell(row.id, 'lastStageDate', e.target.value)}
+                          className="w-full bg-transparent px-1 py-1 rounded text-slate-700 font-semibold text-[11px] focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          placeholder="e.g. 28th July"
+                        />
+                      </td>
+
+                      {/* Status Dropdown Cell */}
+                      <td className="py-1.5 px-2 border-r border-slate-200">
+                        <select
+                          value={row.status}
+                          onChange={(e) => handleUpdateSheetCell(row.id, 'status', e.target.value as SheetRow['status'])}
+                          className={`w-full px-2 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer focus:outline-none transition-colors ${getStatusBadge(row.status)}`}
+                        >
+                          <option value="Connection Request Sent" className="bg-indigo-50 text-indigo-900 font-bold">Connection Request Sent</option>
+                          <option value="Approached / Cold DM" className="bg-blue-50 text-blue-900 font-bold">Approached / Cold DM</option>
+                          <option value="Following Up" className="bg-cyan-50 text-cyan-900 font-bold">Following Up</option>
+                          <option value="Recruiter Call" className="bg-amber-50 text-amber-900 font-bold">Recruiter Call</option>
+                          <option value="Technical Interview" className="bg-purple-50 text-purple-900 font-bold">Technical Interview</option>
+                          <option value="Offer Received" className="bg-emerald-50 text-emerald-900 font-bold">Offer Received</option>
+                          <option value="Rejected" className="bg-rose-50 text-rose-900 font-bold">Rejected</option>
+                        </select>
+                      </td>
+
+                      {/* Notes / Call Log Cell */}
+                      <td className="py-1.5 px-2 border-r border-slate-200">
+                        <input
+                          type="text"
+                          value={row.notes}
+                          onChange={(e) => handleUpdateSheetCell(row.id, 'notes', e.target.value)}
+                          placeholder="Add call notes or follow-up status..."
+                          className="w-full bg-transparent px-2 py-1 rounded text-slate-600 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                      </td>
+
+                      {/* Action Cell */}
+                      <td className="py-1.5 px-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSheetRow(row.id)}
+                          className="p-1 rounded text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          title="Delete row"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* SPREADSHEET FOOTER METRICS SUMMARY */}
+          <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-slate-500 font-medium pt-1 px-1">
+            <span className="font-bold text-slate-700">Total Tracked: <strong className="text-emerald-700 font-black">{filteredSheetRows.length} Rows</strong></span>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span>Connection Sent: <strong className="text-indigo-700 font-bold">{sheetRows.filter(r => r.status === 'Connection Request Sent').length}</strong></span>
+              <span>Approached: <strong className="text-blue-700 font-bold">{sheetRows.filter(r => r.status === 'Approached / Cold DM').length}</strong></span>
+              <span>Follow Ups: <strong className="text-cyan-700 font-bold">{sheetRows.filter(r => r.status === 'Following Up').length}</strong></span>
+              <span>Calls: <strong className="text-amber-700 font-bold">{sheetRows.filter(r => r.status === 'Recruiter Call').length}</strong></span>
+              <span>Interviews: <strong className="text-purple-700 font-bold">{sheetRows.filter(r => r.status === 'Technical Interview').length}</strong></span>
+              <span>Offers: <strong className="text-emerald-700 font-bold">{sheetRows.filter(r => r.status === 'Offer Received').length}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        {/* STEP 6: Weekly Targets */}
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 rounded-3xl p-6 text-white shadow-xl space-y-5">
           <div className="flex items-center justify-between flex-wrap gap-3 border-b border-slate-700/60 pb-4">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-2xl bg-emerald-500 text-slate-950 font-black text-sm flex items-center justify-center shrink-0">
-                07
+                06
               </div>
               <div>
                 <h4 className="font-extrabold text-lg text-white flex items-center gap-2">

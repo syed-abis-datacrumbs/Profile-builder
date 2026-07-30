@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { 
   Plus, 
   FileText, 
@@ -21,8 +22,10 @@ const ACCENTS = ['#dc2626', '#1e3a8a', '#059669', '#7c3aed', '#d97706', '#0891b2
 
 interface ResumeLandingViewProps {
   userName?: string;
-  /** Loads the chosen field's ready-made resume. */
+  /** Loads the chosen field's ready-made resume directly. */
   onSelectField: (sample: LmsResumeSample) => void;
+  /** Triggers template preview popup modal before editing. */
+  onSelectTemplate?: (sample: LmsResumeSample) => void;
   onUsePrompt: (promptText: string) => void;
   onOpenEditorDirectly: () => void;
 }
@@ -30,6 +33,7 @@ interface ResumeLandingViewProps {
 export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
   userName = "Abis",
   onSelectField,
+  onSelectTemplate,
   onUsePrompt,
   onOpenEditorDirectly
 }) => {
@@ -101,7 +105,12 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-8 px-4 space-y-10 animate-in fade-in duration-300">
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="w-full max-w-5xl mx-auto py-8 px-4 space-y-10"
+    >
       
       {/* Title Greeting */}
       <div className="text-center pt-2">
@@ -178,12 +187,14 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.95 }}
                 type="submit"
                 className="w-8 h-8 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-all shadow-sm"
               >
                 <Send className="w-4 h-4" />
-              </button>
+              </motion.button>
             </div>
 
           </div>
@@ -198,8 +209,10 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           {starterPrompts.map((item, idx) => (
-            <div
+            <motion.div
               key={idx}
+              whileHover={{ y: -3, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => onUsePrompt(item.prompt)}
               className="p-3.5 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer flex items-center justify-between h-20 group"
             >
@@ -209,13 +222,12 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
               <div className="shrink-0">
                 <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" />
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
 
-      {/* Section 2: Field templates — pick a field, load its ready-made resume
-          (shown directly here, no popup). Switch Professional/Student in the editor. */}
+      {/* Section 2: Field templates */}
       <div className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-700">
@@ -242,9 +254,14 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
               .split(',').map((s: string) => s.trim()).filter(Boolean).slice(0, 4);
             const fullName = (cv.personalInfo && cv.personalInfo.fullName) || 'Your Name';
             return (
-              <div
+              <motion.div
                 key={sample.label}
-                onClick={() => onSelectField(sample)}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: i * 0.04 }}
+                whileHover={{ y: -4, scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => (onSelectTemplate ? onSelectTemplate(sample) : onSelectField(sample))}
                 className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
               >
                 {/* Mini resume preview, filled from this field's real content */}
@@ -283,12 +300,12 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
                   </div>
                   <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform shrink-0 ml-2">Use Template →</span>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
       </div>
 
-    </div>
+    </motion.div>
   );
 };

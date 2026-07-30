@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { 
   Plus, 
   Folder, 
@@ -93,7 +94,12 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-8 px-4 space-y-10 animate-in fade-in duration-300">
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="w-full max-w-5xl mx-auto py-8 px-4 space-y-10"
+    >
       
       {/* Title Greeting */}
       <div className="text-center pt-2">
@@ -170,12 +176,14 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.95 }}
                 type="submit"
                 className="w-8 h-8 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-all shadow-sm"
               >
                 <Send className="w-4 h-4" />
-              </button>
+              </motion.button>
             </div>
 
           </div>
@@ -190,8 +198,10 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           {starterPrompts.map((item, idx) => (
-            <div
+            <motion.div
               key={idx}
+              whileHover={{ y: -3, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => onUsePrompt(item.prompt)}
               className="p-3.5 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer flex items-center justify-between h-20 group"
             >
@@ -201,7 +211,7 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
               <div className="shrink-0">
                 <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" />
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -222,8 +232,13 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {linkedinCovers.map((cover, index) => (
-            <div
+            <motion.div
               key={cover.id}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: index * 0.04 }}
+              whileHover={{ y: -4, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => onSelectTemplate(cover.id)}
               className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
             >
@@ -283,11 +298,11 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
                 </div>
                 <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform">Use Template →</span>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
 
-    </div>
+    </motion.div>
   );
 };

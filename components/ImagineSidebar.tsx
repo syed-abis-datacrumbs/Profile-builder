@@ -19,6 +19,7 @@ import {
   LogOut,
   CreditCard
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GithubIcon, LinkedinIcon } from './icons';
 import { ActiveTab } from '../types';
 
@@ -76,108 +77,50 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
 
         {/* Main Nav Items */}
         <nav className="space-y-0.5 text-xs font-medium px-1">
-
-          <button
-            onClick={() => {
-              setActiveTab('home');
-              onNewChat();
-            }}
-            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all ${
-              activeTab === 'home'
-                ? 'bg-slate-200/80 text-slate-900 font-bold'
-                : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Home className="w-4 h-4 text-slate-700" />
-              <span>Home</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('resume')}
-            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all ${
-              activeTab === 'resume'
-                ? 'bg-slate-200/80 text-slate-900 font-bold'
-                : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <FileText className="w-4 h-4 text-blue-600" />
-              <span>Resume Builder</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('github')}
-            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all ${
-              activeTab === 'github'
-                ? 'bg-slate-200/80 text-slate-900 font-bold'
-                : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <GithubIcon className="w-4 h-4 text-slate-800" />
-              <span>GitHub README</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('linkedin')}
-            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all ${
-              activeTab === 'linkedin'
-                ? 'bg-slate-200/80 text-slate-900 font-bold'
-                : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <LinkedinIcon className="w-4 h-4 text-blue-600" />
-              <span>LinkedIn Optimizer</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('jobhunting')}
-            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all ${
-              activeTab === 'jobhunting'
-                ? 'bg-slate-200/80 text-slate-900 font-bold'
-                : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Briefcase className="w-4 h-4 text-emerald-600" />
-              <span>Job Hunting</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('freelancing')}
-            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all ${
-              activeTab === 'freelancing'
-                ? 'bg-slate-200/80 text-slate-900 font-bold'
-                : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Globe className="w-4 h-4 text-purple-600" />
-              <span>Freelancing</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('interview')}
-            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all ${
-              activeTab === 'interview'
-                ? 'bg-slate-200/80 text-slate-900 font-bold'
-                : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Brain className="w-4 h-4 text-amber-600" />
-              <span>Interview Prep</span>
-            </div>
-          </button>
-
+          {[
+            { id: 'home', label: 'Home', icon: Home, color: 'text-slate-700' },
+            { id: 'resume', label: 'Resume Builder', icon: FileText, color: 'text-blue-600' },
+            { id: 'github', label: 'GitHub README', icon: GithubIcon, color: 'text-slate-800' },
+            { id: 'linkedin', label: 'LinkedIn Optimizer', icon: LinkedinIcon, color: 'text-blue-600' },
+            { id: 'jobhunting', label: 'Job Hunting', icon: Briefcase, color: 'text-emerald-600' },
+            { id: 'freelancing', label: 'Freelancing', icon: Globe, color: 'text-purple-600' },
+            { id: 'interview', label: 'Interview Prep', icon: Brain, color: 'text-amber-600' },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <motion.button
+                key={item.id}
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  if (item.id === 'home') {
+                    setActiveTab('home');
+                    onNewChat();
+                  } else {
+                    setActiveTab(item.id as ActiveTab);
+                  }
+                }}
+                className={`relative w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-colors ${
+                  isActive
+                    ? 'text-slate-900 font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabBg"
+                    className="absolute inset-0 bg-slate-200/80 rounded-xl shadow-xs"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <div className="relative z-10 flex items-center gap-2.5">
+                  <Icon className={`w-4 h-4 ${item.color}`} />
+                  <span>{item.label}</span>
+                </div>
+              </motion.button>
+            );
+          })}
         </nav>
 
       </div>
