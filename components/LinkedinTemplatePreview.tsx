@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { linkedinCovers, getDefaultPfpGradientId } from '../lib/linkedinCovers';
 import { linkedinTemplateSamples, LinkedinTemplateSample, LinkedinTemplateFeaturedItem } from '../lib/linkedinTemplateSamples';
-import { COVER_ART, CoverArtField, getCoverArtId } from '../lib/linkedinCoverArt';
+import { COVER_ART, CoverArtField, getCoverArtId, computeFitScale } from '../lib/linkedinCoverArt';
+import { ShrinkToFitCoverText } from './ShrinkToFitCoverText';
 
 const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
 
@@ -114,53 +115,73 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
           {art.fields.map((field) => {
             const value = resolveFieldValue(field, sample);
             const align = field.geometry.align;
-            const left = align === 'center' ? field.geometry.xPct - field.geometry.maxWidthPct / 2 : field.geometry.xPct;
-            const boxStyle: React.CSSProperties = {
-              position: 'absolute',
-              top: `${field.geometry.yPct * 100}%`,
-              left: `${left * 100}%`,
-              width: `${field.geometry.maxWidthPct * 100}%`,
-              textAlign: align,
-              color: field.geometry.color,
-              fontWeight: field.geometry.fontWeight,
-              fontFamily: field.geometry.fontFamily,
-              fontSize: cqw(field.geometry.fontSizePx, art.canvasWidthPx),
-              lineHeight: field.geometry.lineHeightPx ? cqw(field.geometry.lineHeightPx, art.canvasWidthPx) : 1.25,
-            };
+            // xPct is always the box's LEFT edge, for every alignment —
+            // matches the LMS's own canvas renderer (drawTextField/
+            // drawPillsField: `x = g.xPct * W` used as-is, with centering
+            // computed as an anchor WITHIN [x, x+maxWidth], never by
+            // shifting the box itself). text-align/justify-content below
+            // do that centering for us.
+            const left = field.geometry.xPct;
 
             if (field.kind === 'pills') {
               const pills = Array.isArray(value) ? value : [value];
               return (
                 <div
                   key={field.id}
-                  style={{ ...boxStyle, display: 'flex', flexWrap: 'wrap', gap: cqw(field.geometry.pillGapPx ?? 12, art.canvasWidthPx), justifyContent: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start' }}
+                  style={{
+                    position: 'absolute',
+                    top: `${field.geometry.yPct * 100}%`,
+                    left: `${left * 100}%`,
+                    width: `${field.geometry.maxWidthPct * 100}%`,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: cqw(field.geometry.pillGapPx ?? 12, art.canvasWidthPx),
+                    justifyContent: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
+                  }}
                 >
-                  {pills.map((p, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        background: field.geometry.pillBg ?? 'rgba(0,0,0,0.35)',
-                        borderRadius: 9999,
-                        padding: `${cqw(field.geometry.fontSizePx * 0.45, art.canvasWidthPx)} ${cqw(field.geometry.fontSizePx * 0.9, art.canvasWidthPx)}`,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {p}
-                    </span>
-                  ))}
+                  {pills.map((p, i) => {
+                    const scale = computeFitScale(p.length, field.pillMaxLengths?.[i] ?? 32);
+                    const chipFontSize = field.geometry.fontSizePx * scale;
+                    return (
+                      <span
+                        key={i}
+                        style={{
+                          color: field.geometry.color,
+                          fontWeight: field.geometry.fontWeight,
+                          fontFamily: field.geometry.fontFamily,
+                          fontSize: cqw(chipFontSize, art.canvasWidthPx),
+                          background: field.geometry.pillBg ?? 'rgba(0,0,0,0.35)',
+                          borderRadius: 9999,
+                          padding: `${cqw(chipFontSize * 0.45, art.canvasWidthPx)} ${cqw(chipFontSize * 0.9, art.canvasWidthPx)}`,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {p}
+                      </span>
+                    );
+                  })}
                 </div>
               );
             }
 
             const text = Array.isArray(value) ? value.join('\n') : value;
             return (
-              <div key={field.id} style={boxStyle}>
+              <div
+                key={field.id}
+                style={{
+                  position: 'absolute',
+                  top: `${field.geometry.yPct * 100}%`,
+                  left: `${left * 100}%`,
+                  width: `${field.geometry.maxWidthPct * 100}%`,
+                }}
+              >
                 {field.staticLabel && (
                   <div
                     style={{
                       fontSize: cqw(field.staticLabelFontSizePx ?? field.geometry.fontSizePx * 0.65, art.canvasWidthPx),
                       fontFamily: field.staticLabelFontFamily,
                       fontWeight: 600,
+                      color: field.geometry.color,
                       opacity: 0.85,
                       marginBottom: '0.15em',
                     }}
@@ -168,16 +189,18 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
                     {field.staticLabel}
                   </div>
                 )}
-                <div
-                  style={{
-                    whiteSpace: 'pre-line',
-                    ...(field.geometry.maxLines
-                      ? { display: '-webkit-box', WebkitLineClamp: field.geometry.maxLines, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
-                      : {}),
-                  }}
-                >
-                  {text}
-                </div>
+                <ShrinkToFitCoverText
+                  text={text}
+                  maxLines={field.geometry.maxLines}
+                  fontSizePx={field.geometry.fontSizePx}
+                  lineHeightPx={field.geometry.lineHeightPx}
+                  canvasWidthPx={art.canvasWidthPx}
+                  cqw={cqw}
+                  color={field.geometry.color}
+                  fontWeight={field.geometry.fontWeight}
+                  fontFamily={field.geometry.fontFamily}
+                  textAlign={align}
+                />
               </div>
             );
           })}

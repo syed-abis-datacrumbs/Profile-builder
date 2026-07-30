@@ -28,8 +28,9 @@ import {
   PFP_GRADIENT_IDS,
   buildCoverFieldValues,
 } from '../lib/linkedinRichProfile';
-import { CoverArtField } from '../lib/linkedinCoverArt';
+import { CoverArtField, computeFitScale, OVERAGE_ALLOWANCE_CHARS } from '../lib/linkedinCoverArt';
 import { PfpCropModal } from './PfpCropModal';
+import { ShrinkToFitCoverText } from './ShrinkToFitCoverText';
 import { LinkedinTemplateSampleExperience, LinkedinTemplateSampleEducation, LinkedinTemplateSampleCertification, LinkedinTemplateSampleProject } from '../lib/linkedinTemplateSamples';
 
 const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
@@ -74,6 +75,24 @@ function Edit({
 }
 
 const cqw = (px: number, canvasWidthPx: number) => `${((px / canvasWidthPx) * 100).toFixed(3)}cqw`;
+
+// Cover text boxes are a fixed size and don't auto-shrink for fields without
+// `maxLines` — text past the LMS's own maxLength (or too many/too-long
+// pills) overflows into whatever sits below it on the banner. Enforced here
+// on manual edits too, mirroring the same caps the chat's server route
+// enforces on AI-driven edits: up to OVERAGE_ALLOWANCE_CHARS over is left
+// alone (the render above shrinks that field's font to compensate — see
+// computeFitScale), only overage beyond that gets backed off to the last
+// whole word within reach, never a chopped mid-word.
+const MAX_PILL_CHARS = 32;
+const truncateText = (value: string, max: number | undefined) => {
+  if (!max) return value;
+  const ceiling = max + OVERAGE_ALLOWANCE_CHARS;
+  if (value.length <= ceiling) return value;
+  const cut = value.slice(0, ceiling);
+  const lastSpace = cut.lastIndexOf(' ');
+  return lastSpace > 0 ? cut.slice(0, lastSpace).trimEnd() : cut;
+};
 
 function PickerOverlay({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -136,7 +155,7 @@ export const LinkedinChatStudio: React.FC<{
       const data = await res.json();
       if (data.error) setMessages((m) => [...m, { role: 'assistant', content: `⚠️ ${data.error}` }]);
       else {
-        if (data.profile) onChange(data.profile as LinkedinRichProfile);
+        if (data.profile) updateProfile(data.profile as LinkedinRichProfile);
         setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Done.' }]);
       }
     } catch {
@@ -146,7 +165,31 @@ export const LinkedinChatStudio: React.FC<{
     }
   };
 
-  const set = (patch: Partial<LinkedinRichProfile>) => onChange({ ...profile, ...patch });
+  // Cover fields with a `defaultFrom` (name/title/company) are meant to stay
+  // in sync with the profile's own fullName/title/currentCompany — mirroring
+  // how the LMS's own templates work. coverFieldValues is otherwise just a
+  // plain snapshot, so without this, editing your name/title (from the chat
+  // OR by clicking the text) would silently leave the cover banner showing
+  // stale copy. Re-synced through every profile update, not just `set`, so
+  // a chat-driven bulk rewrite of the whole profile picks it up too.
+  const updateProfile = (next: LinkedinRichProfile) => {
+    const identityChanged =
+      next.fullName !== profile.fullName || next.title !== profile.title || next.currentCompany !== profile.currentCompany;
+    const art = COVER_ART[next.coverTemplateId];
+    if (!identityChanged || !art) {
+      onChange(next);
+      return;
+    }
+    const resyncedCoverFieldValues = { ...next.coverFieldValues };
+    for (const field of art.fields) {
+      if (field.defaultFrom === 'fullName') resyncedCoverFieldValues[field.id] = next.fullName;
+      else if (field.defaultFrom === 'currentPosition') resyncedCoverFieldValues[field.id] = next.title;
+      else if (field.defaultFrom === 'currentCompany') resyncedCoverFieldValues[field.id] = next.currentCompany;
+    }
+    onChange({ ...next, coverFieldValues: resyncedCoverFieldValues });
+  };
+
+  const set = (patch: Partial<LinkedinRichProfile>) => updateProfile({ ...profile, ...patch });
 
   const setSkill = (i: number, v: string) => set({ skills: profile.skills.map((s, j) => (j === i ? v : s)) });
 
@@ -282,61 +325,85 @@ export const LinkedinChatStudio: React.FC<{
                 {art?.fields.map((field: CoverArtField) => {
                   const value = profile.coverFieldValues[field.id] ?? field.placeholder;
                   const align = field.geometry.align;
-                  const left = align === 'center' ? field.geometry.xPct - field.geometry.maxWidthPct / 2 : field.geometry.xPct;
-                  const boxStyle: React.CSSProperties = {
-                    position: 'absolute',
-                    top: `${field.geometry.yPct * 100}%`,
-                    left: `${left * 100}%`,
-                    width: `${field.geometry.maxWidthPct * 100}%`,
-                    textAlign: align,
-                    color: field.geometry.color,
-                    fontWeight: field.geometry.fontWeight,
-                    fontFamily: field.geometry.fontFamily,
-                    fontSize: cqw(field.geometry.fontSizePx, art.canvasWidthPx),
-                    lineHeight: field.geometry.lineHeightPx ? cqw(field.geometry.lineHeightPx, art.canvasWidthPx) : 1.25,
-                  };
+                  // xPct is always the box's LEFT edge, for every alignment —
+                  // matches the LMS's own canvas renderer (drawTextField/
+                  // drawPillsField: `x = g.xPct * W` used as-is, with
+                  // centering computed as an anchor WITHIN [x, x+maxWidth],
+                  // never by shifting the box itself). text-align/
+                  // justify-content below do that centering for us.
+                  const left = field.geometry.xPct;
 
                   if (field.kind === 'pills') {
                     const pills = Array.isArray(value) ? value : [value];
                     return (
                       <div
                         key={field.id}
-                        style={{ ...boxStyle, display: 'flex', flexWrap: 'wrap', gap: cqw(field.geometry.pillGapPx ?? 12, art.canvasWidthPx), justifyContent: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start' }}
+                        style={{
+                          position: 'absolute',
+                          top: `${field.geometry.yPct * 100}%`,
+                          left: `${left * 100}%`,
+                          width: `${field.geometry.maxWidthPct * 100}%`,
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: cqw(field.geometry.pillGapPx ?? 12, art.canvasWidthPx),
+                          justifyContent: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
+                        }}
                       >
-                        {pills.map((p, i) => (
-                          <span
-                            key={i}
-                            contentEditable
-                            suppressContentEditableWarning
-                            onBlur={(e) => {
-                              const v = e.currentTarget.textContent ?? '';
-                              if (v === p) return;
-                              setCoverFieldValue(field.id, pills.map((pp, j) => (j === i ? v : pp)));
-                            }}
-                            className="outline-none cursor-text"
-                            style={{
-                              background: field.geometry.pillBg ?? 'rgba(0,0,0,0.35)',
-                              borderRadius: 9999,
-                              padding: `${cqw(field.geometry.fontSizePx * 0.45, art.canvasWidthPx)} ${cqw(field.geometry.fontSizePx * 0.9, art.canvasWidthPx)}`,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {p}
-                          </span>
-                        ))}
+                        {pills.map((p, i) => {
+                          // A pill a bit over its own budget shrinks to keep
+                          // fitting instead of getting chopped — same idea as
+                          // the text-field scale below, per chip.
+                          const scale = computeFitScale(p.length, field.pillMaxLengths?.[i] ?? MAX_PILL_CHARS);
+                          const chipFontSize = field.geometry.fontSizePx * scale;
+                          return (
+                            <span
+                              key={i}
+                              contentEditable
+                              suppressContentEditableWarning
+                              onBlur={(e) => {
+                                const raw = e.currentTarget.textContent ?? '';
+                                const v = truncateText(raw, field.pillMaxLengths?.[i] ?? MAX_PILL_CHARS);
+                                if (v === p) return;
+                                setCoverFieldValue(field.id, pills.map((pp, j) => (j === i ? v : pp)));
+                              }}
+                              className="outline-none cursor-text"
+                              style={{
+                                color: field.geometry.color,
+                                fontWeight: field.geometry.fontWeight,
+                                fontFamily: field.geometry.fontFamily,
+                                fontSize: cqw(chipFontSize, art.canvasWidthPx),
+                                background: field.geometry.pillBg ?? 'rgba(0,0,0,0.35)',
+                                borderRadius: 9999,
+                                padding: `${cqw(chipFontSize * 0.45, art.canvasWidthPx)} ${cqw(chipFontSize * 0.9, art.canvasWidthPx)}`,
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {p}
+                            </span>
+                          );
+                        })}
                       </div>
                     );
                   }
 
                   const text = Array.isArray(value) ? value.join('\n') : value;
                   return (
-                    <div key={field.id} style={boxStyle}>
+                    <div
+                      key={field.id}
+                      style={{
+                        position: 'absolute',
+                        top: `${field.geometry.yPct * 100}%`,
+                        left: `${left * 100}%`,
+                        width: `${field.geometry.maxWidthPct * 100}%`,
+                      }}
+                    >
                       {field.staticLabel && (
                         <div
                           style={{
                             fontSize: cqw(field.staticLabelFontSizePx ?? field.geometry.fontSizePx * 0.65, art.canvasWidthPx),
                             fontFamily: field.staticLabelFontFamily,
                             fontWeight: 600,
+                            color: field.geometry.color,
                             opacity: 0.85,
                             marginBottom: '0.15em',
                           }}
@@ -344,23 +411,21 @@ export const LinkedinChatStudio: React.FC<{
                           {field.staticLabel}
                         </div>
                       )}
-                      <div
-                        contentEditable
-                        suppressContentEditableWarning
-                        onBlur={(e) => {
-                          const v = e.currentTarget.textContent ?? '';
-                          if (v !== text) setCoverFieldValue(field.id, v);
-                        }}
-                        className="outline-none cursor-text"
-                        style={{
-                          whiteSpace: 'pre-line',
-                          ...(field.geometry.maxLines
-                            ? { display: '-webkit-box', WebkitLineClamp: field.geometry.maxLines, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
-                            : {}),
-                        }}
-                      >
-                        {text}
-                      </div>
+                      <ShrinkToFitCoverText
+                        text={text}
+                        maxLines={field.geometry.maxLines}
+                        fontSizePx={field.geometry.fontSizePx}
+                        lineHeightPx={field.geometry.lineHeightPx}
+                        canvasWidthPx={art.canvasWidthPx}
+                        cqw={cqw}
+                        color={field.geometry.color}
+                        fontWeight={field.geometry.fontWeight}
+                        fontFamily={field.geometry.fontFamily}
+                        textAlign={align}
+                        editable
+                        placeholder={field.placeholder as string}
+                        onCommit={(v) => setCoverFieldValue(field.id, truncateText(v, field.maxLength))}
+                      />
                     </div>
                   );
                 })}

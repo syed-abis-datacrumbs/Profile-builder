@@ -43,6 +43,22 @@ export type CoverArtField = {
   staticLabel?: string;
   staticLabelFontSizePx?: number;
   staticLabelFontFamily?: string;
+  /** Ported straight from the LMS's CoverTextField.maxLength — the box this
+   *  field renders in is a FIXED size (no auto-shrink for fields without
+   *  `maxLines`, e.g. `helping-businesses.headline`), so text past this
+   *  length overflows into whatever sits below it rather than wrapping
+   *  safely. Enforced server-side (chat) and on manual edit, not just
+   *  suggested to the AI — see linkedin-rich-chat/route.ts. */
+  maxLength?: number;
+  /** kind:"pills" only — ported from the LMS's CoverTextField.maxPills. */
+  maxPills?: number;
+  /** kind:"pills" only — per-chip character cap, index-matched to
+   *  `placeholder`/the live chip array (chip 0's cap, chip 1's cap, ...).
+   *  Calibrated by hand against the real background art (each chip's
+   *  available row width differs), so this is more accurate than one
+   *  uniform per-chip cap. Falls back to a flat default when a chip index
+   *  has no entry here — see MAX_PILL_CHARS in linkedin-rich-chat/route.ts. */
+  pillMaxLengths?: number[];
   geometry: CoverArtFieldGeometry;
 };
 
@@ -53,6 +69,28 @@ export type CoverArtTemplate = {
   canvasHeightPx: number;
   fields: CoverArtField[];
 };
+
+// Shared between the server (linkedin-rich-chat route, deciding how much
+// overage to let through untrimmed) and the renderers (LinkedinChatStudio /
+// LinkedinTemplatePreview, deciding how far to shrink text to fit that
+// overage) — a moderate overshoot (a word or two over budget) shrinks the
+// font down to compensate rather than getting cut; only overage beyond this
+// allowance gets trimmed at all, since below MIN_FONT_SCALE the text would
+// read as illegibly small.
+export const OVERAGE_ALLOWANCE_CHARS = 20;
+export const MIN_FONT_SCALE = 0.6;
+
+/** 1 = render at full size (fits within `max` already). Between 1 and
+ *  MIN_FONT_SCALE for a moderate overshoot — scaled linearly across the
+ *  allowance window so a 1-char overage barely shrinks and a full
+ *  20-char overage hits the floor. `max` of 0/undefined (a field with no
+ *  configured cap) always renders full size. */
+export function computeFitScale(length: number, max: number | undefined): number {
+  if (!max || length <= max) return 1;
+  const over = length - max;
+  if (over >= OVERAGE_ALLOWANCE_CHARS) return MIN_FONT_SCALE;
+  return 1 - (over / OVERAGE_ALLOWANCE_CHARS) * (1 - MIN_FONT_SCALE);
+}
 
 // The order the LMS's 8 real templates cycle onto the 28 career-track cards
 // (see lib/linkedinCovers.ts) — index % 8 into this array picks which art +
@@ -84,13 +122,15 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         id: 'tagline',
         kind: 'text',
         placeholder: 'Ideas that inspire.\nSolutions that last.',
-        geometry: { xPct: 0.615, yPct: 0.26, maxWidthPct: 0.37, align: 'left', fontSizePx: 46, fontWeight: 600, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 62 },
+        maxLength: 80,
+        geometry: { xPct: 0.615, yPct: 0.26, maxWidthPct: 0.37, align: 'left', fontSizePx: 46, fontWeight: 600, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 62, maxLines: 2 },
       },
       {
         id: 'caption',
         kind: 'text',
         placeholder: 'DATACRUMBS.ORG',
-        geometry: { xPct: 0.615, yPct: 0.68, maxWidthPct: 0.37, align: 'left', fontSizePx: 15, fontWeight: 700, color: '#e5e7eb' },
+        maxLength: 40,
+        geometry: { xPct: 0.615, yPct: 0.68, maxWidthPct: 0.37, align: 'left', fontSizePx: 15, fontWeight: 700, color: '#e5e7eb', maxLines: 1 },
       },
     ],
   },
@@ -104,6 +144,7 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         id: 'heading',
         kind: 'text',
         placeholder: "Let's Work Together",
+        maxLength: 22,
         geometry: { xPct: 0.02, yPct: 0.29, maxWidthPct: 0.24, align: 'left', fontSizePx: 33, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
       },
       {
@@ -113,7 +154,8 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         staticLabelFontSizePx: 12.6,
         staticLabelFontFamily: FONT_POPPINS,
         placeholder: '+123-456-7890',
-        geometry: { xPct: 0.075, yPct: 0.44, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff' },
+        maxLength: 30,
+        geometry: { xPct: 0.075, yPct: 0.44, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
       },
       {
         id: 'email',
@@ -122,7 +164,8 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         staticLabelFontSizePx: 12.6,
         staticLabelFontFamily: FONT_POPPINS,
         placeholder: 'support@datacrumbs.org',
-        geometry: { xPct: 0.075, yPct: 0.565, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff' },
+        maxLength: 40,
+        geometry: { xPct: 0.075, yPct: 0.565, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
       },
       {
         id: 'website',
@@ -131,13 +174,15 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         staticLabelFontSizePx: 12.6,
         staticLabelFontFamily: FONT_POPPINS,
         placeholder: 'www.datacrumbs.org',
-        geometry: { xPct: 0.075, yPct: 0.69, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff' },
+        maxLength: 40,
+        geometry: { xPct: 0.075, yPct: 0.69, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
       },
       {
         id: 'name',
         kind: 'text',
         defaultFrom: 'fullName',
         placeholder: 'Your Name',
+        maxLength: 13,
         geometry: { xPct: 0.685, yPct: 0.22, maxWidthPct: 0.22, align: 'left', fontSizePx: 79, fontWeight: 400, color: '#ffffff', fontFamily: FONT_BRICOLAGE, lineHeightPx: 70, maxLines: 2 },
       },
       {
@@ -145,6 +190,7 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         kind: 'text',
         defaultFrom: 'currentPosition',
         placeholder: 'Your Title',
+        maxLength: 18,
         geometry: { xPct: 0.685, yPct: 0.58, maxWidthPct: 0.22, align: 'left', fontSizePx: 38, fontWeight: 400, color: '#ffffff', maxLines: 1 },
       },
     ],
@@ -159,19 +205,23 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         id: 'headline',
         kind: 'text',
         placeholder: 'Helping Businesses Scale\nThrough Paid Marketing',
-        geometry: { xPct: 0.395, yPct: 0.18, maxWidthPct: 0.56, align: 'left', fontSizePx: 53, fontWeight: 800, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 50 },
+        maxLength: 55,
+        geometry: { xPct: 0.395, yPct: 0.18, maxWidthPct: 0.56, align: 'left', fontSizePx: 53, fontWeight: 800, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 50, maxLines: 2 },
       },
       {
         id: 'pills',
         kind: 'pills',
         placeholder: ['Email Lead Generation', 'Social Media Ads', 'SEO'],
+        maxPills: 5,
+        pillMaxLengths: [30, 16, 4],
         geometry: { xPct: 0.595, yPct: 0.6, maxWidthPct: 0.44, align: 'center', fontSizePx: 16, fontWeight: 500, color: '#ffffff', fontFamily: FONT_POPPINS, pillBg: 'rgba(0,0,0,0.35)', pillGapPx: 14 },
       },
       {
         id: 'caption',
         kind: 'text',
         placeholder: 'DATACRUMBS.ORG',
-        geometry: { xPct: 0.83, yPct: 0.82, maxWidthPct: 0.15, align: 'right', fontSizePx: 13, fontWeight: 700, color: '#ffffff', fontFamily: FONT_POPPINS },
+        maxLength: 27,
+        geometry: { xPct: 0.83, yPct: 0.82, maxWidthPct: 0.15, align: 'right', fontSizePx: 13, fontWeight: 700, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
       },
     ],
   },
@@ -185,18 +235,25 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         id: 'headline',
         kind: 'text',
         placeholder: 'Helping Brands Build\nStunning Websites',
-        geometry: { xPct: 0.395, yPct: 0.16, maxWidthPct: 0.56, align: 'left', fontSizePx: 50, fontWeight: 800, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 52 },
+        maxLength: 52,
+        geometry: { xPct: 0.395, yPct: 0.16, maxWidthPct: 0.56, align: 'left', fontSizePx: 50, fontWeight: 800, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 52, maxLines: 2 },
       },
       {
         id: 'pills',
         kind: 'pills',
         placeholder: ['WordPress Website Development', 'Website Design', 'Web Services', 'Website Strategy', 'Web SEO Optimization'],
+        maxPills: 6,
+        // Chips 4 & 5 sit on the same trailing row together, so their combined
+        // budget (~90 chars) matters more than either alone — split evenly.
+        pillMaxLengths: [47, 20, 22, 45, 45],
         geometry: { xPct: 0.395, yPct: 0.5, maxWidthPct: 0.56, align: 'left', fontSizePx: 14, fontWeight: 600, color: '#ffffff', fontFamily: FONT_POPPINS, pillBg: '#0e7490', pillGapPx: 12 },
       },
       {
         id: 'banner',
         kind: 'pills',
         placeholder: ['Trusted by 200+ Satisfied Clients Worldwide'],
+        maxPills: 1,
+        pillMaxLengths: [50],
         geometry: { xPct: 0.395, yPct: 0.78, maxWidthPct: 0.56, align: 'left', fontSizePx: 15, fontWeight: 700, color: '#ffffff', fontFamily: FONT_POPPINS, pillBg: '#06b6d4' },
       },
     ],
@@ -212,6 +269,7 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         kind: 'text',
         defaultFrom: 'fullName',
         placeholder: 'Mahnoor Khan',
+        maxLength: 21,
         geometry: { xPct: 0.685, yPct: 0.3, maxWidthPct: 0.28, align: 'left', fontSizePx: 46, fontWeight: 550, color: '#ffffff', fontFamily: FONT_DANCING_SCRIPT, lineHeightPx: 52, maxLines: 1 },
       },
       {
@@ -219,25 +277,29 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         kind: 'text',
         defaultFrom: 'currentPosition',
         placeholder: 'Graphic Designer',
+        maxLength: 32,
         geometry: { xPct: 0.685, yPct: 0.43, maxWidthPct: 0.28, align: 'left', fontSizePx: 24, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
       },
       {
         id: 'phone',
         kind: 'text',
         placeholder: '123-456-7890',
-        geometry: { xPct: 0.685, yPct: 0.57, maxWidthPct: 0.28, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS },
+        maxLength: 30,
+        geometry: { xPct: 0.685, yPct: 0.57, maxWidthPct: 0.28, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
       },
       {
         id: 'email',
         kind: 'text',
         placeholder: 'support@datacrumbs.org',
-        geometry: { xPct: 0.685, yPct: 0.65, maxWidthPct: 0.28, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS },
+        maxLength: 40,
+        geometry: { xPct: 0.685, yPct: 0.65, maxWidthPct: 0.28, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
       },
       {
         id: 'website',
         kind: 'text',
         placeholder: 'datacrumbs.org',
-        geometry: { xPct: 0.685, yPct: 0.73, maxWidthPct: 0.28, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS },
+        maxLength: 40,
+        geometry: { xPct: 0.685, yPct: 0.73, maxWidthPct: 0.28, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
       },
     ],
   },
@@ -251,25 +313,29 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         id: 'headline',
         kind: 'text',
         placeholder: 'Helping brands\nspeak, sell, and\nscale with words.',
-        geometry: { xPct: 0.565, yPct: 0.2, maxWidthPct: 0.3, align: 'left', fontSizePx: 50, fontWeight: 900, color: '#16215c', fontFamily: FONT_PLAYFAIR, lineHeightPx: 50 },
+        maxLength: 51,
+        geometry: { xPct: 0.565, yPct: 0.2, maxWidthPct: 0.3, align: 'left', fontSizePx: 50, fontWeight: 900, color: '#16215c', fontFamily: FONT_PLAYFAIR, lineHeightPx: 50, maxLines: 3 },
       },
       {
         id: 'phone',
         kind: 'text',
         placeholder: '123-456-7890',
-        geometry: { xPct: 0.63, yPct: 0.643, maxWidthPct: 0.38, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#16215c' },
+        maxLength: 30,
+        geometry: { xPct: 0.63, yPct: 0.643, maxWidthPct: 0.38, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#16215c', maxLines: 1 },
       },
       {
         id: 'email',
         kind: 'text',
         placeholder: 'support@datacrumbs.org',
-        geometry: { xPct: 0.63, yPct: 0.74, maxWidthPct: 0.38, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#16215c' },
+        maxLength: 40,
+        geometry: { xPct: 0.63, yPct: 0.74, maxWidthPct: 0.38, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#16215c', maxLines: 1 },
       },
       {
         id: 'website',
         kind: 'text',
         placeholder: 'lms.datacrumbs.org',
-        geometry: { xPct: 0.63, yPct: 0.843, maxWidthPct: 0.38, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#16215c' },
+        maxLength: 40,
+        geometry: { xPct: 0.63, yPct: 0.843, maxWidthPct: 0.38, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#16215c', maxLines: 1 },
       },
     ],
   },
@@ -284,6 +350,7 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         kind: 'text',
         defaultFrom: 'fullName',
         placeholder: 'Aun Ali',
+        maxLength: 12,
         geometry: { xPct: 0.685, yPct: 0.28, maxWidthPct: 0.28, align: 'left', fontSizePx: 68, fontWeight: 700, color: '#1a1a2e', fontFamily: FONT_POPPINS, maxLines: 1 },
       },
       {
@@ -291,13 +358,15 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         kind: 'text',
         defaultFrom: 'currentPosition',
         placeholder: 'Graphic Designer',
+        maxLength: 30,
         geometry: { xPct: 0.685, yPct: 0.49, maxWidthPct: 0.28, align: 'left', fontSizePx: 22, fontWeight: 400, color: '#1a1a2e', fontFamily: FONT_POPPINS, maxLines: 1 },
       },
       {
         id: 'website',
         kind: 'text',
         placeholder: 'datacrumbs.org',
-        geometry: { xPct: 0.685, yPct: 0.6, maxWidthPct: 0.28, align: 'left', fontSizePx: 18, fontWeight: 400, color: '#1a1a2e' },
+        maxLength: 40,
+        geometry: { xPct: 0.685, yPct: 0.6, maxWidthPct: 0.28, align: 'left', fontSizePx: 18, fontWeight: 400, color: '#1a1a2e', maxLines: 1 },
       },
     ],
   },
@@ -312,6 +381,7 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         kind: 'text',
         defaultFrom: 'currentPosition',
         placeholder: 'AI Engineer',
+        maxLength: 16,
         geometry: { xPct: 0.58, yPct: 0.3, maxWidthPct: 0.39, align: 'left', fontSizePx: 72, fontWeight: 800, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 64, maxLines: 2 },
       },
       {
@@ -319,7 +389,11 @@ export const COVER_ART: Record<string, CoverArtTemplate> = {
         kind: 'text',
         defaultFrom: 'currentCompany',
         placeholder: 'DATACRUMBS',
-        geometry: { xPct: 0.586, yPct: 0.7, maxWidthPct: 0.39, align: 'left', fontSizePx: 32, fontWeight: 600, color: '#dbb3d2', fontFamily: FONT_POPPINS, maxLines: 1 },
+        maxLength: 30,
+        // Repositioned up (yPct 0.7 -> 0.51) now that `title` is capped short
+        // enough to rarely wrap to 2 lines, so company sits closer beneath it
+        // instead of leaving a large gap — recalibrated via the DevTools tool.
+        geometry: { xPct: 0.58, yPct: 0.51, maxWidthPct: 0.39, align: 'left', fontSizePx: 32, fontWeight: 600, color: '#dbb3d2', fontFamily: FONT_POPPINS, maxLines: 1 },
       },
     ],
   },

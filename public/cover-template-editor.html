@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cover Template Editor</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Open+Sans:wght@400;600;700&family=Poppins:wght@400;500;600;700&family=Bricolage+Grotesque:wght@400;600;700&family=Dancing+Script:wght@400;700&family=Caveat:wght@400;700&family=Pacifico&family=Great+Vibes&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { background: #0a0a0a; color: #fff; font-family: Arial, sans-serif; padding: 24px; }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  p.hint { color: #999; font-size: 13px; margin-bottom: 24px; max-width: 700px; line-height: 1.5; }
+  section { margin-bottom: 40px; padding-bottom: 40px; border-bottom: 1px solid #333; }
+  h2 { font-size: 15px; margin-bottom: 12px; color: #4fc3f7; }
+  .template-frame {
+    width: 1584px;
+    height: 396px;
+    position: relative;
+    background: #111;
+    overflow: hidden;
+    outline: 1px solid #444;
+  }
+  .template-frame img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .field {
+    position: absolute;
+    outline: 1px dashed rgba(255,80,80,0.6);
+    cursor: text;
+    white-space: pre-wrap;
+  }
+  .field:hover { outline: 1px dashed #4fc3f7; }
+  .field:focus { outline: 2px solid #4fc3f7; background: rgba(0,0,0,0.15); }
+  .icon-row { position: absolute; display: flex; align-items: center; gap: 8px; }
+  .icon-row .material-icons-round { flex-shrink: 0; }
+  .icon-row .stack { display: flex; flex-direction: column; }
+  .icon-row .label { opacity: 0.85; }
+  .pill {
+    display: inline-flex; align-items: center; padding: 8px 18px; border-radius: 999px;
+    margin-right: 12px; white-space: nowrap; outline: 1px dashed rgba(255,80,80,0.6); cursor: text;
+  }
+  .pill:hover { outline: 1px dashed #4fc3f7; }
+  .pill:focus { outline: 2px solid #4fc3f7; }
+  .controls {
+    margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px 18px;
+    padding: 12px; background: #131313; border: 1px solid #2a2a2a; border-radius: 6px;
+  }
+  .controls label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #999; }
+  .controls select {
+    background: #161616; color: #fff; border: 1px solid #444; border-radius: 4px;
+    padding: 5px 8px; font-size: 12px; min-width: 170px;
+  }
+  button {
+    margin-top: 14px; padding: 8px 16px; background: #0A66C2; color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; font-weight: bold; text-transform: uppercase;
+    letter-spacing: 0.05em; cursor: pointer;
+  }
+  button:hover { background: #0958A8; }
+  pre.output {
+    margin-top: 12px; background: #161616; border: 1px solid #333; border-radius: 6px;
+    padding: 12px; font-size: 12px; max-width: 1584px; overflow-x: auto; white-space: pre-wrap;
+    display: none;
+  }
+  .char-count {
+    position: absolute;
+    background: #0A66C2;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    font-size: 10px;
+    font-weight: bold;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 20;
+  }
+  .char-count.over { background: #d92d20; }
+</style>
+</head>
+<body>
+
+<h1>Cover Template Editor</h1>
+<p class="hint">
+  Real DOM elements, not canvas — right-click any dashed box → Inspect, then edit
+  <code>left</code> / <code>top</code> / <code>width</code> / <code>font-size</code> /
+  <code>font-family</code> / <code>color</code> directly in the Styles panel. Click a box to
+  edit its text in place. The frame is a true 1584×396 canvas — 1 CSS px here = 1px in
+  the real exported image, so whatever you read in DevTools is the real number, no conversion
+  needed. When happy, hit "Copy config for this template" and paste the result back.
+  <br><br>
+  Note on centered fields (currently just <code>helping-businesses.pills</code>):
+  <code>xPct</code> is always the box's LEFT edge, even when centered — the box can legitimately
+  extend past the frame's right edge (its content just won't reach that far), so don't be
+  alarmed if a centered box's <code>left + width</code> exceeds 100%.
+</p>
+
+<!-- ================= ideas-inspire ================= -->
+<section>
+  <h2>ideas-inspire</h2>
+  <div class="template-frame" data-template-id="ideas-inspire">
+    <img src="/images/linkedin-templates/cover/ideas-inspire/background.png" alt="">
+    <div class="field" data-field-id="tagline" data-max="80" contenteditable="true" style="left:61.5%; top:26%; width:37%; font-family:'Poppins', Arial, sans-serif; font-size:46px; font-weight:600; line-height:62px; color:#ffffff; text-align:left;">Ideas that inspire.
+Solutions that last.</div>
+    <div class="field" data-field-id="caption" data-max="40" contenteditable="true" style="left:61.5%; top:68%; width:37%; font-family:Arial, sans-serif; font-size:15px; font-weight:700; color:#e5e7eb; text-align:left;">DATACRUMBS.ORG</div>
+  </div>
+  <div class="controls" data-controls-for="ideas-inspire"></div>
+  <button onclick="exportSection(this)">Copy config for this template</button>
+  <pre class="output"></pre>
+</section>
+
+<!-- ================= lets-work-together ================= -->
+<section>
+  <h2>lets-work-together</h2>
+  <div class="template-frame" data-template-id="lets-work-together">
+    <img src="/images/linkedin-templates/cover/lets-work-together/background.png" alt="">
+    <div class="field" data-field-id="heading" data-max="22" contenteditable="true" style="left:2%; top:29%; width:24%; font-family:'Poppins', Arial, sans-serif; font-size:33px; font-weight:400; color:#ffffff; text-align:left;">Let's Work Together</div>
+
+    <div class="icon-row" data-field-id="phone" data-max="30" style="left:7.5%; top:44%; width:17%;">
+      <span class="material-icons-round" style="font-size:21px; color:#fff;">call</span>
+      <span class="stack">
+        <span class="label" style="font-family:'Poppins', Arial, sans-serif; font-size:12.6px; font-weight:400; color:#fff;">Phone Number:</span>
+        <span class="value" contenteditable="true" style="font-family:Arial, sans-serif; font-size:16px; font-weight:400; color:#fff;">+123-456-7890</span>
+      </span>
+    </div>
+
+    <div class="icon-row" data-field-id="email" data-max="40" style="left:7.5%; top:56.5%; width:17%;">
+      <span class="material-icons-round" style="font-size:21px; color:#fff;">email</span>
+      <span class="stack">
+        <span class="label" style="font-family:'Poppins', Arial, sans-serif; font-size:12.6px; font-weight:400; color:#fff;">Email Address:</span>
+        <span class="value" contenteditable="true" style="font-family:Arial, sans-serif; font-size:16px; font-weight:400; color:#fff;">support@datacrumbs.org</span>
+      </span>
+    </div>
+
+    <div class="icon-row" data-field-id="website" data-max="40" style="left:7.5%; top:69%; width:17%;">
+      <span class="material-icons-round" style="font-size:21px; color:#fff;">language</span>
+      <span class="stack">
+        <span class="label" style="font-family:'Poppins', Arial, sans-serif; font-size:12.6px; font-weight:400; color:#fff;">Website:</span>
+        <span class="value" contenteditable="true" style="font-family:Arial, sans-serif; font-size:16px; font-weight:400; color:#fff;">www.datacrumbs.org</span>
+      </span>
+    </div>
+
+    <div class="field" data-field-id="name" data-max="13" contenteditable="true" style="left:68.5%; top:22%; width:22%; font-family:'Bricolage Grotesque', Arial, sans-serif; font-size:79px; font-weight:400; line-height:70px; color:#ffffff; text-align:left;">Zoya Khan</div>
+    <div class="field" data-field-id="title" data-max="18" contenteditable="true" style="left:68.5%; top:58%; width:22%; font-family:Arial, sans-serif; font-size:38px; font-weight:400; color:#ffffff; text-align:left;">AI Engineer</div>
+  </div>
+  <div class="controls" data-controls-for="lets-work-together"></div>
+  <button onclick="exportSection(this)">Copy config for this template</button>
+  <pre class="output"></pre>
+</section>
+
+<!-- ================= helping-businesses ================= -->
+<section>
+  <h2>helping-businesses</h2>
+  <div class="template-frame" data-template-id="helping-businesses">
+    <img src="/images/linkedin-templates/cover/helping-businesses/background.png" alt="">
+    <div class="field" data-field-id="headline" data-max="55" contenteditable="true" style="left:39.5%; top:18%; width:56%; font-family:'Poppins', Arial, sans-serif; font-size:53px; font-weight:800; line-height:50px; color:#ffffff; text-align:left;">Helping Businesses Scale
+Through Paid Marketing</div>
+    <div class="pills-row" data-field-id="pills" style="position:absolute; display:flex; flex-wrap:wrap; justify-content:center; gap:14px; left:59.5%; top:60%; width:44%; text-align:center;">
+      <span class="pill" contenteditable="true" data-max="30" style="padding:8px 18px; border-radius:999px; margin-right:0; background:rgba(0,0,0,0.35); font-family:'Poppins', Arial, sans-serif; font-size:16px; font-weight:500; color:#fff;">Email Lead Generation</span><span class="pill" contenteditable="true" data-max="16" style="padding:8px 18px; border-radius:999px; margin-right:0; background:rgba(0,0,0,0.35); font-family:'Poppins', Arial, sans-serif; font-size:16px; font-weight:500; color:#fff;">Social Media Ads</span><span class="pill" contenteditable="true" data-max="4" style="padding:8px 18px; border-radius:999px; margin-right:0; background:rgba(0,0,0,0.35); font-family:'Poppins', Arial, sans-serif; font-size:16px; font-weight:500; color:#fff;">SEO</span>
+    </div>
+    <div class="field" data-field-id="caption" data-max="27" contenteditable="true" style="left:83%; top:82%; width:15%; font-family:'Poppins', Arial, sans-serif; font-size:13px; font-weight:700; color:#ffffff; text-align:right;">DATACRUMBS.ORG</div>
+  </div>
+  <div class="controls" data-controls-for="helping-businesses"></div>
+  <button onclick="exportSection(this)">Copy config for this template</button>
+  <pre class="output"></pre>
+</section>
+
+<!-- ================= stunning-websites ================= -->
+<section>
+  <h2>stunning-websites</h2>
+  <div class="template-frame" data-template-id="stunning-websites">
+    <img src="/images/linkedin-templates/cover/stunning-websites/background.png" alt="">
+    <div class="field" data-field-id="headline" data-max="52" contenteditable="true" style="left:39.5%; top:16%; width:56%; font-family:'Poppins', Arial, sans-serif; font-size:50px; font-weight:800; line-height:52px; color:#ffffff; text-align:left;">Helping Brands Build
+Stunning Websites</div>
+    <div class="pills-row" data-field-id="pills" style="position:absolute; display:flex; flex-wrap:wrap; gap:12px; left:39.5%; top:50%; width:56%; text-align:left;">
+      <span class="pill" contenteditable="true" data-max="47" style="padding:8px 16px; border-radius:999px; margin-right:0; background:#0e7490; font-family:'Poppins', Arial, sans-serif; font-size:14px; font-weight:600; color:#fff;">WordPress Website Development</span><span class="pill" contenteditable="true" data-max="20" style="padding:8px 16px; border-radius:999px; margin-right:0; background:#0e7490; font-family:'Poppins', Arial, sans-serif; font-size:14px; font-weight:600; color:#fff;">Website Design</span><span class="pill" contenteditable="true" data-max="22" style="padding:8px 16px; border-radius:999px; margin-right:0; background:#0e7490; font-family:'Poppins', Arial, sans-serif; font-size:14px; font-weight:600; color:#fff;">Web Services</span><span class="pill" contenteditable="true" data-max="45" style="padding:8px 16px; border-radius:999px; margin-right:0; background:#0e7490; font-family:'Poppins', Arial, sans-serif; font-size:14px; font-weight:600; color:#fff;">Website Strategy</span><span class="pill" contenteditable="true" data-max="45" style="padding:8px 16px; border-radius:999px; margin-right:0; background:#0e7490; font-family:'Poppins', Arial, sans-serif; font-size:14px; font-weight:600; color:#fff;">Web SEO Optimization</span>
+    </div>
+    <div class="pills-row" data-field-id="banner" style="position:absolute; display:flex; gap:0; left:39.5%; top:78%; width:56%; text-align:left;">
+      <span class="pill" contenteditable="true" data-max="50" style="padding:10px 20px; border-radius:999px; margin-right:0; background:#06b6d4; font-family:'Poppins', Arial, sans-serif; font-size:15px; font-weight:700; color:#fff;">Trusted by 200+ Satisfied Clients Worldwide</span>
+    </div>
+  </div>
+  <div class="controls" data-controls-for="stunning-websites"></div>
+  <button onclick="exportSection(this)">Copy config for this template</button>
+  <pre class="output"></pre>
+</section>
+
+<!-- ================= purple-geometric ================= -->
+<section>
+  <h2>purple-geometric</h2>
+  <div class="template-frame" data-template-id="purple-geometric">
+    <img src="/images/linkedin-templates/cover/purple-geometric/background.png" alt="">
+    <div class="field" data-field-id="name" data-max="21" contenteditable="true" style="left:68.5%; top:30%; width:28%; font-family:'Dancing Script', cursive; font-size:46px; font-weight:550; line-height:52px; color:#ffffff; text-align:left;">Mahnoor Khan</div>
+    <div class="field" data-field-id="title" data-max="32" contenteditable="true" style="left:68.5%; top:43%; width:28%; font-family:'Poppins', Arial, sans-serif; font-size:24px; font-weight:400; color:#ffffff; text-align:left;">Graphic Designer</div>
+    <div class="field" data-field-id="phone" data-max="30" contenteditable="true" style="left:68.5%; top:57%; width:28%; font-family:'Poppins', Arial, sans-serif; font-size:16px; font-weight:400; color:#ffffff; text-align:left;">123-456-7890</div>
+    <div class="field" data-field-id="email" data-max="40" contenteditable="true" style="left:68.5%; top:65%; width:28%; font-family:'Poppins', Arial, sans-serif; font-size:16px; font-weight:400; color:#ffffff; text-align:left;">support@datacrumbs.org</div>
+    <div class="field" data-field-id="website" data-max="40" contenteditable="true" style="left:68.5%; top:73%; width:28%; font-family:'Poppins', Arial, sans-serif; font-size:16px; font-weight:400; color:#ffffff; text-align:left;">datacrumbs.org</div>
+  </div>
+  <div class="controls" data-controls-for="purple-geometric"></div>
+  <button onclick="exportSection(this)">Copy config for this template</button>
+  <pre class="output"></pre>
+</section>
+
+<!-- ================= blue-blocks ================= -->
+<section>
+  <h2>blue-blocks</h2>
+  <div class="template-frame" data-template-id="blue-blocks">
+    <img src="/images/linkedin-templates/cover/blue-blocks/background.png" alt="">
+    <div class="field" data-field-id="headline" data-max="51" contenteditable="true" style="left:56.5%; top:20%; width:30%; font-family:'Playfair Display', Georgia, serif; font-size:50px; font-weight:900; line-height:50px; color:#16215c; text-align:left;">Helping brands
+speak, sell, and
+scale with words.</div>
+
+    <!-- No rendered icon here on purpose — the call/email/globe glyphs for
+         this template are already baked into background.png, same as every
+         other template's baked-in icons. Just plain text fields, positioned
+         to sit next to where those baked-in icons already are. -->
+    <div class="field" data-field-id="phone" data-max="30" contenteditable="true" style="left:63%; top:64.3%; width:38%; font-family:Arial, sans-serif; font-size:16px; font-weight:400; color:#16215c; text-align:left;">123-456-7890</div>
+    <div class="field" data-field-id="email" data-max="40" contenteditable="true" style="left:63%; top:74%; width:38%; font-family:Arial, sans-serif; font-size:16px; font-weight:400; color:#16215c; text-align:left;">support@datacrumbs.org</div>
+    <div class="field" data-field-id="website" data-max="40" contenteditable="true" style="left:63%; top:84.3%; width:38%; font-family:Arial, sans-serif; font-size:16px; font-weight:400; color:#16215c; text-align:left;">lms.datacrumbs.org</div>
+  </div>
+  <div class="controls" data-controls-for="blue-blocks"></div>
+  <button onclick="exportSection(this)">Copy config for this template</button>
+  <pre class="output"></pre>
+</section>
+
+<!-- ================= yellow-wave ================= -->
+<section>
+  <h2>yellow-wave</h2>
+  <div class="template-frame" data-template-id="yellow-wave">
+    <img src="/images/linkedin-templates/cover/yellow-wave/background.png" alt="">
+    <div class="field" data-field-id="name" data-max="12" contenteditable="true" style="left:68.5%; top:28%; width:28%; font-family:'Poppins', Arial, sans-serif; font-size:68px; font-weight:700; color:#1a1a2e; text-align:left;">Aun Ali</div>
+    <div class="field" data-field-id="title" data-max="30" contenteditable="true" style="left:68.5%; top:49%; width:28%; font-family:'Poppins', Arial, sans-serif; font-size:22px; font-weight:400; color:#1a1a2e; text-align:left;">Graphic Designer</div>
+    <div class="field" data-field-id="website" data-max="40" contenteditable="true" style="left:68.5%; top:60%; width:28%; font-family:Arial, sans-serif; font-size:18px; font-weight:400; color:#1a1a2e; text-align:left;">datacrumbs.org</div>
+  </div>
+  <div class="controls" data-controls-for="yellow-wave"></div>
+  <button onclick="exportSection(this)">Copy config for this template</button>
+  <pre class="output"></pre>
+</section>
+
+<!-- ================= ai-engineer-badge ================= -->
+<section>
+  <h2>ai-engineer-badge</h2>
+  <div class="template-frame" data-template-id="ai-engineer-badge">
+    <img src="/images/linkedin-templates/cover/ai-engineer-badge/background.png" alt="">
+    <div class="field" data-field-id="title" data-max="16" contenteditable="true" style="left:58%; top:30%; width:39%; font-family:'Poppins', Arial, sans-serif; font-size:72px; font-weight:800; line-height:64px; color:#ffffff; text-align:left;">AI Engineer</div>
+    <div class="field" data-field-id="company" data-max="30" contenteditable="true" style="left:58%; top:51%; width:39%; font-family:'Poppins', Arial, sans-serif; font-size:32px; font-weight:600; color:#dbb3d2; text-align:left;">DATACRUMBS</div>
+  </div>
+  <div class="controls" data-controls-for="ai-engineer-badge"></div>
+  <button onclick="exportSection(this)">Copy config for this template</button>
+  <pre class="output"></pre>
+</section>
+
+<script>
+// "Object Sans" and "Georgia Pro" are commercial fonts (Monotype/Wilson
+// Bikadi) not distributed via Google Fonts, so there's nothing to actually
+// load for them — Arial/Georgia below are the closest free system stand-ins.
+// Everything else here is a real loaded webfont (see the <link> in <head>).
+const FONT_OPTIONS = [
+  { label: "Playfair Display (serif)", value: "'Playfair Display', Georgia, serif" },
+  { label: "Georgia (Georgia Pro stand-in)", value: "Georgia, serif" },
+  { label: "Arial (Object Sans stand-in)", value: "Arial, Helvetica, sans-serif" },
+  { label: "Open Sans", value: "'Open Sans', Arial, sans-serif" },
+  { label: "Poppins", value: "'Poppins', Arial, sans-serif" },
+  { label: "Bricolage Grotesque", value: "'Bricolage Grotesque', Arial, sans-serif" },
+  { label: "Dancing Script (handwriting)", value: "'Dancing Script', cursive" },
+  { label: "Caveat (handwriting)", value: "'Caveat', cursive" },
+  { label: "Pacifico (handwriting)", value: "'Pacifico', cursive" },
+  { label: "Great Vibes (handwriting)", value: "'Great Vibes', cursive" },
+];
+
+function buildControls() {
+  document.querySelectorAll(".controls").forEach((panel) => {
+    const templateId = panel.dataset.controlsFor;
+    const frame = document.querySelector(`.template-frame[data-template-id="${templateId}"]`);
+    const targets = [];
+    frame.querySelectorAll(":scope > .field").forEach((el) => targets.push({ id: el.dataset.fieldId, el }));
+    frame.querySelectorAll(":scope > .icon-row").forEach((el) => targets.push({ id: el.dataset.fieldId, el: el.querySelector(".value") }));
+
+    targets.forEach(({ id, el }) => {
+      const label = document.createElement("label");
+      label.textContent = id;
+      const select = document.createElement("select");
+      const currentFamily = getComputedStyle(el).fontFamily;
+      FONT_OPTIONS.forEach((opt) => {
+        const option = document.createElement("option");
+        option.value = opt.value;
+        option.textContent = opt.label;
+        select.appendChild(option);
+      });
+      // Best-effort: pre-select whichever option's family list starts the
+      // same way as what's currently applied, so the dropdown isn't blank.
+      const match = FONT_OPTIONS.find((opt) => opt.value.split(",")[0].replace(/['"]/g, "") === currentFamily.split(",")[0].replace(/['"]/g, ""));
+      if (match) select.value = match.value;
+      select.addEventListener("change", () => {
+        el.style.fontFamily = select.value;
+      });
+      label.appendChild(select);
+      panel.appendChild(label);
+    });
+  });
+}
+
+function rgbToHex(rgb) {
+  const m = rgb.match(/\d+(\.\d+)?/g);
+  if (!m) return rgb;
+  return "#" + m.slice(0,3).map(n => (+n).toString(16).padStart(2, "0")).join("");
+}
+
+function exportSection(btn) {
+  const section = btn.closest("section");
+  const frame = section.querySelector(".template-frame");
+  const frameRect = frame.getBoundingClientRect();
+  const result = {};
+
+  frame.querySelectorAll(":scope > .field").forEach((el) => {
+    const r = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    result[el.dataset.fieldId] = {
+      xPct: +((r.left - frameRect.left) / frameRect.width).toFixed(4),
+      yPct: +((r.top - frameRect.top) / frameRect.height).toFixed(4),
+      maxWidthPct: +(r.width / frameRect.width).toFixed(4),
+      align: cs.textAlign,
+      fontSizePx: parseFloat(cs.fontSize),
+      fontWeight: parseInt(cs.fontWeight) || 400,
+      color: rgbToHex(cs.color),
+      fontFamily: cs.fontFamily,
+      lineHeightPx: cs.lineHeight === "normal" ? null : Math.round(parseFloat(cs.lineHeight)),
+    };
+  });
+
+  frame.querySelectorAll(":scope > .icon-row").forEach((el) => {
+    const r = el.getBoundingClientRect();
+    const valueEl = el.querySelector(".value");
+    const labelEl = el.querySelector(".label");
+    const iconEl = el.querySelector(".material-icons-round");
+    const vcs = getComputedStyle(valueEl);
+    result[el.dataset.fieldId] = {
+      xPct: +((r.left - frameRect.left) / frameRect.width).toFixed(4),
+      yPct: +((r.top - frameRect.top) / frameRect.height).toFixed(4),
+      maxWidthPct: +(r.width / frameRect.width).toFixed(4),
+      align: "left",
+      fontSizePx: parseFloat(vcs.fontSize),
+      fontWeight: parseInt(vcs.fontWeight) || 400,
+      color: rgbToHex(vcs.color),
+      fontFamily: vcs.fontFamily,
+      // Not every icon-row has a static caption above the value (e.g.
+      // blue-blocks' contact rows are just icon + value, no "Phone Number:"
+      // label) — null rather than throwing when there's nothing to read.
+      staticLabelFontSizePx: labelEl ? parseFloat(getComputedStyle(labelEl).fontSize) : null,
+      iconSizePx: iconEl ? parseFloat(getComputedStyle(iconEl).fontSize) : null,
+    };
+  });
+
+  // A template can have more than one pills-style field (e.g. stunning-websites
+  // has both its tag row and a separate single-chip bottom banner) — every
+  // pills-row container is exported by its own data-field-id, not just one
+  // hardcoded "pills" id.
+  frame.querySelectorAll(":scope > .pills-row").forEach((pillsEl) => {
+    const r = pillsEl.getBoundingClientRect();
+    const firstPill = pillsEl.querySelector(".pill");
+    const pcs = firstPill ? getComputedStyle(firstPill) : null;
+    const bg = pcs ? pcs.backgroundColor : null;
+    const isTransparent = !bg || bg === "rgba(0, 0, 0, 0)" || bg === "transparent";
+    // `align` comes from justify-content here (a flex row, not text —
+    // text-align does nothing to flex item layout). xPct is always the raw
+    // left edge, same as every other field, for every alignment — the LMS's
+    // own canvas renderer (drawPillsField) uses `x = g.xPct * W` as the
+    // box's left edge unconditionally and centers CONTENT within
+    // [x, x+maxWidth], it never shifts the box itself. Centering is handled
+    // by justify-content on render, not by pre-shifting xPct at export time.
+    const justify = getComputedStyle(pillsEl).justifyContent;
+    const align = justify === "center" ? "center" : justify === "flex-end" ? "right" : "left";
+    result[pillsEl.dataset.fieldId] = {
+      xPct: +((r.left - frameRect.left) / frameRect.width).toFixed(4),
+      yPct: +((r.top - frameRect.top) / frameRect.height).toFixed(4),
+      maxWidthPct: +(r.width / frameRect.width).toFixed(4),
+      align,
+      fontSizePx: pcs ? parseFloat(pcs.fontSize) : null,
+      fontWeight: pcs ? parseInt(pcs.fontWeight) : null,
+      color: pcs ? rgbToHex(pcs.color) : null,
+      fontFamily: pcs ? pcs.fontFamily : null,
+      pillBg: isTransparent ? "transparent" : bg,
+      pillGapPx: parseFloat(getComputedStyle(pillsEl).gap) || null,
+    };
+  });
+
+  const out = section.querySelector(".output");
+  out.textContent = JSON.stringify(result, null, 2);
+  out.style.display = "block";
+}
+
+// Live "N" or "N/max" badge above every editable field/label/pill, updating
+// on every keystroke — max comes from data-max (ported from the real
+// maxLength/maxPills in lib/linkedinCoverArt.ts) where we know it, so this
+// reflects the actual limit the live app enforces, not a guess.
+function attachCharCounters() {
+  document.querySelectorAll(".template-frame").forEach((frame) => {
+    const editables = [];
+    frame.querySelectorAll(":scope > .field[contenteditable]").forEach((el) => editables.push({ el, max: el.dataset.max }));
+    frame.querySelectorAll(".icon-row .value[contenteditable]").forEach((el) => {
+      const row = el.closest(".icon-row");
+      editables.push({ el, max: row ? row.dataset.max : undefined });
+    });
+    frame.querySelectorAll(".pill[contenteditable]").forEach((el) => editables.push({ el, max: el.dataset.max }));
+
+    editables.forEach(({ el, max }) => {
+      const counter = document.createElement("span");
+      counter.className = "char-count";
+      frame.appendChild(counter);
+
+      const update = () => {
+        const len = (el.textContent || "").length;
+        counter.textContent = max ? `${len}/${max}` : String(len);
+        counter.classList.toggle("over", !!max && len > Number(max));
+        const fr = frame.getBoundingClientRect();
+        const er = el.getBoundingClientRect();
+        counter.style.left = Math.max(0, er.left - fr.left) + "px";
+        counter.style.top = Math.max(0, er.top - fr.top - 16) + "px";
+      };
+
+      update();
+      el.addEventListener("input", update);
+      el.addEventListener("blur", update);
+      new ResizeObserver(update).observe(el);
+    });
+  });
+}
+
+buildControls();
+attachCharCounters();
+</script>
+
+</body>
+</html>

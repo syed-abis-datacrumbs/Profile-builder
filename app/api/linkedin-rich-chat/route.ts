@@ -1,9 +1,33 @@
 import OpenAI from 'openai';
 import type { LinkedinRichProfile } from '../../../lib/linkedinRichProfile';
+import { COVER_ART } from '../../../lib/linkedinRichProfile';
+import { OVERAGE_ALLOWANCE_CHARS } from '../../../lib/linkedinCoverArt';
 
 export const runtime = 'nodejs';
 
-const SYSTEM_PROMPT = `You are an expert LinkedIn coach helping a professional optimize their full LinkedIn profile (headline, about, experience, education, certifications, projects, skills, awards) in a live editor. You are given the current profile as JSON plus a conversation. Apply the user's request, then reply.
+// coverTemplateId, pfpGradientId, and headshotUrl are structural/asset
+// choices — picker/upload-only, never sent to or trusted from the model.
+// coverFieldValues IS something the model can edit (the user should be able
+// to ask the chat to change the cover banner's wording), but only for the
+// CURRENT template's non-defaultFrom fields — the name/title/company fields
+// are kept in sync separately (client-side, from the profile's own
+// fullName/title/currentCompany) precisely so the model never has to get
+// those right. Constraining it to a known id allowlist per-request, rather
+// than accepting an arbitrary object back, is what keeps this safe — see
+// mergeCoverFieldValues below.
+type LinkedinContentProfile = Omit<LinkedinRichProfile, 'coverTemplateId' | 'pfpGradientId' | 'headshotUrl'>;
+
+const PROTECTED_KEYS = ['coverTemplateId', 'pfpGradientId', 'headshotUrl'] as const;
+
+function toContentProfile(profile: Partial<LinkedinRichProfile>): Partial<LinkedinContentProfile> {
+  const copy: Partial<LinkedinRichProfile> = { ...profile };
+  for (const key of PROTECTED_KEYS) delete copy[key];
+  return copy;
+}
+
+const SYSTEM_PROMPT_BASE = `You are an expert LinkedIn coach helping a professional optimize their full LinkedIn profile (headline, about, experience, education, certifications, projects, skills, awards) AND the wording on their cover banner image, in a live editor. You are given the current profile as JSON plus a conversation. Apply the user's request, then reply.
+
+The user will often paste in raw, unstructured facts about themselves (job history, projects, education, location) all at once, expecting you to restructure ALL of it into the right fields in one pass — do not skip or summarize away any fact they gave you; if they describe multiple projects, add ALL of them as separate entries in "projects", not just one.
 
 Respond with ONLY a JSON object (no markdown fences, no prose outside it):
 {
@@ -14,7 +38,7 @@ Respond with ONLY a JSON object (no markdown fences, no prose outside it):
 Profile JSON schema (keep this exact shape and keys):
 {
   "fullName": "",
-  "title": "",                  // short current job title, e.g. "Data Scientist"
+  "title": "",                  // short current job title, e.g. "Full Stack Developer"
   "headline": "",                // ~220-char keyword-rich LinkedIn headline
   "location": "",
   "currentCompany": "",
@@ -26,22 +50,98 @@ Profile JSON schema (keep this exact shape and keys):
   "certifications": [{ "name": "", "organization": "", "date": "" }, ...],
   "projects": [{ "title": "", "description": "" }, ...],
   "awards": [{ "title": "", "issuer": "", "date": "" }, ...],
-  "coverTemplateId": "",          // do NOT change — controlled by a separate template picker
-  "coverFieldValues": {},         // do NOT change — controlled by a separate template picker
-  "pfpGradientId": "",            // do NOT change — controlled by a separate picker
-  "headshotUrl": ""               // do NOT change — controlled by a separate photo upload
+  "coverFieldValues": { }         // OPTIONAL — see the cover-banner section below
 }
 
 Rules:
-- Return the WHOLE profile object every time; preserve every field and array item the user did not ask to change — including coverTemplateId, coverFieldValues, pfpGradientId, and headshotUrl EXACTLY as given, character for character. Those four are never yours to edit.
+- Return the WHOLE profile object every time; preserve every field and array item the user did not ask to change.
 - "experience[].description" is a set of bullet points joined with "\\n" (one sentence per line) — when asked to add a bullet to a role, append a new "\\n"-joined line; when rewriting, keep it as short punchy lines, not a paragraph.
 - Write "about" in a confident, professional first-person voice; quantify achievements where possible; keep it to 2 short paragraphs separated by "\\n\\n".
-- "add a skill" -> append to skills. "add an education / certification / project / award" -> append a new well-formed entry to that array.
+- "add a skill" -> append to skills (dedupe against existing skills, case-insensitively). "add an education / certification / project / award" -> append a new well-formed entry to that array; if the user replaces their whole background in one message, replace the array's contents to match rather than appending duplicates of old placeholder entries.
+- Every project the user describes becomes its own entry in "projects" with a clear title and a 1-2 sentence description covering what it does and the tech used.
 - Keep the headline within ~220 characters. Output valid JSON only.`;
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+function isValidContentProfile(value: unknown): value is LinkedinContentProfile {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.fullName === 'string' &&
+    typeof v.about === 'string' &&
+    Array.isArray(v.skills) &&
+    Array.isArray(v.experience) &&
+    Array.isArray(v.education)
+  );
+}
+
+// Fallback for any pills field/chip index without a hand-calibrated entry in
+// its own `pillMaxLengths` (see lib/linkedinCoverArt.ts) — every pills field
+// we actually ship one for today, so this is just a safety net.
+const MAX_PILL_CHARS = 32;
+
+/** A moderate overshoot (up to OVERAGE_ALLOWANCE_CHARS past `max`) is passed
+ *  through UNTRIMMED — the renderer (computeFitScale, lib/linkedinCoverArt.ts)
+ *  shrinks that field's font to compensate instead of losing words, which
+ *  reads far better than either chopping mid-word or rejecting the edit
+ *  outright. Only overage beyond that allowance — where shrinking would make
+ *  the text illegibly small — gets backed off to the last COMPLETE word that
+ *  fits within `max + allowance`, never a chopped mid-word ("Aut…"). Falls
+ *  back to `fallback` (the field's prior value) only when even the FIRST
+ *  word alone doesn't fit that ceiling — e.g. a 4-char pill budget can't
+ *  hold "Automation" no matter where you cut it, so there's no safe partial
+ *  to show. */
+function fitToLimit(value: string, max: number, fallback: string): string {
+  const trimmed = value.trim();
+  const ceiling = max + OVERAGE_ALLOWANCE_CHARS;
+  if (trimmed.length <= ceiling) return trimmed;
+  const cut = trimmed.slice(0, ceiling);
+  const lastSpace = cut.lastIndexOf(' ');
+  const wholeWords = lastSpace > 0 ? cut.slice(0, lastSpace).trimEnd() : '';
+  return wholeWords || fallback;
+}
+
+/** Only lets through cover-field edits for ids that actually belong to the
+ *  CURRENT template's freely-editable (non-defaultFrom) fields — anything
+ *  else the model returns (an unknown id, a name/title/company-bound field
+ *  it shouldn't touch, a malformed value) is silently dropped rather than
+ *  trusted, so a bad response can only ever no-op the cover, never corrupt
+ *  it. Also HARD-enforces each field's maxLength/maxPills (ported from the
+ *  LMS's own CoverTextField definitions) via fitToLimit above — these boxes
+ *  don't auto-shrink to fit (no `maxLines`-equivalent behavior for fields
+ *  without one), so oversized text would otherwise overflow into whatever
+ *  sits below it on the banner. */
+function mergeCoverFieldValues(
+  coverTemplateId: string,
+  current: Record<string, string | string[]>,
+  proposed: unknown
+): Record<string, string | string[]> {
+  const art = COVER_ART[coverTemplateId];
+  if (!art || !proposed || typeof proposed !== 'object') return current;
+  const editableFields = new Map(art.fields.filter((f) => !f.defaultFrom).map((f) => [f.id, f]));
+  const merged = { ...current };
+  for (const [id, value] of Object.entries(proposed as Record<string, unknown>)) {
+    const field = editableFields.get(id);
+    if (!field) continue;
+    if (field.kind === 'pills') {
+      if (Array.isArray(value) && value.every((v) => typeof v === 'string')) {
+        const capped = field.maxPills ? value.slice(0, field.maxPills) : value;
+        const currentChips = Array.isArray(current[id]) ? (current[id] as string[]) : [];
+        merged[id] = capped.map((chip, i) => {
+          const max = field.pillMaxLengths?.[i] ?? MAX_PILL_CHARS;
+          const fallback = currentChips[i] ?? chip.slice(0, max);
+          return fitToLimit(chip, max, fallback);
+        });
+      }
+    } else if (typeof value === 'string') {
+      const fallback = typeof current[id] === 'string' ? (current[id] as string) : value;
+      merged[id] = field.maxLength ? fitToLimit(value, field.maxLength, fallback) : value;
+    }
+  }
+  return merged;
 }
 
 export async function POST(request: Request) {
@@ -55,25 +155,74 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { messages?: ChatMessage[]; profile?: LinkedinRichProfile };
     const messages = Array.isArray(body.messages) ? body.messages : [];
-    const profile = body.profile ?? {};
+    const fullProfile = body.profile ?? ({} as LinkedinRichProfile);
+    const contentProfile = toContentProfile(fullProfile);
+
+    const art = COVER_ART[fullProfile.coverTemplateId];
+    const editableCoverFields = (art?.fields ?? [])
+      .filter((f) => !f.defaultFrom)
+      .map((f) => ({
+        id: f.id,
+        kind: f.kind,
+        currentValue: fullProfile.coverFieldValues?.[f.id] ?? f.placeholder,
+        ...(f.kind === 'text' && f.maxLength ? { maxLength: f.maxLength } : {}),
+        ...(f.kind === 'pills'
+          ? { maxPills: f.maxPills, maxCharsPerChip: f.pillMaxLengths ?? MAX_PILL_CHARS }
+          : {}),
+      }));
+
+    const coverSection = editableCoverFields.length
+      ? `\n\nThe cover banner image currently shows this baked-on text — these are the ONLY fields you may propose changes for, via an OPTIONAL "coverFieldValues" object in your JSON response, keyed by these exact ids:\n${JSON.stringify(editableCoverFields)}\n\nHARD RULE, not a suggestion: "maxLength" (and per-chip "maxCharsPerChip" for pills — either one number for every chip, or an array index-matched to each chip's own position when they differ) is the character budget INCLUDING spaces and punctuation — treat it as the real ceiling, not a rough guide. Count your characters before writing the field. Going a few characters over shrinks that field's text to keep it fitting (readable but smaller), so it's not catastrophic — but going WAY over (more than ~15-20 characters past the limit) gets cut back to the last whole word within reach, permanently losing whatever came after. So: aim to land AT or UNDER the limit every time: a value that's on-budget always looks best; a value that's wildly over loses content. Never rely on the overage margin on purpose.\nSome of these budgets are extremely tight (a handful of characters, matching a short original chip like "SEO" or "AI") — full sentences or phrases physically cannot fit. For anything under ~10 characters, use a single short word, acronym, or abbreviation (e.g. "AI", "3D", "Web", "SEO", "UX") instead of trying to cram in a phrase and going over. It is always better to write a short, on-topic word that fits than a longer, more descriptive one that gets rejected.\nThese were seeded from a generic template and often DON'T match the user's real field at all (e.g. marketing-agency copy like "Helping Businesses Scale Through Paid Marketing" or tags like "Email Lead Generation, Social Media Ads, SEO" sitting on a software developer's profile) — whenever the user tells you their actual role/skills/what they do, proactively rewrite any of these fields that are now a clear mismatch so the banner reads as consistent with the rest of their profile, in the SAME response, even if they never said the word "cover" or "banner". Base the new wording on their title/skills/experience, subject to the length rule above. Leave a field alone only if it already fits or is truly generic branding unrelated to role (e.g. a plain website URL). Never invent ids not in this list; pills fields take an array of short chip strings (e.g. top skills/technologies instead of marketing services), everything else takes a plain string.`
+      : '';
 
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.5,
+      max_tokens: 3000,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'system', content: `The professional's CURRENT profile as JSON:\n${JSON.stringify(profile)}` },
+        { role: 'system', content: SYSTEM_PROMPT_BASE + coverSection },
+        { role: 'system', content: `The professional's CURRENT profile as JSON:\n${JSON.stringify(contentProfile)}` },
         ...messages.map((m) => ({ role: m.role, content: m.content })),
       ],
     });
 
-    const raw = completion.choices[0]?.message?.content ?? '{}';
-    const parsed = JSON.parse(raw);
+    const choice = completion.choices[0];
+    const raw = choice?.message?.content ?? '';
+    if (!raw) {
+      return Response.json({ error: 'The AI returned an empty response. Please try again.' });
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return Response.json({ error: "The AI's response wasn't valid — please try rephrasing or send it again." });
+    }
+
+    const parsedObj = (parsed ?? {}) as { reply?: unknown; profile?: unknown };
+    if (!isValidContentProfile(parsedObj.profile)) {
+      // Don't silently report success while leaving the profile untouched —
+      // that's the exact bug where the chat says "Done" but nothing changed.
+      return Response.json({
+        error: "The AI's response didn't match the expected profile shape, so nothing was changed — please try again, or try breaking your request into smaller pieces.",
+      });
+    }
+
+    const proposedCoverFieldValues = (parsedObj.profile as { coverFieldValues?: unknown }).coverFieldValues;
+    const mergedProfile: LinkedinRichProfile = {
+      ...fullProfile,
+      ...parsedObj.profile,
+      coverTemplateId: fullProfile.coverTemplateId,
+      pfpGradientId: fullProfile.pfpGradientId,
+      headshotUrl: fullProfile.headshotUrl,
+      coverFieldValues: mergeCoverFieldValues(fullProfile.coverTemplateId, fullProfile.coverFieldValues ?? {}, proposedCoverFieldValues),
+    };
+
     return Response.json({
-      reply: typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your profile.',
-      profile: parsed.profile ?? profile,
+      reply: typeof parsedObj.reply === 'string' ? parsedObj.reply : 'Done — updated your profile.',
+      profile: mergedProfile,
     });
   } catch {
     return Response.json({ error: 'The AI request failed. Check your API key / connection and try again.' });
