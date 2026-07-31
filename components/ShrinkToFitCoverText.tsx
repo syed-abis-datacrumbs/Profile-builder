@@ -1,18 +1,27 @@
 'use client';
 
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React from 'react';
+import { computeFitScale } from '../lib/linkedinCoverArt';
 
-// Character counts (maxLength) don't tell you how many lines a string wraps
-// to — that depends on real word lengths and the box's actual pixel width,
-// neither of which a character-count ratio knows about. This measures the
-// ACTUAL rendered height at full size, in the DOM, and steps the font down
-// until the real content fits within `maxLines` — the only way to guarantee
-// a fit instead of guessing one.
-const MIN_SCALE = 0.55;
-const STEP = 0.04;
-
+// Renders one cover-banner text field at the template's exact geometry,
+// shrinking the font only when the text runs past that field's calibrated
+// maxLength (see computeFitScale for why the ratio preserves line count).
+//
+// Deliberately NOT measuring the DOM: an earlier version rendered the text,
+// compared scrollHeight against maxLines, and stepped the font down until it
+// fit. That looked principled but behaved worse — it optimized for a fit
+// target the per-field calibration never promised (those maxLength numbers
+// were tuned against placeholders carrying explicit "\n" breaks, not against
+// free auto-wrapping), so it routinely bottomed out at its floor and shrank
+// text far more than the overage justified. It also depended on measuring
+// mid-webfont-load and on temporarily stripping the line clamp to measure,
+// which had to be restored by a re-render React skips when the scale doesn't
+// change — leaving overflow:visible stuck on the element and letting text
+// escape its box. A pure ratio has none of those failure modes.
 interface ShrinkToFitCoverTextProps {
   text: string;
+  /** The field's calibrated character budget — the shrink trigger. */
+  maxLength?: number;
   maxLines?: number;
   fontSizePx: number;
   lineHeightPx?: number;
@@ -29,6 +38,7 @@ interface ShrinkToFitCoverTextProps {
 
 export const ShrinkToFitCoverText: React.FC<ShrinkToFitCoverTextProps> = ({
   text,
+  maxLength,
   maxLines,
   fontSizePx,
   lineHeightPx,
@@ -42,63 +52,8 @@ export const ShrinkToFitCoverText: React.FC<ShrinkToFitCoverTextProps> = ({
   placeholder,
   onCommit,
 }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
+  const scale = computeFitScale(text.length, maxLength);
   const baseLineHeight = lineHeightPx ?? fontSizePx * 1.25;
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el || !maxLines) {
-      setScale(1);
-      return;
-    }
-
-    const measure = () => {
-      // Strip clamping/overflow constraints for measurement — with
-      // -webkit-line-clamp active, scrollHeight reports the CLAMPED height
-      // in most browsers, not the true content height, which would make
-      // this comparison useless. The final render (after setScale below)
-      // re-adds the clamp for the actual clipped/ellipsis visual.
-      el.style.webkitLineClamp = 'unset';
-      el.style.display = 'block';
-      el.style.overflow = 'visible';
-      el.style.maxHeight = 'none';
-
-      let s = 1;
-      const apply = (v: number) => {
-        el.style.fontSize = cqw(fontSizePx * v, canvasWidthPx);
-        el.style.lineHeight = cqw(baseLineHeight * v, canvasWidthPx);
-      };
-      apply(1);
-      const resolvedLineHeight = () => parseFloat(getComputedStyle(el).lineHeight) || fontSizePx * 1.25;
-      let allowedHeight = resolvedLineHeight() * maxLines;
-      while (el.scrollHeight > allowedHeight + 1 && s > MIN_SCALE) {
-        s = Math.max(MIN_SCALE, s - STEP);
-        apply(s);
-        allowedHeight = resolvedLineHeight() * maxLines;
-      }
-      setScale(s);
-    };
-
-    measure();
-
-    // A field using a custom webfont (e.g. Bricolage Grotesque for `name`)
-    // may still be mid-download the instant this first measurement runs —
-    // that first pass then measures against the FALLBACK font's metrics,
-    // not the real one, and can reach the wrong fit/no-fit conclusion.
-    // Fields on a plain system font (no download, no swap) never hit this.
-    // Re-measuring once every requested webfont is confirmed loaded fixes
-    // that without guessing which fields are affected.
-    let cancelled = false;
-    if (typeof document !== 'undefined' && document.fonts && document.fonts.status !== 'loaded') {
-      document.fonts.ready.then(() => {
-        if (!cancelled) measure();
-      });
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [text, maxLines, fontSizePx, baseLineHeight, canvasWidthPx, cqw]);
 
   const style: React.CSSProperties = {
     color,
@@ -116,7 +71,6 @@ export const ShrinkToFitCoverText: React.FC<ShrinkToFitCoverTextProps> = ({
   if (editable) {
     return (
       <div
-        ref={ref}
         contentEditable
         suppressContentEditableWarning
         data-ph={placeholder}
@@ -132,9 +86,5 @@ export const ShrinkToFitCoverText: React.FC<ShrinkToFitCoverTextProps> = ({
     );
   }
 
-  return (
-    <div ref={ref} style={style}>
-      {text}
-    </div>
-  );
+  return <div style={style}>{text}</div>;
 };

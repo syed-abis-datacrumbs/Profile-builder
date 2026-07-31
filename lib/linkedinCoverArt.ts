@@ -72,24 +72,28 @@ export type CoverArtTemplate = {
 
 // Shared between the server (linkedin-rich-chat route, deciding how much
 // overage to let through untrimmed) and the renderers (LinkedinChatStudio /
-// LinkedinTemplatePreview, deciding how far to shrink text to fit that
-// overage) — a moderate overshoot (a word or two over budget) shrinks the
-// font down to compensate rather than getting cut; only overage beyond this
-// allowance gets trimmed at all, since below MIN_FONT_SCALE the text would
-// read as illegibly small.
+// LinkedinTemplatePreview, deciding how far to shrink text to absorb that
+// overage). Overage past the allowance is trimmed server-side rather than
+// shrunk further — below MIN_FONT_SCALE the text stops matching the
+// template's look, which matters more than fitting every last word.
 export const OVERAGE_ALLOWANCE_CHARS = 20;
-export const MIN_FONT_SCALE = 0.6;
+export const MIN_FONT_SCALE = 0.75;
 
-/** 1 = render at full size (fits within `max` already). Between 1 and
- *  MIN_FONT_SCALE for a moderate overshoot — scaled linearly across the
- *  allowance window so a 1-char overage barely shrinks and a full
- *  20-char overage hits the floor. `max` of 0/undefined (a field with no
- *  configured cap) always renders full size. */
+/** How much to shrink a field whose text runs past its calibrated
+ *  `maxLength`. Returns exactly 1 when it fits — a field within budget must
+ *  render pixel-identical to the template, never "close enough".
+ *
+ *  The ratio `max / length` is the whole trick: characters-per-line is
+ *  inversely proportional to font size, so if `max` characters were
+ *  calibrated to fill N lines at full size, `length` characters fill those
+ *  same N lines at `max / length` of that size. That keeps the text block's
+ *  line count — and therefore the template's alignment and spacing —
+ *  unchanged, which measuring-and-shrinking-until-it-fits did not: that
+ *  approach chased a fit target the calibration never promised and could
+ *  bottom out far smaller than the overage warranted. */
 export function computeFitScale(length: number, max: number | undefined): number {
   if (!max || length <= max) return 1;
-  const over = length - max;
-  if (over >= OVERAGE_ALLOWANCE_CHARS) return MIN_FONT_SCALE;
-  return 1 - (over / OVERAGE_ALLOWANCE_CHARS) * (1 - MIN_FONT_SCALE);
+  return Math.max(MIN_FONT_SCALE, max / length);
 }
 
 // The order the LMS's 8 real templates cycle onto the 28 career-track cards

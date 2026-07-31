@@ -474,6 +474,7 @@ export const LinkedinChatStudio: React.FC<{
                       )}
                       <ShrinkToFitCoverText
                         text={text}
+                        maxLength={field.maxLength}
                         maxLines={field.geometry.maxLines}
                         fontSizePx={field.geometry.fontSizePx}
                         lineHeightPx={field.geometry.lineHeightPx}
