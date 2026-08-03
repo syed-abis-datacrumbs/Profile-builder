@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
+import { useClerk } from '@clerk/nextjs';
+import {
   Sparkles, 
   Plus, 
   ChevronRight, 
@@ -9,7 +10,6 @@ import {
   FileText,
   Bot,
   MessageSquare,
-  Home,
   DollarSign,
   Briefcase,
   Globe,
@@ -43,20 +43,27 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   onOpenAskExpert
 }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { signOut } = useClerk();
+
+  // Real initials from the signed-in (or fallback placeholder) name, instead
+  // of the previously-hardcoded "AH" — e.g. "Abis Hussain" -> "AH".
+  const initials = userName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'U';
 
   return (
     <aside className="w-64 shrink-0 hidden md:flex flex-col h-screen border-r border-slate-200 bg-[#FAFAFA] p-3 text-slate-800 justify-between select-none">
       
       <div className="space-y-4">
         
-        {/* Brand Header (Clickable Logo to open homepage) */}
-        <div 
-          onClick={() => {
-            setActiveTab('home');
-            onNewChat();
-          }}
+        {/* Brand Header (click resets the current builder to its landing view) */}
+        <div
+          onClick={onNewChat}
           className="flex items-center justify-between px-2 pt-1 pb-1 cursor-pointer group hover:bg-slate-200/50 rounded-xl transition-all"
-          title="Go to Homepage"
+          title="Reset to landing"
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <img 
@@ -78,7 +85,6 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
         {/* Main Nav Items */}
         <nav className="space-y-0.5 text-xs font-medium px-1">
           {[
-            { id: 'home', label: 'Home', icon: Home, color: 'text-slate-700' },
             { id: 'resume', label: 'Resume Builder', icon: FileText, color: 'text-blue-600' },
             { id: 'github', label: 'GitHub README', icon: GithubIcon, color: 'text-slate-800' },
             { id: 'linkedin', label: 'LinkedIn Optimizer', icon: LinkedinIcon, color: 'text-blue-600' },
@@ -93,14 +99,7 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
                 key={item.id}
                 whileHover={{ x: 2 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  if (item.id === 'home') {
-                    setActiveTab('home');
-                    onNewChat();
-                  } else {
-                    setActiveTab(item.id as ActiveTab);
-                  }
-                }}
+                onClick={() => setActiveTab(item.id as ActiveTab)}
                 className={`relative w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-colors ${
                   isActive
                     ? 'text-slate-900 font-bold'
@@ -173,11 +172,11 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                      AH
+                      {initials}
                     </div>
                     <div className="truncate">
                       <div className="font-bold text-xs text-slate-900 truncate">
-                        Abishussainsyed&apos;s Personal
+                        {userName}
                       </div>
                       <div className="text-[10px] text-slate-400 font-medium">
                         {planName}
@@ -245,7 +244,7 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
                 <button
                   onClick={() => {
                     setIsSettingsOpen(false);
-                    alert('Successfully logged out.');
+                    signOut();
                   }}
                   className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors text-left"
                 >
@@ -264,7 +263,7 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                A
+                {initials}
               </div>
               <div className="truncate">
                 <div className="font-bold text-xs text-slate-900 truncate">

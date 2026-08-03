@@ -54,7 +54,7 @@ export const defaultResumeData: ResumeData = {
     }
   ],
   skills: [
-    "TypeScript", "React / Next.js", "Python", "Node.js", "PyTorch / OpenAI API", 
+    "TypeScript", "React / Next.js", "Python", "Node.js", "PyTorch / OpenAI API",
     "TailwindCSS", "PostgreSQL", "Docker / K8s", "GraphQL / REST", "GraphQL", "AWS / Vercel"
   ],
   projects: [
@@ -92,11 +92,11 @@ export const defaultGithubData: GithubProfileData = {
   bannerUrl: "https://res.cloudinary.com/dnqk2jlds/image/upload/f_auto,q_auto,w_1400/v1784892308/lms-assets/github-builder-banner.png",
   avatarUrl: "https://randomuser.me/api/portraits/men/32.jpg",
   techStack: [
-    "TypeScript", "JavaScript", "React", "Next.js", "Python", "PyTorch", 
+    "TypeScript", "JavaScript", "React", "Next.js", "Python", "PyTorch",
     "FastAPI", "Node.js", "TailwindCSS", "PostgreSQL", "Docker", "Git"
   ],
   showStatsCard: true,
-  showStreakCard: true,
+  showStreakCard: false,
   showTopLangsCard: true,
   theme: "dark",
   socialLinks: {
@@ -124,7 +124,7 @@ export const defaultLinkedinData: LinkedinProfileData = {
     "Reduced cloud infrastructure costs by $85k/year through query and cache optimization."
   ],
   keySkills: [
-    "Artificial Intelligence (AI)", "Full-Stack Development", "Next.js", 
+    "Artificial Intelligence (AI)", "Full-Stack Development", "Next.js",
     "TypeScript", "Python", "Large Language Models (LLM)", "System Architecture"
   ],
   featuredPost: "🔥 Thrilled to release ProfileArchitect - AI Career Builder! An open-source workspace to generate ATS-optimized Resumes, custom GitHub Markdown bios, and high-impact LinkedIn profiles in seconds. Check out the live demo below! 👇",

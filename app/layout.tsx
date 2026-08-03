@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono, Poppins, Bricolage_Grotesque, Dancing_Script, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
@@ -47,11 +48,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} ${bricolageGrotesque.variable} ${dancingScript.variable} ${playfairDisplay.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
-    </html>
+    <ClerkProvider>
+      <html
+        lang="en"
+        className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} ${bricolageGrotesque.variable} ${dancingScript.variable} ${playfairDisplay.variable} h-full antialiased`}
+      >
+        <body className="min-h-full flex flex-col">{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }

@@ -97,7 +97,9 @@ export const GithubChatStudio: React.FC<{
   github: GithubProfileData;
   onChange: (g: GithubProfileData) => void;
   onBack: () => void;
-}> = ({ github, onChange, onBack }) => {
+  isLoggedIn: boolean;
+  onRequireAuth: () => void;
+}> = ({ github, onChange, onBack, isLoggedIn, onRequireAuth }) => {
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: 'assistant',
@@ -118,6 +120,7 @@ export const GithubChatStudio: React.FC<{
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
+    if (!isLoggedIn) { onRequireAuth(); return; }
     const next: Msg[] = [...messages, { role: 'user', content: text }];
     setMessages(next);
     setInput('');
@@ -292,11 +295,10 @@ export const GithubChatStudio: React.FC<{
             <div className="relative">
               <button
                 onClick={() => setShowBannerPicker((v) => !v)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
-                  showBannerPicker
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${showBannerPicker
                     ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
+                  }`}
               >
                 <Image className="w-3.5 h-3.5" />
                 Banner
@@ -324,9 +326,8 @@ export const GithubChatStudio: React.FC<{
                         <button
                           key={b.label}
                           onClick={() => { set({ bannerUrl: b.url }); setShowBannerPicker(false); }}
-                          className={`rounded-lg border-2 overflow-hidden transition-all hover:scale-[1.03] ${
-                            github.bannerUrl === b.url ? 'border-indigo-500 shadow-md' : 'border-slate-200 hover:border-slate-300'
-                          }`}
+                          className={`rounded-lg border-2 overflow-hidden transition-all hover:scale-[1.03] ${github.bannerUrl === b.url ? 'border-indigo-500 shadow-md' : 'border-slate-200 hover:border-slate-300'
+                            }`}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={b.thumb} alt={b.label} className="w-full h-10 object-cover" />
@@ -486,21 +487,26 @@ export const GithubChatStudio: React.FC<{
               {(github.showStatsCard || github.showStreakCard || github.showTopLangsCard) && (
                 <div className="space-y-3 pt-3 border-t border-slate-800">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">📊 GitHub Analytics</h3>
-                  {github.username ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {github.showStatsCard && (
-                        <StatImg src={`https://github-readme-stats-ten-kohl-77.vercel.app/api?username=${encodeURIComponent(github.username)}&show_icons=true&theme=${github.theme}`} alt="GitHub Stats" />
-                      )}
-                      {github.showTopLangsCard && (
-                        <StatImg src={`https://github-readme-stats-ten-kohl-77.vercel.app/api/top-langs/?username=${encodeURIComponent(github.username)}&layout=compact&theme=${github.theme}`} alt="Top Languages" />
-                      )}
-                      {github.showStreakCard && (
-                        <StatImg src={`https://github-readme-streak-stats.herokuapp.com/?user=${encodeURIComponent(github.username)}&theme=${github.theme}`} alt="GitHub Streak" />
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-500">
-                      Add your GitHub username (ask the chat: &quot;my username is …&quot;) to load your live stats cards.
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {github.showStatsCard && (
+                      isRealUsername(github.username)
+                        ? <StatImg src={`https://github-readme-stats-ten-kohl-77.vercel.app/api?username=${encodeURIComponent(github.username)}&show_icons=true&theme=${github.theme}`} alt="GitHub Stats" fallback={<DummyStatsCard />} />
+                        : <DummyStatsCard />
+                    )}
+                    {github.showTopLangsCard && (
+                      isRealUsername(github.username)
+                        ? <StatImg src={`https://github-readme-stats-ten-kohl-77.vercel.app/api/top-langs/?username=${encodeURIComponent(github.username)}&layout=compact&theme=${github.theme}`} alt="Top Languages" fallback={<DummyTopLangsCard />} />
+                        : <DummyTopLangsCard />
+                    )}
+                    {github.showStreakCard && (
+                      isRealUsername(github.username)
+                        ? <StatImg src={`https://github-readme-streak-stats.herokuapp.com/?user=${encodeURIComponent(github.username)}&theme=${github.theme}`} alt="GitHub Streak" fallback={<DummyStreakCard />} />
+                        : <DummyStreakCard />
+                    )}
+                  </div>
+                  {!isRealUsername(github.username) && (
+                    <p className="text-[10px] text-slate-600 italic">
+                      Showing sample data — enter your real GitHub username to load your live stats.
                     </p>
                   )}
                 </div>
@@ -534,9 +540,66 @@ export const GithubChatStudio: React.FC<{
   );
 };
 
-function StatImg({ src, alt }: { src: string; alt: string }) {
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} loading="lazy" className="w-full rounded-lg border border-slate-800 bg-slate-900" />;
+/** Placeholder usernames that shouldn't hit the live API. */
+const PLACEHOLDER_USERNAMES = new Set(['', 'alexrivera-ai', 'your-username']);
+function isRealUsername(u: string): boolean {
+  return !!u.trim() && !PLACEHOLDER_USERNAMES.has(u.trim());
+}
+
+/**
+ * Live stats image with graceful fallback. If the external API image fails to
+ * load (Heroku cold-start, network timeout, invalid user) OR takes longer than
+ * 15 seconds, it renders the fallback with a retry option.
+ */
+function StatImg({ src, alt, fallback }: { src: string; alt: string; fallback?: React.ReactNode }) {
+  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+  const [attempt, setAttempt] = useState(0);
+
+  // Timeout: if the image hasn't loaded in 15s, give up and show the fallback.
+  useEffect(() => {
+    if (status !== 'loading') return;
+    const timer = setTimeout(() => setStatus('error'), 15000);
+    return () => clearTimeout(timer);
+  }, [status, attempt]);
+
+  const retry = () => {
+    setAttempt((a) => a + 1);
+    setStatus('loading');
+  };
+
+  if (status === 'error') {
+    return (
+      <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 flex flex-col items-center justify-center gap-2 min-h-[120px]">
+        <span className="text-[11px] text-slate-500">Stats API didn't respond</span>
+        <button
+          onClick={retry}
+          className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {status === 'loading' && (
+        <div className="absolute inset-0 rounded-lg border border-slate-800 bg-slate-900 animate-pulse flex items-center justify-center">
+          <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
+        </div>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        key={attempt}
+        src={attempt > 0 ? `${src}&_r=${attempt}` : src}
+        alt={alt}
+        loading="lazy"
+        className={`w-full rounded-lg border border-slate-800 bg-slate-900 ${status === 'loading' ? 'invisible' : ''}`}
+        onLoad={() => setStatus('ok')}
+        onError={() => setStatus('error')}
+      />
+    </div>
+  );
 }
 
 function Social({ label, color }: { label: string; color: string }) {
@@ -544,6 +607,93 @@ function Social({ label, color }: { label: string; color: string }) {
     <span className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-bold text-white" style={{ backgroundColor: `#${color}` }}>
       {label}
     </span>
+  );
+}
+
+/* ── Dummy stat cards ── styled to look like real github-readme-stats cards ── */
+
+function DummyStatsCard() {
+  const stats = [
+    { label: 'Total Stars Earned', value: '142' },
+    { label: 'Total Commits (2025)', value: '1,247' },
+    { label: 'Total PRs', value: '89' },
+    { label: 'Total Issues', value: '34' },
+    { label: 'Contributed to', value: '12' },
+  ];
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 space-y-2.5">
+      <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+        <span className="text-indigo-400">⚡</span> GitHub Stats
+      </div>
+      {stats.map((s) => (
+        <div key={s.label} className="flex items-center justify-between">
+          <span className="text-[11px] text-slate-500">{s.label}</span>
+          <span className="text-[11px] font-bold text-slate-300 tabular-nums">{s.value}</span>
+        </div>
+      ))}
+      <div className="pt-1.5 mt-1 border-t border-slate-800">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-slate-600">Rank:</span>
+          <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-full bg-indigo-500 rounded-full" style={{ width: '68%' }} />
+          </div>
+          <span className="text-[10px] font-bold text-indigo-400">A+</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DummyTopLangsCard() {
+  const langs = [
+    { name: 'TypeScript', pct: 38, color: '#3178C6' },
+    { name: 'Python', pct: 28, color: '#3776AB' },
+    { name: 'JavaScript', pct: 18, color: '#F7DF1E' },
+    { name: 'CSS', pct: 9, color: '#563D7C' },
+    { name: 'Other', pct: 7, color: '#6366f1' },
+  ];
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 space-y-2.5">
+      <div className="text-xs font-bold text-slate-300">Most Used Languages</div>
+      {/* Compact bar */}
+      <div className="flex h-2.5 rounded-full overflow-hidden">
+        {langs.map((l) => (
+          <div key={l.name} style={{ width: `${l.pct}%`, backgroundColor: l.color }} />
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+        {langs.map((l) => (
+          <div key={l.name} className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
+            <span className="text-[11px] text-slate-400">{l.name}</span>
+            <span className="text-[10px] text-slate-600 ml-auto tabular-nums">{l.pct}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DummyStreakCard() {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 flex items-center justify-around text-center">
+      <div>
+        <div className="text-lg font-bold text-orange-400 tabular-nums">1,247</div>
+        <div className="text-[10px] text-slate-500">Total Contributions</div>
+      </div>
+      <div className="w-px h-10 bg-slate-800" />
+      <div>
+        <div className="text-lg font-bold text-orange-400 tabular-nums">16</div>
+        <div className="text-[10px] text-slate-500 leading-tight">Current Streak</div>
+        <div className="text-[9px] text-slate-600">Jul 14 – Jul 30</div>
+      </div>
+      <div className="w-px h-10 bg-slate-800" />
+      <div>
+        <div className="text-lg font-bold text-orange-400 tabular-nums">42</div>
+        <div className="text-[10px] text-slate-500">Longest Streak</div>
+        <div className="text-[9px] text-slate-600">Mar 1 – Apr 11</div>
+      </div>
+    </div>
   );
 }
 

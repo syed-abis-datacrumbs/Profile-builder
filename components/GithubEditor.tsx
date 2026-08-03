@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  Copy, 
-  Download, 
-  Check, 
-  Sparkles, 
-  Code, 
-  Eye, 
-  Terminal, 
-  Plus, 
+import {
+  Copy,
+  Download,
+  Check,
+  Sparkles,
+  Code,
+  Eye,
+  Terminal,
+  Plus,
   Trash2,
   ExternalLink,
   Shield,
@@ -23,12 +23,16 @@ interface GithubEditorProps {
   data: GithubProfileData;
   onChange: (newData: GithubProfileData) => void;
   onAIRefine: (prompt: string) => void;
+  isLoggedIn: boolean;
+  onRequireAuth: () => void;
 }
 
 export const GithubEditor: React.FC<GithubEditorProps> = ({
   data,
   onChange,
-  onAIRefine
+  onAIRefine,
+  isLoggedIn,
+  onRequireAuth
 }) => {
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<'visual' | 'code'>('visual');
@@ -122,12 +126,12 @@ export const GithubEditor: React.FC<GithubEditorProps> = ({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-      
+
       {/* Left Settings & Inputs */}
       <div className="lg:col-span-5 flex flex-col gap-4">
-        
+
         <div className="glass-panel p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4 max-h-[calc(100vh-160px)] overflow-y-auto">
-          
+
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div className="flex items-center gap-2 font-bold text-sm text-slate-100">
               <GithubIcon className="w-4 h-4 text-indigo-400" />
@@ -186,11 +190,10 @@ export const GithubEditor: React.FC<GithubEditorProps> = ({
                   <button
                     key={badge.name}
                     onClick={() => toggleBadge(badge.name)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all ${
-                      isSelected
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all ${isSelected
                         ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
                         : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700'
-                    }`}
+                      }`}
                   >
                     {badge.name}
                   </button>
@@ -202,7 +205,7 @@ export const GithubEditor: React.FC<GithubEditorProps> = ({
           {/* Analytics Cards Toggles */}
           <div className="space-y-2 border-t border-slate-800 pt-3">
             <label className="text-[11px] font-medium text-slate-400 block mb-1">GitHub Stats Widgets</label>
-            
+
             <label className="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer">
               <span className="text-xs text-slate-300">Stats Overview Card</span>
               <input
@@ -239,7 +242,10 @@ export const GithubEditor: React.FC<GithubEditorProps> = ({
             <label className="text-[11px] font-medium text-slate-400 mb-1 block">Stats Theme</label>
             <select
               value={data.theme}
-              onChange={(e) => onChange({ ...data, theme: e.target.value as any })}
+              onChange={(e) => {
+                if (!isLoggedIn) { onRequireAuth(); return; }
+                onChange({ ...data, theme: e.target.value as any });
+              }}
               className="w-full px-3 py-2 rounded-xl text-xs glass-input text-slate-100 focus:outline-none bg-slate-900"
             >
               <option value="dark">Dark Theme</option>
@@ -256,28 +262,26 @@ export const GithubEditor: React.FC<GithubEditorProps> = ({
 
       {/* Right Studio Live Preview & Raw Code */}
       <div className="lg:col-span-7 flex flex-col gap-3">
-        
+
         {/* Toggle View & Actions */}
         <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-slate-950/80 border border-slate-800">
           <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
             <button
               onClick={() => setViewMode('visual')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                viewMode === 'visual'
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${viewMode === 'visual'
                   ? 'bg-indigo-600 text-white'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               <Eye className="w-3.5 h-3.5" />
               <span>Visual Preview</span>
             </button>
             <button
               onClick={() => setViewMode('code')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                viewMode === 'code'
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${viewMode === 'code'
                   ? 'bg-indigo-600 text-white'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               <Terminal className="w-3.5 h-3.5" />
               <span>Markdown Source</span>
@@ -307,7 +311,7 @@ export const GithubEditor: React.FC<GithubEditorProps> = ({
         <div className="flex-1 p-6 bg-slate-950 rounded-2xl border border-slate-800 overflow-y-auto max-h-[calc(100vh-210px)]">
           {viewMode === 'visual' ? (
             <div className="space-y-6 text-slate-200 font-sans">
-              
+
               {/* GitHub Styled Header */}
               <div className="border-b border-slate-800 pb-4">
                 <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">

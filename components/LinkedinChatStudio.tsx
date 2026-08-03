@@ -112,7 +112,9 @@ export const LinkedinChatStudio: React.FC<{
   profile: LinkedinRichProfile;
   onChange: (p: LinkedinRichProfile) => void;
   onBack: () => void;
-}> = ({ profile, onChange, onBack }) => {
+  isLoggedIn: boolean;
+  onRequireAuth: () => void;
+}> = ({ profile, onChange, onBack, isLoggedIn, onRequireAuth }) => {
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: 'assistant',
@@ -135,6 +137,7 @@ export const LinkedinChatStudio: React.FC<{
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
+    if (!isLoggedIn) { onRequireAuth(); return; }
     const next: Msg[] = [...messages, { role: 'user', content: text }];
     setMessages(next);
     setInput('');

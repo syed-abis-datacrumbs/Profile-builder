@@ -77,6 +77,8 @@ interface ResumeChatStudioProps {
   onChange: (cv: CvData) => void;
   fieldLabel?: string;
   onBack: () => void;
+  isLoggedIn: boolean;
+  onRequireAuth: () => void;
 }
 
 export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
@@ -84,6 +86,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   onChange,
   fieldLabel,
   onBack,
+  isLoggedIn,
+  onRequireAuth,
 }) => {
   const [messages, setMessages] = useState<Msg[]>([
     {
@@ -194,6 +198,7 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
+    if (!isLoggedIn) { onRequireAuth(); return; }
     const nextMessages: Msg[] = [...messages, { role: 'user', content: text }];
     setMessages(nextMessages);
     setInput('');

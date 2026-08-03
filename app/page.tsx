@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
 import confetti from 'canvas-confetti';
 import { ImagineSidebar } from '../components/ImagineSidebar';
 import { ImagineHeader } from '../components/ImagineHeader';
-import { ImagineHero } from '../components/ImagineHero';
 import { ResumeLandingView } from '../components/ResumeLandingView';
 import { ResumeEditor } from '../components/ResumeEditor';
 import { GithubLandingView, GithubTemplateCard } from '../components/GithubLandingView';
@@ -38,7 +38,6 @@ import { ArrowLeft, Sparkles, FileText, Download, Award } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '../components/icons';
 
 export default function Home() {
-  const [viewMode, setViewMode] = useState<'home' | 'studio'>('home');
   const [activeTab, setActiveTab] = useState<ActiveTab>('resume');
   const [resumeMode, setResumeMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
   const [resumePreviewSample, setResumePreviewSample] = useState<LmsResumeSample | null>(null);
@@ -64,9 +63,12 @@ export default function Home() {
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isAskExpertOpen, setIsAskExpertOpen] = useState(false);
 
-  // User Auth State
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | undefined>();
+  // User Auth State — real Clerk session, same account as the LMS
+  // (lms.datacrumbs.org shares this Clerk app), so this is one source of
+  // truth rather than locally-tracked login state.
+  const { isSignedIn, user } = useUser();
+  const isLoggedIn = isSignedIn ?? false;
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
   const [assistantPrompt, setAssistantPrompt] = useState('');
 
   // Calculate ATS Score
@@ -79,17 +81,6 @@ export default function Home() {
   };
 
   const atsScore = calculateATSScore();
-
-  const handleSelectTabFromHero = (tab: ActiveTab) => {
-    setActiveTab(tab);
-    setViewMode('studio');
-  };
-
-  const handleSubmitPromptFromHero = (promptText: string) => {
-    setAssistantPrompt(promptText);
-    setActiveTab('assistant');
-    setViewMode('studio');
-  };
 
   // Loads a role's ready-made README (from the picker popup or a role chip)
   // onto the GitHub data, then jumps into the editor.
@@ -129,11 +120,12 @@ export default function Home() {
       {/* ImagineArt Style Left Sidebar */}
       <ImagineSidebar
         activeTab={activeTab}
-        setActiveTab={(tab) => {
-          setActiveTab(tab);
-          setViewMode('studio');
+        setActiveTab={setActiveTab}
+        onNewChat={() => {
+          if (activeTab === 'resume') setResumeMode('landing');
+          else if (activeTab === 'github') setGithubMode('landing');
+          else if (activeTab === 'linkedin') setLinkedinMode('landing');
         }}
-        onNewChat={() => setViewMode('home')}
         userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis Hussain Syed" : "Abis Hussain Syed"}
         planName={isLoggedIn ? "Pro Plan" : "Free Plan"}
         onOpenUpgrade={() => setIsUpgradeOpen(true)}
@@ -142,20 +134,17 @@ export default function Home() {
 
       {/* Main Content Area */}
       <div className={`flex-1 flex flex-col min-w-0 h-screen ${
-        viewMode === 'studio' && (
+        (activeTab === 'resume' && resumeMode === 'studio') ||
+        (activeTab === 'linkedin' && linkedinMode === 'studio') ||
+        (activeTab === 'github' && githubMode === 'studio')
+          ? 'overflow-hidden' : 'overflow-y-auto'
+      }`}>
+
+        {/* Top Header - hidden in full-bleed Studio mode */}
+        {!(
           (activeTab === 'resume' && resumeMode === 'studio') ||
           (activeTab === 'linkedin' && linkedinMode === 'studio') ||
           (activeTab === 'github' && githubMode === 'studio')
-        ) ? 'overflow-hidden' : 'overflow-y-auto'
-      }`}>
-        
-        {/* Top Header - hidden in full-bleed Studio mode */}
-        {!(
-          viewMode === 'studio' && (
-            (activeTab === 'resume' && resumeMode === 'studio') ||
-            (activeTab === 'linkedin' && linkedinMode === 'studio') ||
-            (activeTab === 'github' && githubMode === 'studio')
-          )
         ) && (
           <ImagineHeader
             onOpenUpgrade={() => setIsUpgradeOpen(true)}
@@ -165,24 +154,8 @@ export default function Home() {
           />
         )}
 
-        {/* Home Screen OR Studio Workspace View */}
+        {/* Studio Workspace View */}
         <AnimatePresence mode="wait">
-          {viewMode === 'home' ? (
-            <motion.div
-              key="home-view"
-              initial={{ opacity: 0, y: 12, scale: 0.99 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 0.99 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="flex-1 flex items-center justify-center"
-            >
-              <ImagineHero
-                userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
-                onSelectTab={handleSelectTabFromHero}
-                onSubmitPrompt={handleSubmitPromptFromHero}
-              />
-            </motion.div>
-          ) : (
             <motion.div
               key={`studio-view-${activeTab}`}
               initial={{ opacity: 0, y: 14, scale: 0.995 }}
@@ -215,6 +188,8 @@ export default function Home() {
                           onChange={(v) => setStudioCv(v)}
                           fieldLabel={studioLabel}
                           onBack={() => setResumeMode('landing')}
+                          isLoggedIn={isLoggedIn}
+                          onRequireAuth={() => setIsAuthOpen(true)}
                         />
                       ) : resumeMode === 'editor' ? (
                         <div className="space-y-4">
@@ -301,6 +276,8 @@ export default function Home() {
                           github={githubData}
                           onChange={setGithubData}
                           onBack={() => setGithubMode('landing')}
+                          isLoggedIn={isLoggedIn}
+                          onRequireAuth={() => setIsAuthOpen(true)}
                         />
                       ) : githubMode === 'editor' ? (
                         <div className="space-y-4">
@@ -320,6 +297,8 @@ export default function Home() {
                               setActiveTab('assistant');
                               setAssistantPrompt("Generate a cyberpunk GitHub README bio");
                             }}
+                            isLoggedIn={isLoggedIn}
+                            onRequireAuth={() => setIsAuthOpen(true)}
                           />
                         </div>
                       ) : (
@@ -409,6 +388,8 @@ export default function Home() {
                           profile={linkedinRichProfile}
                           onChange={setLinkedinRichProfile}
                           onBack={() => setLinkedinMode('landing')}
+                          isLoggedIn={isLoggedIn}
+                          onRequireAuth={() => setIsAuthOpen(true)}
                         />
                       ) : (
                         <>
@@ -552,7 +533,6 @@ export default function Home() {
                 </AnimatePresence>
               </div>
             </motion.div>
-          )}
         </AnimatePresence>
 
       </div>
@@ -561,10 +541,7 @@ export default function Home() {
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
-        onSuccess={(email) => {
-          setIsLoggedIn(true);
-          setUserEmail(email);
-        }}
+        onSuccess={() => setIsAuthOpen(false)}
       />
 
       <ATSScoreModal
