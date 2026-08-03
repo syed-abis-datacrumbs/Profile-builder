@@ -76,8 +76,42 @@ export type CoverArtTemplate = {
 // overage). Overage past the allowance is trimmed server-side rather than
 // shrunk further — below MIN_FONT_SCALE the text stops matching the
 // template's look, which matters more than fitting every last word.
-export const OVERAGE_ALLOWANCE_CHARS = 20;
-export const MIN_FONT_SCALE = 0.75;
+//
+// The allowance is a RATIO of each field's own budget, not a flat character
+// count: a flat "+20 chars" is 36% of a 55-char headline but 154% of a
+// 13-char name, so small fields were being handed far more overage than any
+// bounded shrink could absorb — which is exactly how text ended up
+// ellipsized instead of fitted. MIN_FONT_SCALE is the exact reciprocal of
+// the allowance so the two always cancel: at the worst permitted overage,
+// `length * scale` lands back on `max`, guaranteeing a fit.
+export const OVERAGE_ALLOWANCE_RATIO = 0.25;
+export const MIN_FONT_SCALE = 1 / (1 + OVERAGE_ALLOWANCE_RATIO); // 0.8
+
+/** The longest string this field may hold before the text itself is trimmed
+ *  — beyond this, shrinking alone can no longer keep it inside the box. */
+export function overageCeiling(max: number): number {
+  // floor, not ceil: rounding UP here would admit one more character than
+  // MIN_FONT_SCALE can shrink away, reintroducing the ellipsis this pairing
+  // exists to prevent.
+  return Math.floor(max * (1 + OVERAGE_ALLOWANCE_RATIO));
+}
+
+/** Smallest on-screen size cover text may render at, in real CSS px. */
+export const MIN_READABLE_PX = 11;
+
+/** Font size for a cover field, as a CSS value.
+ *
+ *  Sizes are authored against the 1584px export canvas, but the banner is
+ *  displayed at profile width (~half that), so anything authored small —
+ *  tag pills at 16px, captions and contact lines at 13-16px — lands at
+ *  6-8px on screen: fine in the 1:1 calibration tool, unreadable where it's
+ *  actually seen. `max()` keeps the design's proportional sizing wherever
+ *  there's room and only takes over once a field would drop below what
+ *  anyone can read, so large fields (headlines, names) are never affected.
+ *  Pair with em-based padding so chip boxes track the size that wins. */
+export function coverFontSize(px: number, canvasWidthPx: number): string {
+  return `max(${MIN_READABLE_PX}px, ${((px / canvasWidthPx) * 100).toFixed(3)}cqw)`;
+}
 
 /** How much to shrink a field whose text runs past its calibrated
  *  `maxLength`. Returns exactly 1 when it fits — a field within budget must

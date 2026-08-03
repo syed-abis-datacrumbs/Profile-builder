@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { linkedinCovers, getDefaultPfpGradientId } from '../lib/linkedinCovers';
 import { linkedinTemplateSamples, LinkedinTemplateSample, LinkedinTemplateFeaturedItem } from '../lib/linkedinTemplateSamples';
-import { COVER_ART, CoverArtField, getCoverArtId, computeFitScale } from '../lib/linkedinCoverArt';
+import { COVER_ART, CoverArtField, getCoverArtId, computeFitScale, coverFontSize } from '../lib/linkedinCoverArt';
 import { ShrinkToFitCoverText } from './ShrinkToFitCoverText';
 
 const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
@@ -82,22 +82,25 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
   return (
     <div className={`space-y-4 max-w-3xl mx-auto pb-12 ${inter.className}`}>
       {/* ── Top Navigation Bar ── */}
-      <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-5 py-3 shadow-xs">
+      <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-xl px-3 sm:px-5 py-3 shadow-xs">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+          className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors shrink-0"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to templates
+          <ArrowLeft className="w-4 h-4 shrink-0" />
+          {/* Full label needs room the narrowest phones don't have */}
+          <span className="sm:hidden">Back</span>
+          <span className="hidden sm:inline">Back to templates</span>
         </button>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500 hidden sm:inline-block">Template: {template.name}</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs font-semibold text-slate-500 hidden md:inline-block truncate">Template: {template.name}</span>
           <button
             onClick={onEdit}
-            className="flex items-center gap-1.5 text-sm font-semibold text-white bg-[#0A66C2] hover:bg-[#0958A8] rounded-full px-4 py-2 transition-colors shadow-2xs"
+            className="flex items-center gap-1.5 text-sm font-semibold text-white bg-[#0A66C2] hover:bg-[#0958A8] rounded-full px-3 sm:px-4 py-2 transition-colors shadow-2xs shrink-0"
           >
-            <PenSquare className="w-4 h-4" />
-            Edit this profile
+            <PenSquare className="w-4 h-4 shrink-0" />
+            <span className="sm:hidden">Edit</span>
+            <span className="hidden sm:inline">Edit this profile</span>
           </button>
         </div>
       </div>
@@ -149,10 +152,10 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
                           color: field.geometry.color,
                           fontWeight: field.geometry.fontWeight,
                           fontFamily: field.geometry.fontFamily,
-                          fontSize: cqw(chipFontSize, art.canvasWidthPx),
+                          fontSize: coverFontSize(chipFontSize, art.canvasWidthPx),
                           background: field.geometry.pillBg ?? 'rgba(0,0,0,0.35)',
                           borderRadius: 9999,
-                          padding: `${cqw(chipFontSize * 0.45, art.canvasWidthPx)} ${cqw(chipFontSize * 0.9, art.canvasWidthPx)}`,
+                          padding: '0.45em 0.9em',
                           whiteSpace: 'nowrap',
                         }}
                       >
@@ -178,7 +181,7 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
                 {field.staticLabel && (
                   <div
                     style={{
-                      fontSize: cqw(field.staticLabelFontSizePx ?? field.geometry.fontSizePx * 0.65, art.canvasWidthPx),
+                      fontSize: coverFontSize(field.staticLabelFontSizePx ?? field.geometry.fontSizePx * 0.65, art.canvasWidthPx),
                       fontFamily: field.staticLabelFontFamily,
                       fontWeight: 600,
                       color: field.geometry.color,
@@ -196,7 +199,6 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
                   fontSizePx={field.geometry.fontSizePx}
                   lineHeightPx={field.geometry.lineHeightPx}
                   canvasWidthPx={art.canvasWidthPx}
-                  cqw={cqw}
                   color={field.geometry.color}
                   fontWeight={field.geometry.fontWeight}
                   fontFamily={field.geometry.fontFamily}

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { computeFitScale } from '../lib/linkedinCoverArt';
+import { computeFitScale, coverFontSize } from '../lib/linkedinCoverArt';
 
 // Renders one cover-banner text field at the template's exact geometry,
 // shrinking the font only when the text runs past that field's calibrated
@@ -26,7 +26,6 @@ interface ShrinkToFitCoverTextProps {
   fontSizePx: number;
   lineHeightPx?: number;
   canvasWidthPx: number;
-  cqw: (px: number, canvasWidthPx: number) => string;
   color: string;
   fontWeight: number;
   fontFamily?: string;
@@ -43,7 +42,6 @@ export const ShrinkToFitCoverText: React.FC<ShrinkToFitCoverTextProps> = ({
   fontSizePx,
   lineHeightPx,
   canvasWidthPx,
-  cqw,
   color,
   fontWeight,
   fontFamily,
@@ -61,8 +59,10 @@ export const ShrinkToFitCoverText: React.FC<ShrinkToFitCoverTextProps> = ({
     fontFamily,
     textAlign,
     whiteSpace: 'pre-line',
-    fontSize: cqw(fontSizePx * scale, canvasWidthPx),
-    lineHeight: cqw(baseLineHeight * scale, canvasWidthPx),
+    fontSize: coverFontSize(fontSizePx * scale, canvasWidthPx),
+    // em, so it tracks whichever size coverFontSize settles on — a cqw
+    // line-height would collapse onto a floored font size.
+    lineHeight: baseLineHeight / fontSizePx,
     ...(maxLines
       ? { display: '-webkit-box', WebkitLineClamp: maxLines, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }
       : {}),

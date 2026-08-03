@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import type { LinkedinRichProfile } from '../../../lib/linkedinRichProfile';
 import { COVER_ART } from '../../../lib/linkedinRichProfile';
-import { OVERAGE_ALLOWANCE_CHARS } from '../../../lib/linkedinCoverArt';
+import { overageCeiling } from '../../../lib/linkedinCoverArt';
 
 export const runtime = 'nodejs';
 
@@ -96,7 +96,7 @@ const MAX_PILL_CHARS = 32;
  *  to show. */
 function fitToLimit(value: string, max: number, fallback: string): string {
   const trimmed = value.trim();
-  const ceiling = max + OVERAGE_ALLOWANCE_CHARS;
+  const ceiling = overageCeiling(max);
   if (trimmed.length <= ceiling) return trimmed;
   const cut = trimmed.slice(0, ceiling);
   const lastSpace = cut.lastIndexOf(' ');

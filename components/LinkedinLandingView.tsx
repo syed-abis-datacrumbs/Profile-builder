@@ -98,12 +98,12 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="w-full max-w-5xl mx-auto py-8 px-4 space-y-10"
+      className="w-full max-w-5xl mx-auto py-6 sm:py-8 px-4 space-y-8 sm:space-y-10"
     >
-      
+
       {/* Title Greeting */}
       <div className="text-center pt-2">
-        <h1 className="text-4xl sm:text-5xl font-serif tracking-tight text-slate-900">
+        <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif tracking-tight text-slate-900 text-balance">
           Optimize your LinkedIn Profile, {userName.split(' ')[0]}.
         </h1>
       </div>
@@ -123,10 +123,10 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
           />
 
           {/* Bottom Bar inside Prompt Box */}
-          <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-            
+          <div className="flex items-center justify-between gap-2 flex-wrap border-t border-slate-100 pt-3">
+
             {/* Left Controls */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
               <button
                 type="button"
                 className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
@@ -151,23 +151,24 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
                 <PenTool className="w-3.5 h-3.5" />
               </button>
 
-              <div className="h-4 w-px bg-slate-200 mx-1" />
+              <div className="hidden sm:block h-4 w-px bg-slate-200 mx-1" />
 
-              {/* Auto Pill */}
-              <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium flex items-center gap-1 border border-slate-200/60">
+              {/* Auto Pill — decorative, first to go when width is scarce */}
+              <span className="hidden sm:flex px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium items-center gap-1 border border-slate-200/60">
                 <Check className="w-3 h-3 text-slate-500" />
                 <span>Auto</span>
               </span>
 
               {/* LinkedIn Pill */}
-              <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
-                <LinkedinIcon className="w-3.5 h-3.5 text-white" />
-                <span>LinkedIn Optimizer</span>
+              <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs shrink-0">
+                <LinkedinIcon className="w-3.5 h-3.5 text-white shrink-0" />
+                <span className="sm:hidden">LinkedIn</span>
+                <span className="hidden sm:inline">LinkedIn Optimizer</span>
               </span>
             </div>
 
             {/* Right Controls */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ml-auto shrink-0">
               <button
                 type="button"
                 className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 flex items-center gap-1 border border-slate-200/80 transition-colors"
@@ -218,19 +219,19 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
 
       {/* Section 2: Try a Profile Preset */}
       <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <h3 className="text-sm font-semibold text-slate-700">
             Try a LinkedIn Cover Template
           </h3>
           <button
             onClick={onOpenEditorDirectly}
-            className="text-xs font-semibold text-blue-600 hover:underline"
+            className="text-xs font-semibold text-blue-600 hover:underline shrink-0"
           >
             Open Optimizer Editor →
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
           {linkedinCovers.map((cover, index) => (
             <motion.div
               key={cover.id}
