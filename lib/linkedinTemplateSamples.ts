@@ -129,7 +129,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'lets-work-together': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Hamza Iqbal',
     title: 'Data Scientist',
     headline: 'Data Scientist | Turning messy data into decisions that matter',
     location: 'Lahore, Pakistan',
@@ -190,7 +190,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'helping-businesses': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Sana Mirza',
     title: 'Full Stack Developer',
     headline: 'Full Stack Developer | React, Node.js & everything in between',
     location: 'Lahore, Pakistan',
@@ -251,7 +251,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'stunning-websites': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Bilal Ahmed',
     title: 'Frontend Developer',
     headline: 'Frontend Developer | Crafting fast, accessible interfaces with React',
     location: 'Lahore, Pakistan',
@@ -312,7 +312,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'purple-geometric': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Mahnoor Khan',
     title: 'Software Engineer',
     headline: 'Software Engineer | Building scalable backend systems',
     location: 'Lahore, Pakistan',
@@ -375,7 +375,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'blue-blocks': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Usman Tariq',
     title: 'Data Analyst',
     headline: 'Data Analyst | Turning raw numbers into decisions leadership can act on',
     location: 'Lahore, Pakistan',
@@ -436,7 +436,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'yellow-wave': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Aun Ali',
     title: 'Cyber Security Analyst',
     headline: 'Cyber Security Analyst | Threat detection, incident response & security audits',
     location: 'Lahore, Pakistan',
@@ -497,7 +497,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'ai-engineer-badge': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Zoya Siddiqui',
     title: 'Digital Marketing Specialist',
     headline: 'Digital Marketing Specialist | Performance campaigns & SEO that actually convert',
     location: 'Lahore, Pakistan',
@@ -558,7 +558,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'data-engineer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Faisal Nadeem',
     title: 'Data Engineer',
     headline: 'Data Engineer | Building reliable pipelines that data teams can trust',
     location: 'Lahore, Pakistan',
@@ -619,7 +619,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'devops-engineer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Areeba Malik',
     title: 'DevOps Engineer',
     headline: 'DevOps Engineer | CI/CD, infrastructure-as-code & reliable deployments',
     location: 'Lahore, Pakistan',
@@ -680,7 +680,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'mobile-app-developer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Danish Qureshi',
     title: 'Mobile App Developer',
     headline: 'Mobile App Developer | React Native & Flutter apps used by thousands',
     location: 'Lahore, Pakistan',
@@ -741,7 +741,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'ui-ux-designer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Hira Shah',
     title: 'UI/UX Designer',
     headline: 'UI/UX Designer | Research-driven design that solves real user problems',
     location: 'Lahore, Pakistan',
@@ -802,7 +802,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'graphic-designer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Zain Abbas',
     title: 'Graphic Designer',
     headline: 'Graphic Designer | Brand identity, print & digital design',
     location: 'Lahore, Pakistan',
@@ -863,7 +863,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'video-editor': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Noor Fatima',
     title: 'Video Editor',
     headline: 'Video Editor | Short-form & long-form content that keeps people watching',
     location: 'Lahore, Pakistan',
@@ -924,7 +924,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'backend-developer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Ahsan Javed',
     title: 'Backend Developer',
     headline: 'Backend Developer | Scalable APIs & databases powering real products',
     location: 'Lahore, Pakistan',
@@ -985,7 +985,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'cloud-engineer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Kiran Baig',
     title: 'Cloud Engineer',
     headline: 'Cloud Engineer | Designing scalable, cost-efficient AWS infrastructure',
     location: 'Lahore, Pakistan',
@@ -1046,7 +1046,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'qa-test-automation': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Talha Rauf',
     title: 'QA Automation Engineer',
     headline: 'QA / Test Automation Engineer | Catching bugs before users do',
     location: 'Lahore, Pakistan',
@@ -1107,7 +1107,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'game-developer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Rimsha Anwar',
     title: 'Game Developer',
     headline: 'Game Developer | Building playable, polished experiences in Unity',
     location: 'Lahore, Pakistan',
@@ -1168,7 +1168,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'mlops-engineer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Saad Hussain',
     title: 'MLOps Engineer',
     headline: 'MLOps Engineer | Getting machine learning models from notebook to production',
     location: 'Lahore, Pakistan',
@@ -1229,7 +1229,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'business-intelligence-analyst': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Nimra Aslam',
     title: 'Business Intelligence Analyst',
     headline: 'Business Intelligence Analyst | Dashboards leadership actually uses',
     location: 'Lahore, Pakistan',
@@ -1290,7 +1290,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'computer-vision-engineer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Owais Bhatti',
     title: 'Computer Vision Engineer',
     headline: 'Computer Vision Engineer | Building systems that see and understand images',
     location: 'Lahore, Pakistan',
@@ -1351,7 +1351,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'blockchain-web3-developer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Laiba Rehman',
     title: 'Blockchain Developer',
     headline: 'Blockchain Developer | Smart contracts & decentralized applications',
     location: 'Lahore, Pakistan',
@@ -1412,7 +1412,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'embedded-iot-engineer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Hassan Sheikh',
     title: 'Embedded Systems Engineer',
     headline: 'Embedded Systems / IoT Engineer | Firmware and hardware that just works',
     location: 'Lahore, Pakistan',
@@ -1473,7 +1473,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'product-manager-tech': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Maryam Yousaf',
     title: 'Product Manager',
     headline: 'Product Manager | Shipping features users actually asked for',
     location: 'Lahore, Pakistan',
@@ -1534,7 +1534,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'business-analyst-it': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Imran Farooq',
     title: 'Business Analyst',
     headline: 'Business Analyst | Bridging business needs and technical solutions',
     location: 'Lahore, Pakistan',
@@ -1595,7 +1595,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'technical-writer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Sadia Kamal',
     title: 'Technical Writer',
     headline: 'Technical Writer | Documentation developers actually want to read',
     location: 'Lahore, Pakistan',
@@ -1656,7 +1656,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'network-engineer': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Waleed Akram',
     title: 'Network Engineer',
     headline: 'Network Engineer | Reliable, secure infrastructure at every layer',
     location: 'Lahore, Pakistan',
@@ -1717,7 +1717,7 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
   },
 
   'database-administrator': {
-    fullName: 'Ayesha Raza',
+    fullName: 'Anum Zafar',
     title: 'Database Administrator',
     headline: 'Database Administrator | Keeping data reliable, fast & backed up',
     location: 'Lahore, Pakistan',

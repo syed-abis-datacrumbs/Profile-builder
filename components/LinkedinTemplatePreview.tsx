@@ -283,8 +283,10 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
               </div>
             </div>
 
-            {/* RIGHT COLUMN: Company & School badges */}
-            <div className="flex flex-col gap-3 shrink-0 pt-1">
+            {/* RIGHT COLUMN: Company & School badges — desktop only, matching
+                real LinkedIn, which drops these from the mobile header and
+                shows them in the Experience/Education sections instead. */}
+            <div className="hidden sm:flex flex-col gap-3 shrink-0 pt-1">
               <div className="flex items-center gap-2.5 group cursor-pointer">
                 <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-slate-100 border border-slate-200">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -319,11 +321,13 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[18px] font-bold text-[#191919]">Featured</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Mobile: horizontal snap carousel matching LinkedIn's app — see the
+            matching block in LinkedinChatStudio for the layout rationale. */}
+        <div className="flex snap-x snap-mandatory overflow-x-auto gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:overflow-visible sm:grid sm:grid-cols-2 lg:grid-cols-3">
           {featuredItems.map((item, idx) => (
             <div
               key={idx}
-              className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs hover:shadow-md transition flex flex-col group cursor-pointer"
+              className="snap-start shrink-0 w-[85%] sm:w-auto border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs hover:shadow-md transition flex flex-col group cursor-pointer"
             >
               <div className="h-[135px] w-full relative overflow-hidden bg-slate-900">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

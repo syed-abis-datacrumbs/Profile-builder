@@ -629,8 +629,12 @@ export const LinkedinChatStudio: React.FC<{
                     </div>
                   </div>
 
-                  {/* RIGHT COLUMN: Company & School badges */}
-                  <div className="flex flex-col gap-3 shrink-0 pt-1">
+                  {/* RIGHT COLUMN: Company & School badges — desktop only.
+                      Real LinkedIn drops these from the mobile header and
+                      surfaces them in the Experience/Education sections
+                      instead; stacked under the action buttons on a phone
+                      they read as duplicate content. */}
+                  <div className="hidden sm:flex flex-col gap-3 shrink-0 pt-1">
                     <div className="flex items-center gap-2.5 group cursor-pointer">
                       <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-slate-100 border border-slate-200">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -671,9 +675,15 @@ export const LinkedinChatStudio: React.FC<{
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-[18px] font-bold text-[#191919]">Featured</h2>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Mobile: horizontal snap carousel, like LinkedIn's own app —
+                  each card keeps its own bounds inside the section's padding
+                  (no negative-margin bleed, which clipped the first card
+                  against the section's rounded corner), sized so the next one
+                  peeks and reads as swipeable. Scrollbar hidden: the peeking
+                  card is the affordance. Reverts to the grid from sm up. */}
+              <div className="flex snap-x snap-mandatory overflow-x-auto gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:overflow-visible sm:grid sm:grid-cols-2 lg:grid-cols-3">
                 {featuredItems.map((item, idx) => (
-                  <div key={idx} className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs flex flex-col">
+                  <div key={idx} className="snap-start shrink-0 w-[85%] sm:w-auto border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs flex flex-col">
                     <div className="h-[135px] w-full relative overflow-hidden bg-slate-900">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={item.image} alt="" className="w-full h-full object-cover" />
@@ -702,8 +712,8 @@ export const LinkedinChatStudio: React.FC<{
                         <img src="/images/featured-thumbnail/company logo.jfif" alt="" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Edit value={exp.title} onCommit={(v) => setExperience(i, { title: v })} placeholder="Job title" className="text-[16px] font-semibold text-[#191919] leading-tight" />
-                        <Edit value={exp.company} onCommit={(v) => setExperience(i, { company: v })} placeholder="Company" className="text-[14px] font-medium text-slate-800 mt-0.5" />
+                        <Edit block value={exp.title} onCommit={(v) => setExperience(i, { title: v })} placeholder="Job title" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                        <Edit block value={exp.company} onCommit={(v) => setExperience(i, { company: v })} placeholder="Company" className="text-[14px] font-medium text-slate-800 mt-0.5" />
                         <div className="text-[13px] text-slate-500 mt-0.5 flex items-center gap-1">
                           <Edit value={exp.start} onCommit={(v) => setExperience(i, { start: v })} placeholder="Start" />
                           <span>–</span>
@@ -735,8 +745,11 @@ export const LinkedinChatStudio: React.FC<{
                         <img src="/images/featured-thumbnail/education logo.jpg" alt="" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Edit value={edu.school} onCommit={(v) => setEducation(i, { school: v })} placeholder="School" className="text-[16px] font-semibold text-[#191919] leading-tight" />
-                        <div className="text-[14px] font-medium text-slate-800 mt-0.5 flex items-center gap-1">
+                        <Edit block value={edu.school} onCommit={(v) => setEducation(i, { school: v })} placeholder="School" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                        {/* flex-wrap so degree and field wrap as whole units;
+                            without it flex shrinks each one and their text
+                            wraps internally, splitting into ragged columns. */}
+                        <div className="text-[14px] font-medium text-slate-800 mt-0.5 flex flex-wrap items-center gap-x-1">
                           <Edit value={edu.degree} onCommit={(v) => setEducation(i, { degree: v })} placeholder="Degree" />
                           <span>·</span>
                           <Edit value={edu.fieldOfStudy} onCommit={(v) => setEducation(i, { fieldOfStudy: v })} placeholder="Field of study" />
@@ -769,8 +782,8 @@ export const LinkedinChatStudio: React.FC<{
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Edit value={cert.name} onCommit={(v) => setCertification(idx, { name: v })} placeholder="Certification name" className="text-[16px] font-semibold text-[#191919] leading-tight" />
-                        <Edit value={cert.organization} onCommit={(v) => setCertification(idx, { organization: v })} placeholder="Organization" className="text-[14px] font-medium text-slate-800 mt-0.5" />
+                        <Edit block value={cert.name} onCommit={(v) => setCertification(idx, { name: v })} placeholder="Certification name" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                        <Edit block value={cert.organization} onCommit={(v) => setCertification(idx, { organization: v })} placeholder="Organization" className="text-[14px] font-medium text-slate-800 mt-0.5" />
                         <div className="text-[13px] text-slate-500 mt-0.5 flex items-center gap-1">
                           <span>Issued</span>
                           <Edit value={cert.date} onCommit={(v) => setCertification(idx, { date: v })} placeholder="Date" />
@@ -797,7 +810,7 @@ export const LinkedinChatStudio: React.FC<{
                         <FolderGit2 className="w-6 h-6" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Edit value={proj.title} onCommit={(v) => setProject(i, { title: v })} placeholder="Project title" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                        <Edit block value={proj.title} onCommit={(v) => setProject(i, { title: v })} placeholder="Project title" className="text-[16px] font-semibold text-[#191919] leading-tight" />
                         <Edit block value={proj.description} onCommit={(v) => setProject(i, { description: v })} placeholder="Project description" className="text-[14px] text-slate-700 mt-1 leading-relaxed" />
 
                         {/* Attached Project Media Thumbnail Card */}
