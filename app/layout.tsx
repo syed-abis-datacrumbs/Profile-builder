@@ -53,7 +53,12 @@ export default function RootLayout({
         lang="en"
         className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} ${bricolageGrotesque.variable} ${dancingScript.variable} ${playfairDisplay.variable} h-full antialiased`}
       >
-        <body className="min-h-full flex flex-col">{children}</body>
+        {/* suppressHydrationWarning covers only <body>'s own attributes, not
+            its children. Browser extensions (ColorZilla adds
+            cz-shortcut-listen, password managers add their own) stamp
+            attributes on <body> before React hydrates, which React reports as
+            a mismatch even though nothing in this app is at fault. */}
+        <body className="min-h-full flex flex-col" suppressHydrationWarning>{children}</body>
       </html>
     </ClerkProvider>
   );

@@ -268,16 +268,18 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 mt-4 flex-wrap">
-                <button className="bg-[#0A66C2] hover:bg-[#084e96] text-white font-semibold text-sm px-5 py-1.5 rounded-full flex items-center gap-1.5 transition shadow-2xs">
+              {/* Kept on a single row — see the matching note in
+                  LinkedinChatStudio; the overflow button must not wrap. */}
+              <div className="flex items-center gap-2 mt-4">
+                <button className="bg-[#0A66C2] hover:bg-[#084e96] text-white font-semibold text-sm px-3.5 sm:px-5 py-1.5 rounded-full flex items-center gap-1.5 transition shadow-2xs shrink-0 whitespace-nowrap">
                   <Plus className="w-4 h-4 stroke-[2.5]" />
                   Connect
                 </button>
-                <button className="border border-[#0A66C2] text-[#0A66C2] hover:bg-blue-50/60 font-semibold text-sm px-5 py-1.5 rounded-full flex items-center gap-1.5 transition">
+                <button className="border border-[#0A66C2] text-[#0A66C2] hover:bg-blue-50/60 font-semibold text-sm px-3.5 sm:px-5 py-1.5 rounded-full flex items-center gap-1.5 transition shrink-0 whitespace-nowrap">
                   <MessageSquare className="w-4 h-4" />
                   Message
                 </button>
-                <button className="border border-slate-500 text-slate-700 hover:bg-slate-100 w-9 h-9 rounded-full flex items-center justify-center transition">
+                <button className="border border-slate-500 text-slate-700 hover:bg-slate-100 w-9 h-9 rounded-full flex items-center justify-center transition shrink-0">
                   <MoreHorizontal className="w-5 h-5" />
                 </button>
               </div>

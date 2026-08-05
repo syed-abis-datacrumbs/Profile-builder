@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import confetti from 'canvas-confetti';
-import { ImagineSidebar } from '../components/ImagineSidebar';
+import { ImagineSidebar, MobileNavBar } from '../components/ImagineSidebar';
 import { ImagineHeader } from '../components/ImagineHeader';
 import { ResumeLandingView } from '../components/ResumeLandingView';
 import { ResumeEditor } from '../components/ResumeEditor';
@@ -47,7 +47,10 @@ export default function Home() {
   const [linkedinPreviewTemplateId, setLinkedinPreviewTemplateId] = useState<string | null>(null);
   const [linkedinRichProfile, setLinkedinRichProfile] = useState<LinkedinRichProfile | null>(null);
   const [selectedModel, setSelectedModel] = useState('Flash');
-  
+  // Mobile nav drawer — the sidebar rail is desktop-only, so on a phone this
+  // is the only way to move between builders.
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
   // Profile Data State
   const [resumeData, setResumeData] = useState<ResumeData>(defaultResumeData);
   // Resume Studio (chat + live LMS-format CV) works in the LMS CvData shape.
@@ -130,6 +133,8 @@ export default function Home() {
         planName={isLoggedIn ? "Pro Plan" : "Free Plan"}
         onOpenUpgrade={() => setIsUpgradeOpen(true)}
         onOpenAskExpert={() => setIsAskExpertOpen(true)}
+        isMobileOpen={isMobileNavOpen}
+        onCloseMobile={() => setIsMobileNavOpen(false)}
       />
 
       {/* Main Content Area */}
@@ -139,6 +144,10 @@ export default function Home() {
         (activeTab === 'github' && githubMode === 'studio')
           ? 'overflow-hidden' : 'overflow-y-auto'
       }`}>
+
+        {/* Mobile menu bar — rendered in every mode, including full-bleed
+            Studio, since it is the only nav a phone gets. */}
+        <MobileNavBar onOpenMenu={() => setIsMobileNavOpen(true)} />
 
         {/* Top Header - hidden in full-bleed Studio mode */}
         {!(
