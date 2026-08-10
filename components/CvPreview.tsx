@@ -176,11 +176,11 @@ function CvPreviewBase({
         <h1 className="text-[40px] font-bold tracking-wide text-center">
           {editable ? <RichText html={p.fullName} placeholder="YOUR NAME" onCommit={(v) => setPersonal({ fullName: v })} /> : <Html html={p.fullName || 'YOUR NAME'} />}
         </h1>
-        <div className="grid grid-cols-3 items-center text-[16px] mt-1 text-slate-700">
-          <div className="text-left">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center text-[16px] mt-1 text-slate-700 gap-2">
+          <div className="text-left whitespace-nowrap">
             {editable ? <RichText html={p.phone} placeholder="Phone" onCommit={(v) => setPersonal({ phone: v })} /> : <Html html={p.phone} />}
           </div>
-          <div className="flex flex-wrap justify-center gap-x-3">
+          <div className="flex flex-nowrap justify-center gap-x-3 whitespace-nowrap">
             {p.linkedin && (
               <a href={normalizeUrl(p.linkedin)} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">
                 {p.linkedinLabel || 'Linkedin'}
@@ -197,7 +197,7 @@ function CvPreviewBase({
               </a>
             )}
           </div>
-          <div className="text-right text-blue-700 underline">
+          <div className="text-right text-blue-700 underline whitespace-nowrap">
             {editable ? (
               <RichText html={p.email} placeholder="email@example.com" onCommit={(v) => setPersonal({ email: v })} />
             ) : (

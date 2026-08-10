@@ -1534,3 +1534,64 @@ export function lmsSampleToResumeData(sample: LmsResumeSample): ResumeData {
     resumeType: cv.cvType === 'student' ? 'student' : 'professional',
   };
 }
+
+// Keyword sets per field, keyed by the sample label with its "(N page/s)"
+// suffix stripped — used to pick a starting template from a free-typed
+// prompt (e.g. "build me a cybersecurity resume" -> Cyber Security), instead
+// of always seeding the AI from the same fixed default field.
+const FIELD_KEYWORDS: Record<string, string[]> = {
+  'AI/ML Engineer': ['ai', 'ml', 'machine learning', 'artificial intelligence', 'deep learning', 'llm', 'nlp'],
+  'Data Science': ['data scien'],
+  'Full Stack Developer': ['full stack', 'full-stack', 'fullstack'],
+  'Frontend Developer': ['frontend', 'front-end', 'front end', 'react developer', 'ui developer'],
+  'Software Engineer': ['software engineer', 'swe'],
+  'Data Analytics': ['data analy', 'data analyst', 'analytics'],
+  'Cyber Security': ['cyber', 'security', 'infosec', 'pentest'],
+  'Digital Marketing': ['marketing', 'seo', 'digital market'],
+  'Data Engineer': ['data engineer', 'etl', 'data pipeline'],
+  'DevOps Engineer': ['devops', 'ci/cd', 'site reliability', 'sre'],
+  'Mobile App Developer': ['mobile', 'android', 'ios developer', 'flutter', 'react native', 'swift', 'kotlin'],
+  'UI/UX Designer': ['ui/ux', 'ux design', 'ui design', 'user experience', 'user interface', 'figma'],
+  'Graphic Designer': ['graphic design', 'illustrator', 'branding designer'],
+  'Video Editor': ['video edit', 'premiere', 'after effects', 'video production'],
+  'Backend Developer': ['backend', 'back-end', 'back end', 'server-side'],
+  'Cloud Engineer': ['cloud engineer', 'cloud infrastructure', 'aws engineer', 'azure engineer', 'gcp engineer'],
+  'QA / Test Automation': ['qa engineer', 'quality assurance', 'test automation', 'sdet'],
+  'Game Developer': ['game dev', 'unity', 'unreal engine', 'game design'],
+  'MLOps Engineer': ['mlops', 'ml ops', 'ml infrastructure', 'ml pipeline'],
+  'Business Intelligence Analyst': ['business intelligence', 'bi analyst', 'power bi', 'tableau'],
+  'Computer Vision Engineer': ['computer vision', 'cv engineer', 'image recognition', 'opencv'],
+  'Blockchain / Web3 Developer': ['blockchain', 'web3', 'smart contract', 'solidity', 'crypto'],
+  'Embedded / IoT Engineer': ['embedded', 'iot', 'firmware', 'microcontroller'],
+  'Product Manager (Tech)': ['product manager', 'product management', 'tpm'],
+  'Business Analyst (IT)': ['business analyst', 'requirements analyst'],
+  'Technical Writer': ['technical writ', 'documentation specialist', 'tech writer'],
+  'Network Engineer': ['network engineer', 'networking', 'ccna', 'cisco'],
+  'Database Administrator': ['dba', 'database admin'],
+};
+
+/** Picks the LMS resume sample whose field keywords best match a free-typed
+ *  prompt, falling back to the generic Software Engineer field when nothing
+ *  matches (or that field is missing, the first sample overall). */
+export function matchResumeSampleToPrompt(prompt: string): LmsResumeSample {
+  const lower = prompt.toLowerCase();
+  let best: LmsResumeSample | null = null;
+  let bestScore = 0;
+
+  for (const sample of LMS_RESUME_SAMPLES) {
+    const field = sample.label.replace(/\s*\(\d+\s*pages?\)\s*$/i, '').trim();
+    const keywords = FIELD_KEYWORDS[field];
+    if (!keywords) continue;
+    const score = keywords.reduce((n, kw) => (lower.includes(kw) ? n + 1 : n), 0);
+    if (score > bestScore) {
+      bestScore = score;
+      best = sample;
+    }
+  }
+
+  if (best) return best;
+  return (
+    LMS_RESUME_SAMPLES.find((s) => s.label.startsWith('Software Engineer')) ||
+    LMS_RESUME_SAMPLES[0]
+  );
+}

@@ -67,6 +67,40 @@ function computePageBreaks(el: HTMLElement): number[] {
   return breaks;
 }
 
+/**
+ * Finds the nearest fully-white (blank) horizontal row of the canvas to
+ * `targetY`, within +/- `range` px. html-to-image can position individual
+ * text lines a few px off from the live DOM (baseline/line-height
+ * differences), so cutting at a DOM-derived Y can clip a line even when the
+ * block math above is right. Snapping the cut to real whitespace guarantees
+ * text is never sliced. Ported from the LMS's cvExport.ts (same bug, same fix).
+ */
+function nearestBlankRow(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  heightLimit: number,
+  targetY: number,
+  range: number
+): number {
+  const rowIsBlank = (y: number): boolean => {
+    if (y < 0 || y >= heightLimit) return false;
+    const data = ctx.getImageData(0, y, width, 1).data;
+    for (let i = 0; i < data.length; i += 4) {
+      // Near-white on all channels (tolerates anti-aliasing).
+      if (data[i] < 248 || data[i + 1] < 248 || data[i + 2] < 248) return false;
+    }
+    return true;
+  };
+
+  const t = Math.round(targetY);
+  if (rowIsBlank(t)) return t;
+  for (let d = 1; d <= range; d++) {
+    if (rowIsBlank(t + d)) return t + d; // prefer snapping DOWN (keep the block whole on this page)
+    if (rowIsBlank(t - d)) return t - d;
+  }
+  return t; // no blank found — fall back to the target
+}
+
 interface Msg {
   role: 'user' | 'assistant';
   content: string;
@@ -79,6 +113,9 @@ interface ResumeChatStudioProps {
   onBack: () => void;
   isLoggedIn: boolean;
   onRequireAuth: () => void;
+  /** Prompt typed on the landing page before entering the Studio — sent to
+   *  the AI automatically once, on mount. */
+  initialPrompt?: string;
 }
 
 export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
@@ -88,6 +125,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   onBack,
   isLoggedIn,
   onRequireAuth,
+  initialPrompt,
 }) => {
   const [messages, setMessages] = useState<Msg[]>([
     {
@@ -159,7 +197,21 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
         const cutsCss = computePageBreaks(el);
         const canvas = await toCanvas(el, opts);
         const scaleY = canvas.height / el.offsetHeight;
-        const cuts = [...cutsCss.map((y) => Math.round(y * scaleY)), canvas.height];
+        const canvasCtx = canvas.getContext('2d');
+        const snapRange = Math.round(40 * scaleY); // ~40 CSS px search window
+        // Snap each break to the nearest real blank row in the RENDERED canvas
+        // — html-to-image can shift a text line a few px from where the live
+        // DOM measured it, so cutting at the raw DOM coordinate can still
+        // slice through a line even though the block-boundary math is right.
+        const cuts = [
+          ...cutsCss.map((y) => {
+            const target = y * scaleY;
+            return canvasCtx
+              ? nearestBlankRow(canvasCtx, canvas.width, canvas.height, target, snapRange)
+              : Math.round(target);
+          }),
+          canvas.height,
+        ];
 
         const { jsPDF } = await import('jspdf');
         const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
@@ -195,13 +247,13 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, loading]);
 
-  const send = async () => {
-    const text = input.trim();
+  const send = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
     if (!text || loading) return;
     if (!isLoggedIn) { onRequireAuth(); return; }
     const nextMessages: Msg[] = [...messages, { role: 'user', content: text }];
     setMessages(nextMessages);
-    setInput('');
+    if (overrideText === undefined) setInput('');
     setLoading(true);
     try {
       const res = await fetch('/api/resume-chat', {
@@ -223,6 +275,13 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
     }
   };
 
+  useEffect(() => {
+    if (initialPrompt && initialPrompt.trim()) send(initialPrompt);
+    // Run once on mount only — this is a one-time "prompt typed before
+    // entering the Studio" hand-off, not something to repeat on re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [pageLines, setPageLines] = useState<number[]>([]);
   useEffect(() => {
     const el = exportRef.current;
@@ -238,7 +297,7 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
     <div className="flex flex-col lg:flex-row h-full w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none">
       
       {/* COLUMN 2 (AI CHAT - LEFT) */}
-      <div className="w-full lg:w-[500px] xl:w-[560px] 2xl:w-[600px] flex flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden">
+      <div className="w-full lg:w-[380px] xl:w-[420px] 2xl:w-[460px] flex flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden">
         
         {/* Top Header of Chat Column */}
         <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
@@ -356,7 +415,7 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
                 </button>
 
                 <button
-                  onClick={send}
+                  onClick={() => send()}
                   disabled={loading || !input.trim()}
                   className="w-7 h-7 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-xs"
                 >

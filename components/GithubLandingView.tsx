@@ -47,7 +47,7 @@ export interface GithubTemplateCard {
   subhead: string;
 }
 
-const GITHUB_TEMPLATES: GithubTemplateCard[] = [
+export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
   {
     id: 'minimal-ds',
     presetId: 'data-science',

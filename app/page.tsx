@@ -7,7 +7,10 @@ import { ImagineSidebar, MobileNavBar } from '../components/ImagineSidebar';
 import { ImagineHeader } from '../components/ImagineHeader';
 import { ResumeLandingView } from '../components/ResumeLandingView';
 import { ResumeEditor } from '../components/ResumeEditor';
-import { GithubLandingView, GithubTemplateCard } from '../components/GithubLandingView';
+import { GithubLandingView, GithubTemplateCard, GITHUB_TEMPLATES } from '../components/GithubLandingView';
+import { TemplatePickerModal } from '../components/TemplatePickerModal';
+import { LinkedinTemplateThumbnail } from '../components/LinkedinTemplateThumbnail';
+import { linkedinCovers } from '../lib/linkedinCovers';
 import { GithubEditor } from '../components/GithubEditor';
 import { LinkedinLandingView } from '../components/LinkedinLandingView';
 import { LinkedinEditor } from '../components/LinkedinEditor';
@@ -30,11 +33,11 @@ import { LinkedinRichProfile, buildInitialRichProfile } from '../lib/linkedinRic
 import { ActiveTab, ResumeData, GithubProfileData, LinkedinProfileData, SavedProfile } from '../types';
 import { defaultResumeData, defaultGithubData, defaultLinkedinData } from '../lib/defaultData';
 import { applyRolePresetToGithub, GithubRolePreset, GITHUB_ROLE_PRESETS } from '../lib/githubRolePresets';
-import { LmsResumeSample } from '../lib/resumeSamples';
+import { LmsResumeSample, matchResumeSampleToPrompt } from '../lib/resumeSamples';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { ResumeChatStudio } from '../components/ResumeChatStudio';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Sparkles, FileText, Download, Award } from 'lucide-react';
+import { ArrowLeft, Sparkles, FileText, Download, Award, Terminal } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '../components/icons';
 
 export default function Home() {
@@ -47,6 +50,16 @@ export default function Home() {
   const [linkedinPreviewTemplateId, setLinkedinPreviewTemplateId] = useState<string | null>(null);
   const [linkedinRichProfile, setLinkedinRichProfile] = useState<LinkedinRichProfile | null>(null);
   const [selectedModel, setSelectedModel] = useState('Flash');
+
+  // Prompt typed on a landing page, sent to the AI once the matching Chat
+  // Studio has mounted. Resume skips template selection entirely; GitHub and
+  // LinkedIn hold the prompt here while the user picks a template first.
+  const [resumeInitialPrompt, setResumeInitialPrompt] = useState('');
+  const [githubInitialPrompt, setGithubInitialPrompt] = useState('');
+  const [linkedinInitialPrompt, setLinkedinInitialPrompt] = useState('');
+  const [pendingPrompt, setPendingPrompt] = useState('');
+  const [showGithubTemplatePicker, setShowGithubTemplatePicker] = useState(false);
+  const [showLinkedinTemplatePicker, setShowLinkedinTemplatePicker] = useState(false);
   // Mobile nav drawer — the sidebar rail is desktop-only, so on a phone this
   // is the only way to move between builders.
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -99,6 +112,7 @@ export default function Home() {
         customSections: g.customSections.map((s) => ({ ...s, content: s.content.replace(/\*\*/g, '') })),
       };
     });
+    setGithubInitialPrompt('');
     setGithubMode('studio');
   };
 
@@ -106,6 +120,7 @@ export default function Home() {
   const loadResumeField = (sample: LmsResumeSample) => {
     setStudioCv(cvMarkdownToHtml(sample.data as CvData));
     setStudioLabel(sample.label);
+    setResumeInitialPrompt('');
     setResumeMode('studio');
   };
 
@@ -199,6 +214,7 @@ export default function Home() {
                           onBack={() => setResumeMode('landing')}
                           isLoggedIn={isLoggedIn}
                           onRequireAuth={() => setIsAuthOpen(true)}
+                          initialPrompt={resumeInitialPrompt}
                         />
                       ) : resumeMode === 'editor' ? (
                         <div className="space-y-4">
@@ -230,8 +246,13 @@ export default function Home() {
                               setResumeMode('preview');
                             }}
                             onUsePrompt={(promptText) => {
-                              setAssistantPrompt(promptText);
-                              setActiveTab('assistant');
+                              // Resume skips template selection — go straight
+                              // into the Studio, auto-picking the closest
+                              // matching field so the AI has a sensible base
+                              // to work from rather than always the same one.
+                              const sample = matchResumeSampleToPrompt(promptText);
+                              loadResumeField(sample);
+                              setResumeInitialPrompt(promptText);
                             }}
                             onOpenEditorDirectly={() => setResumeMode('editor')}
                           />
@@ -287,6 +308,7 @@ export default function Home() {
                           onBack={() => setGithubMode('landing')}
                           isLoggedIn={isLoggedIn}
                           onRequireAuth={() => setIsAuthOpen(true)}
+                          initialPrompt={githubInitialPrompt}
                         />
                       ) : githubMode === 'editor' ? (
                         <div className="space-y-4">
@@ -321,8 +343,11 @@ export default function Home() {
                               setGithubMode('preview');
                             }}
                             onUsePrompt={(promptText) => {
-                              setAssistantPrompt(promptText);
-                              setActiveTab('assistant');
+                              // GitHub needs a template pick first — hold the
+                              // prompt and show the picker; the AI runs once
+                              // a template is chosen (see the modal below).
+                              setPendingPrompt(promptText);
+                              setShowGithubTemplatePicker(true);
                             }}
                             onOpenEditorDirectly={() => setGithubMode('editor')}
                           />
@@ -399,6 +424,7 @@ export default function Home() {
                           onBack={() => setLinkedinMode('landing')}
                           isLoggedIn={isLoggedIn}
                           onRequireAuth={() => setIsAuthOpen(true)}
+                          initialPrompt={linkedinInitialPrompt}
                         />
                       ) : (
                         <>
@@ -409,8 +435,10 @@ export default function Home() {
                               setLinkedinMode('preview');
                             }}
                             onUsePrompt={(promptText) => {
-                              setAssistantPrompt(promptText);
-                              setActiveTab('assistant');
+                              // LinkedIn also needs a template pick first —
+                              // same hand-off pattern as GitHub above.
+                              setPendingPrompt(promptText);
+                              setShowLinkedinTemplatePicker(true);
                             }}
                             onOpenEditorDirectly={() => setLinkedinMode('editor')}
                           />
@@ -439,6 +467,7 @@ export default function Home() {
                                     onBack={() => setLinkedinMode('landing')}
                                     onEdit={() => {
                                       setLinkedinRichProfile(buildInitialRichProfile(linkedinPreviewTemplateId));
+                                      setLinkedinInitialPrompt('');
                                       setLinkedinMode('studio');
                                     }}
                                   />
@@ -552,6 +581,115 @@ export default function Home() {
         onClose={() => setIsAuthOpen(false)}
         onSuccess={() => setIsAuthOpen(false)}
       />
+
+      {/* Prompt was typed on the GitHub landing page — pick a template, then
+          the AI runs the prompt on top of it inside the Chat Studio. */}
+      {showGithubTemplatePicker && (
+        <TemplatePickerModal
+          title="Choose a GitHub README Template"
+          subtitle="Pick a design and I'll apply it, then get started on your request."
+          onClose={() => setShowGithubTemplatePicker(false)}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {GITHUB_TEMPLATES.map((t) => (
+              <div
+                key={t.id}
+                onClick={() => {
+                  setShowGithubTemplatePicker(false);
+                  const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
+                  openGithubStudio(preset, t.theme);
+                  setGithubInitialPrompt(pendingPrompt);
+                }}
+                className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group flex flex-col justify-between"
+              >
+                {/* Card Code/README Graphic Preview */}
+                <div className={`w-full h-52 ${t.bgClass} text-slate-100 rounded-xl p-4 overflow-hidden flex flex-col items-center justify-between text-center gap-2 group-hover:scale-[1.01] transition-transform border ${t.borderClass} relative`}>
+                  <div className="w-full flex items-center justify-between border-b border-white/10 pb-2 text-[10px]">
+                    <span className="flex items-center gap-1 text-slate-400 font-mono">
+                      <Terminal className="w-3 h-3 text-slate-400" />
+                      <span>README.md</span>
+                    </span>
+                    <span className="bg-white/10 text-slate-200 px-2 py-0.5 rounded-full font-mono uppercase tracking-wider text-[8px]">
+                      {t.theme} theme
+                    </span>
+                  </div>
+
+                  <div className="my-auto space-y-2 max-w-xs">
+                    <div className="font-bold text-sm text-white tracking-tight leading-snug">
+                      {t.headline}
+                    </div>
+                    <div className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">
+                      {t.subhead}
+                    </div>
+                    <div className="flex flex-wrap gap-1 justify-center pt-1">
+                      {t.badges.map((b) => (
+                        <span
+                          key={b}
+                          className="bg-slate-900/80 border border-slate-700/60 text-slate-200 px-2 py-0.5 rounded text-[9px] font-mono shadow-2xs"
+                        >
+                          {b}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="w-full pt-1 text-[9px] text-slate-400 font-mono border-t border-white/5 flex items-center justify-center gap-3">
+                    {t.features.map((feat, idx2) => (
+                      <span key={idx2}>{feat}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Card Meta & CTA */}
+                <div className="flex items-center justify-between px-1 pt-1">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-slate-900">{t.name}</span>
+                      <span className="text-[9px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                        {t.badge}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">{t.tagline}</div>
+                  </div>
+                  <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform shrink-0">
+                    Use Template →
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </TemplatePickerModal>
+      )}
+
+      {/* Same hand-off pattern for LinkedIn. */}
+      {showLinkedinTemplatePicker && (
+        <TemplatePickerModal
+          title="Choose a LinkedIn Cover Template"
+          subtitle="Pick a design and I'll apply it, then get started on your request."
+          onClose={() => setShowLinkedinTemplatePicker(false)}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {linkedinCovers.map((cover, index) => (
+              <button
+                key={cover.id}
+                onClick={() => {
+                  setShowLinkedinTemplatePicker(false);
+                  setLinkedinRichProfile(buildInitialRichProfile(cover.id));
+                  setLinkedinInitialPrompt(pendingPrompt);
+                  setLinkedinMode('studio');
+                }}
+                className="text-left p-4 rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all space-y-2"
+              >
+                <div className="w-full bg-white rounded-xl overflow-hidden border border-slate-200">
+                  <LinkedinTemplateThumbnail templateId={cover.id} index={index} />
+                </div>
+                <div className="font-bold text-xs text-slate-900">{cover.name}</div>
+                <div className="text-[11px] text-slate-500">{cover.desc}</div>
+              </button>
+            ))}
+          </div>
+        </TemplatePickerModal>
+      )}
 
       <ATSScoreModal
         isOpen={isATSOpen}

@@ -114,7 +114,10 @@ export const LinkedinChatStudio: React.FC<{
   onBack: () => void;
   isLoggedIn: boolean;
   onRequireAuth: () => void;
-}> = ({ profile, onChange, onBack, isLoggedIn, onRequireAuth }) => {
+  /** Prompt typed on the landing page (after template selection) — sent to
+   *  the AI automatically once, on mount. */
+  initialPrompt?: string;
+}> = ({ profile, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt }) => {
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: 'assistant',
@@ -137,13 +140,13 @@ export const LinkedinChatStudio: React.FC<{
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, loading]);
 
-  const send = async () => {
-    const text = input.trim();
+  const send = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
     if (!text || loading) return;
     if (!isLoggedIn) { onRequireAuth(); return; }
     const next: Msg[] = [...messages, { role: 'user', content: text }];
     setMessages(next);
-    setInput('');
+    if (overrideText === undefined) setInput('');
     setLoading(true);
     try {
       const res = await fetch('/api/linkedin-rich-chat', {
@@ -163,6 +166,12 @@ export const LinkedinChatStudio: React.FC<{
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (initialPrompt && initialPrompt.trim()) send(initialPrompt);
+    // Run once on mount only — one-time hand-off from the template picker.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const updateProfile = (next: LinkedinRichProfile) => {
     const identityChanged =
@@ -367,7 +376,7 @@ export const LinkedinChatStudio: React.FC<{
                   Flash
                 </span>
                 <button
-                  onClick={send}
+                  onClick={() => send()}
                   disabled={loading || !input.trim()}
                   className="w-7 h-7 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-xs"
                 >
