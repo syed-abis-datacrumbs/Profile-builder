@@ -16,6 +16,7 @@ import {
   Send
 } from 'lucide-react';
 import { LMS_RESUME_SAMPLES, LmsResumeSample } from '../lib/resumeSamples';
+import { ResumeTemplateThumbnail } from './ResumeTemplateThumbnail';
 
 // Accent colours cycled across the preview cards (like the original design).
 const ACCENTS = ['#dc2626', '#1e3a8a', '#059669', '#7c3aed', '#d97706', '#0891b2', '#db2777', '#4338ca'];
@@ -243,16 +244,8 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {LMS_RESUME_SAMPLES.map((sample, i) => {
-            const cv = sample.data;
             const accent = ACCENTS[i % ACCENTS.length];
-            const jobTitle = sample.label.replace(/\s*\(\d+\s*pages?\)\s*$/i, '').trim();
-            const exp = (cv.workExperience || [])[0];
-            const firstBullet = exp && exp.bullets
-              ? String(exp.bullets).split('\n')[0].replace(/\*\*/g, '').trim()
-              : '';
-            const skills: string[] = ((cv.additional && cv.additional.skills) || '')
-              .split(',').map((s: string) => s.trim()).filter(Boolean).slice(0, 4);
-            const fullName = (cv.personalInfo && cv.personalInfo.fullName) || 'Your Name';
+            const fullName = (sample.data.personalInfo && sample.data.personalInfo.fullName) || 'Your Name';
             return (
               <motion.div
                 key={sample.label}
@@ -264,33 +257,10 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
                 onClick={() => (onSelectTemplate ? onSelectTemplate(sample) : onSelectField(sample))}
                 className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
               >
-                {/* Mini resume preview, filled from this field's real content */}
-                <div className="w-full h-56 bg-slate-50 border border-slate-200 rounded-xl p-4 overflow-hidden font-sans text-[9px] text-slate-600 space-y-2 group-hover:scale-[1.01] transition-transform">
-                  <div className="border-b-2 pb-1" style={{ borderColor: accent }}>
-                    <div className="font-extrabold text-xs" style={{ color: accent }}>{fullName}</div>
-                    <div className="text-[9px] font-semibold text-slate-700">{jobTitle}</div>
-                    <div className="text-[8px] text-slate-400 truncate">
-                      {(cv.personalInfo && cv.personalInfo.email) || ''}
-                      {cv.personalInfo && cv.personalInfo.phone ? ` • ${cv.personalInfo.phone}` : ''}
-                    </div>
-                  </div>
-                  {exp && (
-                    <div className="space-y-1">
-                      <div className="font-bold text-[8px] uppercase text-slate-800 border-b border-slate-200 pb-0.5">Experience</div>
-                      <div className="font-bold text-slate-800">{exp.title}{exp.company ? ` — ${exp.company}` : ''}</div>
-                      {firstBullet && <div className="text-slate-500 leading-tight line-clamp-2">{firstBullet}</div>}
-                    </div>
-                  )}
-                  {skills.length > 0 && (
-                    <div className="space-y-1">
-                      <div className="font-bold text-[8px] uppercase text-slate-800 border-b border-slate-200 pb-0.5">Skills</div>
-                      <div className="flex flex-wrap gap-1">
-                        {skills.map((s, k) => (
-                          <span key={k} className="bg-slate-200 text-slate-700 px-1 py-0.5 rounded">{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                {/* Real resume preview, scaled down to card size — never a
+                    separate mockup that can drift from the actual output. */}
+                <div className="rounded-xl overflow-hidden border border-slate-200 group-hover:scale-[1.01] transition-transform">
+                  <ResumeTemplateThumbnail sample={sample} accentColor={accent} />
                 </div>
 
                 <div className="flex items-center justify-between px-1">
