@@ -257,36 +257,32 @@ export default function Home() {
                             onOpenEditorDirectly={() => setResumeMode('editor')}
                           />
 
-                          <AnimatePresence>
-                            {resumeMode === 'preview' && resumePreviewSample && (
-                              <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm p-4 sm:p-8"
-                                onClick={(e) => {
-                                  if (e.target === e.currentTarget) setResumeMode('landing');
-                                }}
-                              >
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                                  className="w-full max-w-4xl mx-auto my-4"
-                                >
-                                  <ResumeTemplatePreview
-                                    sample={resumePreviewSample}
-                                    onBack={() => setResumeMode('landing')}
-                                    onEdit={() => {
-                                      loadResumeField(resumePreviewSample);
-                                    }}
-                                  />
-                                </motion.div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
+                          {/* No animation on this popup, on purpose — it
+                              wraps the REAL, heavy resume DOM (many text
+                              nodes across every section), and any entrance
+                              animation here (even just an opacity fade on
+                              the backdrop) was competing with that mount for
+                              the same frame and reading as lag/blink. Plain
+                              instant show/hide instead. */}
+                          {resumeMode === 'preview' && resumePreviewSample && (
+                            <div
+                              className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm p-4 sm:p-8"
+                              style={{ scrollbarGutter: 'stable' }}
+                              onClick={(e) => {
+                                if (e.target === e.currentTarget) setResumeMode('landing');
+                              }}
+                            >
+                              <div className="w-full max-w-4xl mx-auto my-4">
+                                <ResumeTemplatePreview
+                                  sample={resumePreviewSample}
+                                  onBack={() => setResumeMode('landing')}
+                                  onEdit={() => {
+                                    loadResumeField(resumePreviewSample);
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </>
                       )}
                     </motion.div>

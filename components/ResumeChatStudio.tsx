@@ -33,6 +33,19 @@ import {
 import { CvData } from '../lib/cvTypes';
 import { CvPreview } from './CvPreview';
 
+// Blank breathing room reserved at the BOTTOM of every page and the TOP of
+// every continuation page (page 2+), so content never runs flush to a page
+// break. The first page's top spacing already comes from CvPreview's own
+// p-8 padding.
+//
+// Kept smaller than the LMS's 80px on purpose: since a whole section (its
+// heading + first entry are one block, never split) moves down together
+// when it doesn't fit, a bigger reserved margin means MORE of the page gets
+// judged "not enough room" and pushed down as dead space. A smaller margin
+// still guarantees a page break never lands flush against the content, but
+// gives borderline sections more room to actually fit before being pushed.
+const PAGE_MARGIN_PX = 32;
+
 /**
  * Block-aligned A4 page breaks (CSS px, relative to `el`) — a break never falls
  * inside an entry ([data-cv-block]); a block that would straddle the boundary
@@ -50,9 +63,15 @@ function computePageBreaks(el: HTMLElement): number[] {
   const pageH = (el.offsetWidth * 297) / 210; // A4 page height at this width
   const breaks: number[] = [];
   let start = 0;
+  let isFirst = true;
   let guard = 0;
-  while (start + pageH < contentHeight && guard++ < 200) {
-    const limit = start + pageH;
+  while (guard++ < 200) {
+    const topMargin = isFirst ? 0 : PAGE_MARGIN_PX;
+    // Everything left fits within this page's remaining height — no more
+    // breaks needed, so no bottom margin needs to be reserved for one.
+    if (contentHeight - start <= pageH - topMargin) break;
+
+    const limit = start + (pageH - topMargin - PAGE_MARGIN_PX);
     let breakAt = 0;
     for (const b of blocks) {
       if (b.top >= start - 1 && b.bottom <= limit && b.bottom > breakAt) breakAt = b.bottom;
@@ -63,6 +82,7 @@ function computePageBreaks(el: HTMLElement): number[] {
     }
     breaks.push(breakAt);
     start = breakAt;
+    isFirst = false;
   }
   return breaks;
 }
@@ -216,6 +236,11 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
         const { jsPDF } = await import('jspdf');
         const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
         const pdfW = pdf.internal.pageSize.getWidth();
+        const ptPerCssPx = pdfW / el.offsetWidth;
+        // Same PAGE_MARGIN_PX reserved by computePageBreaks — placing each
+        // continuation page's image this far down leaves real blank space at
+        // the top instead of starting flush against the page edge.
+        const marginPt = PAGE_MARGIN_PX * ptPerCssPx;
 
         let start = 0;
         cuts.forEach((end, idx) => {
@@ -231,7 +256,7 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
           const img = slice.toDataURL('image/png');
           const imgH = (sliceH * pdfW) / canvas.width;
           if (idx > 0) pdf.addPage();
-          pdf.addImage(img, 'PNG', 0, 0, pdfW, imgH);
+          pdf.addImage(img, 'PNG', 0, idx > 0 ? marginPt : 0, pdfW, imgH);
           start = end;
         });
         pdf.save(`${name}.pdf`);
