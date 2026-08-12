@@ -144,23 +144,6 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
           onSubmit={handleSubmit}
           className="w-full bg-white border border-slate-200 rounded-3xl p-4 shadow-sm focus-within:shadow-md focus-within:border-slate-400 transition-all space-y-3"
         >
-          {attachedTemplate && (
-            <div className="flex items-center">
-              <span className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
-                <FileText className="w-3 h-3" />
-                <span>{attachedTemplate.label}</span>
-                <button
-                  type="button"
-                  onClick={onClearAttachedTemplate}
-                  className="w-4 h-4 rounded-full hover:bg-blue-100 flex items-center justify-center transition-colors"
-                  title="Remove attached template"
-                >
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              </span>
-            </div>
-          )}
-
           <textarea
             ref={textareaRef}
             rows={2}
@@ -185,43 +168,26 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
             
             {/* Left Controls */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
-                title="Attach file"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                type="button"
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
-                title="Browse docs"
-              >
-                <Folder className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                type="button"
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
-                title="Format style"
-              >
-                <PenTool className="w-3.5 h-3.5" />
-              </button>
-
-              <div className="h-4 w-px bg-slate-200 mx-1" />
-
-              {/* Auto Pill */}
-              <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium flex items-center gap-1 border border-slate-200/60">
-                <Check className="w-3 h-3 text-slate-500" />
-                <span>Auto</span>
-              </span>
-
-              {/* Resume Pill */}
-              <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200 text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
-                <FileText className="w-3.5 h-3.5" />
-                <span>Resume</span>
-              </span>
+              {attachedTemplate ? (
+                <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold shadow-2xs">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>{attachedTemplate.label}</span>
+                  <button
+                    type="button"
+                    onClick={onClearAttachedTemplate}
+                    className="w-4 h-4 rounded-full hover:bg-blue-100 flex items-center justify-center transition-colors"
+                    title="Remove attached template"
+                  >
+                    <X className="w-2.5 h-2.5 text-blue-700" />
+                  </button>
+                </span>
+              ) : (
+                /* Default Resume Pill */
+                <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200 text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Resume</span>
+                </span>
+              )}
             </div>
 
             {/* Right Controls */}
@@ -280,18 +246,13 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
           <h3 className="text-sm font-semibold text-slate-700">
             Try a Template <span className="text-slate-400 font-normal">({LMS_RESUME_SAMPLES.length} fields)</span>
           </h3>
-          <button
-            onClick={onOpenEditorDirectly}
-            className="text-xs font-semibold text-blue-600 hover:underline"
-          >
-            Open Form Editor →
-          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {LMS_RESUME_SAMPLES.map((sample, i) => {
             const accent = getResumeAccentColor(sample);
             const fullName = (sample.data.personalInfo && sample.data.personalInfo.fullName) || 'Your Name';
+            const isSelected = attachedTemplate?.label === sample.label;
             return (
               <motion.div
                 key={sample.label}
@@ -301,10 +262,13 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
                 whileHover={{ y: -4, scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => (onSelectTemplate ? onSelectTemplate(sample) : onSelectField(sample))}
-                className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group"
+                className={`rounded-2xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer space-y-3 group ${
+                  isSelected
+                    ? 'bg-blue-50/30 border-2 border-blue-500 ring-2 ring-blue-500/20'
+                    : 'bg-white border border-slate-200 hover:border-slate-300'
+                }`}
               >
-                {/* Real resume preview, scaled down to card size — never a
-                    separate mockup that can drift from the actual output. */}
+                {/* Real resume preview, scaled down to card size */}
                 <div className="rounded-xl overflow-hidden border border-slate-200 group-hover:scale-[1.01] transition-transform">
                   <ResumeTemplateThumbnail sample={sample} accentColor={accent} />
                 </div>
@@ -314,7 +278,11 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
                     <div className="font-bold text-xs text-slate-900 truncate">{fullName}</div>
                     <div className="text-[11px] text-slate-500 truncate">{sample.label}</div>
                   </div>
-                  <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform shrink-0 ml-2">Use Template →</span>
+                  <span className={`text-xs font-semibold shrink-0 ml-2 transition-transform ${
+                    isSelected ? 'text-blue-700 font-bold' : 'text-blue-600 group-hover:translate-x-0.5'
+                  }`}>
+                    {isSelected ? '✓ Selected' : 'Use Template →'}
+                  </span>
                 </div>
               </motion.div>
             );

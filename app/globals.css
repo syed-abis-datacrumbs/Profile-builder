@@ -75,4 +75,22 @@ body {
   }
 }
 
+/* Global Interactive Cursor Pointer Rules */
+button,
+a,
+select,
+summary,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+.cursor-pointer {
+  cursor: pointer !important;
+}
 
+/* Ensure hoverable interactive cards show hand pointer */
+.group:hover {
+  cursor: pointer;
+}

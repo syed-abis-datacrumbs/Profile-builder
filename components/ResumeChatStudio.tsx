@@ -614,26 +614,27 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       {/* COLUMN 3 (RESUME CANVAS - RIGHT) */}
       <div className="flex-1 flex flex-col bg-slate-100/90 h-full overflow-hidden relative">
         
-        {/* MacOS Window Top Header Bar */}
-        <div className="shrink-0 bg-white border-b border-slate-200/80 px-4 py-2.5 flex items-center justify-between shadow-2xs">
-          <div className="flex items-center gap-2">
+        {/* MacOS Window Single Unified Toolbar Header */}
+        <div className="shrink-0 bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between gap-3 text-xs shadow-2xs overflow-x-auto">
+          
+          {/* Left Controls Group */}
+          <div className="flex items-center gap-2 shrink-0">
             {/* MacOS Traffic Light Dots */}
-            <div className="flex items-center gap-1.5 pr-2">
+            <div className="flex items-center gap-1.5 pr-1">
               <div className="w-3 h-3 rounded-full bg-red-500" />
               <div className="w-3 h-3 rounded-full bg-amber-400" />
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
             </div>
 
-            {/* Tab Title — dropdown: save the current resume to this
-                account, or load/delete one saved earlier. */}
+            {/* Resume Save/Load Dropdown */}
             <div className="relative">
               <button
                 onClick={toggleResumeMenu}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80"
+                className="h-7 px-3 rounded-lg bg-slate-100 text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1.5 leading-none cursor-pointer"
               >
-                <FileText className="w-3.5 h-3.5 text-red-500" />
-                <span>Resume</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
+                <FileText className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                <span className="leading-none">Resume</span>
+                <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
               </button>
 
               {resumeMenuOpen && (
@@ -653,7 +654,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                         <button
                           onClick={handleSaveResume}
                           disabled={saving}
-                          className="px-2.5 py-1.5 rounded-lg bg-slate-900 text-white font-bold hover:bg-slate-800 transition-colors disabled:opacity-50 shrink-0"
+                          className="h-7 px-3 rounded-lg bg-slate-900 text-white font-bold hover:bg-slate-800 transition-colors disabled:opacity-50 shrink-0 flex items-center justify-center leading-none"
                         >
                           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save'}
                         </button>
@@ -699,50 +700,16 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 </>
               )}
             </div>
-          </div>
 
-          {/* Download Action */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setDlMenu((o) => !o)}
-              disabled={!!downloading}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs font-bold shadow-2xs hover:bg-slate-50 transition-all disabled:opacity-50"
-            >
-              {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-slate-700" />}
-              <span>{downloading ? (downloading === 'pdf' ? 'PDF…' : 'PNG…') : 'Download'}</span>
-            </button>
-
-            {dlMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setDlMenu(false)} />
-                <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-20 overflow-hidden text-xs">
-                  <button onClick={() => download('pdf')} className="w-full text-left px-3.5 py-2.5 text-slate-700 hover:bg-slate-50 font-semibold border-b border-slate-100">
-                    Download PDF
-                  </button>
-                  <button onClick={() => download('png')} className="w-full text-left px-3.5 py-2.5 text-slate-700 hover:bg-slate-50 font-semibold">
-                    Download PNG
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Document Formatting & Toolbar Header */}
-        <div className="shrink-0 bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between flex-wrap gap-2 text-xs shadow-2xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-extrabold text-xs text-slate-900 pr-2 border-r border-slate-200">
-              AI Resume
-            </span>
+            <div className="h-4 w-px bg-slate-200 mx-0.5" />
 
             {/* Undo / Redo */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               <button
                 title="Undo"
                 onMouseDown={(e) => { e.preventDefault(); handleUndo(); }}
                 disabled={past.length === 0}
-                className={`w-6 h-6 rounded-md flex items-center justify-center ${past.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}`}
+                className={`w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer ${past.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}`}
               >
                 <Undo className="w-3.5 h-3.5" />
               </button>
@@ -750,13 +717,13 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 title="Redo"
                 onMouseDown={(e) => { e.preventDefault(); handleRedo(); }}
                 disabled={future.length === 0}
-                className={`w-6 h-6 rounded-md flex items-center justify-center ${future.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}`}
+                className={`w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer ${future.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}`}
               >
                 <Redo className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="h-4 w-px bg-slate-200 mx-1" />
+            <div className="h-4 w-px bg-slate-200 mx-0.5" />
 
             {/* Font Family Dropdown */}
             <select
@@ -765,7 +732,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 setFontFamily(e.target.value);
                 document.execCommand('fontName', false, e.target.value);
               }}
-              className="px-2 py-1 rounded-md border border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-800 focus:outline-none"
+              className="h-7 px-2.5 rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-800 focus:outline-none flex items-center justify-center leading-none cursor-pointer"
             >
               <option value="Times New Roman">Times New Roman</option>
               <option value="Inter">Inter</option>
@@ -774,7 +741,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               <option value="Calibri">Calibri</option>
             </select>
 
-            <div className="h-4 w-px bg-slate-200 mx-1" />
+            <div className="h-4 w-px bg-slate-200 mx-0.5" />
 
             {/* Formatting Icons */}
             <div className="flex items-center gap-0.5">
@@ -792,7 +759,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                     document.execCommand(cmd);
                     refreshFmt();
                   }}
-                  className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                     fmt[cmd as keyof typeof fmt]
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-slate-600 hover:bg-slate-100'
@@ -803,16 +770,16 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               ))}
             </div>
 
-            <div className="h-4 w-px bg-slate-200 mx-1" />
+            <div className="h-4 w-px bg-slate-200 mx-0.5" />
 
-            {/* Alignments & Lists */}
+            {/* Lists */}
             <div className="flex items-center gap-0.5">
               <button
                 onMouseDown={(e) => {
                   e.preventDefault();
                   setBulletStyleAtFocus('bullet');
                 }}
-                className="w-6 h-6 rounded-md text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                className="w-7 h-7 rounded-lg text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
                 title="Bullet List"
               >
                 <List className="w-3.5 h-3.5" />
@@ -822,22 +789,23 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                   e.preventDefault();
                   setBulletStyleAtFocus('number');
                 }}
-                className="w-6 h-6 rounded-md text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                className="w-7 h-7 rounded-lg text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
                 title="Numbered List"
               >
                 <ListOrdered className="w-3.5 h-3.5" />
               </button>
             </div>
+          </div>
 
-            <div className="h-4 w-px bg-slate-200 mx-1" />
-
+          {/* Right Controls Group */}
+          <div className="flex items-center gap-2 shrink-0 ml-auto">
             {/* Professional / Student Pill */}
-            <div className="flex items-center gap-1 bg-slate-100 rounded-md p-0.5 border border-slate-200">
+            <div className="h-7 flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
               {(['professional', 'student'] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => external({ ...cv, cvType: t })}
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold capitalize transition-colors ${
+                  className={`h-6 px-2.5 rounded-md text-[10px] font-bold capitalize transition-colors flex items-center justify-center leading-none text-center cursor-pointer ${
                     (cv.cvType ?? 'professional') === t
                       ? 'bg-blue-600 text-white'
                       : 'text-slate-500 hover:text-slate-800'
@@ -847,7 +815,39 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 </button>
               ))}
             </div>
+
+            <div className="h-4 w-px bg-slate-200" />
+
+            {/* Download Action */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setDlMenu((o) => !o)}
+                disabled={!!downloading}
+                className="h-7 px-3.5 rounded-lg bg-blue-600 text-white text-xs font-bold shadow-xs hover:bg-blue-700 transition-all flex items-center justify-center gap-1.5 leading-none text-center cursor-pointer disabled:opacity-50"
+              >
+                {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                <span className="leading-none">
+                  {downloading ? (downloading === 'pdf' ? 'PDF…' : 'PNG…') : 'Download'}
+                </span>
+              </button>
+
+              {dlMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setDlMenu(false)} />
+                  <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-20 overflow-hidden text-xs">
+                    <button onClick={() => download('pdf')} className="w-full text-left px-3.5 py-2.5 text-slate-700 hover:bg-slate-50 font-semibold border-b border-slate-100">
+                      Download PDF
+                    </button>
+                    <button onClick={() => download('png')} className="w-full text-left px-3.5 py-2.5 text-slate-700 hover:bg-slate-50 font-semibold">
+                      Download PNG
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
+
         </div>
 
         {/* Live Resume Canvas Area */}
