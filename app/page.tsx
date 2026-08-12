@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import confetti from 'canvas-confetti';
 import { ImagineSidebar, MobileNavBar } from '../components/ImagineSidebar';
@@ -15,7 +15,7 @@ import { GithubEditor } from '../components/GithubEditor';
 import { LinkedinLandingView } from '../components/LinkedinLandingView';
 import { LinkedinEditor } from '../components/LinkedinEditor';
 import { LinkedinTemplatePreview } from '../components/LinkedinTemplatePreview';
-import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ResumeTemplatePreview } from '../components/ResumeTemplatePreview';
 import { GithubTemplatePreview } from '../components/GithubTemplatePreview';
 import { JobHuntingLandingView } from '../components/JobHuntingLandingView';
 import { FreelancingLandingView } from '../components/FreelancingLandingView';
@@ -41,9 +41,15 @@ import { ArrowLeft, Sparkles, FileText, Download, Award, Terminal } from 'lucide
 import { GithubIcon, LinkedinIcon } from '../components/icons';
 
 export default function Home() {
+  const mainContentRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('resume');
   const [resumeMode, setResumeMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
   const [resumePreviewSample, setResumePreviewSample] = useState<LmsResumeSample | null>(null);
+  // Set when "Use Template" is clicked in the preview popup — instead of
+  // jumping straight into the Studio, the popup closes back to the landing
+  // page with this attached, so the user can add an instruction (or just
+  // send empty to use it as-is) before entering the Studio.
+  const [attachedResumeTemplate, setAttachedResumeTemplate] = useState<LmsResumeSample | null>(null);
   const [githubMode, setGithubMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
   const [githubPreviewTemplate, setGithubPreviewTemplate] = useState<GithubTemplateCard | null>(null);
   const [linkedinMode, setLinkedinMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
@@ -153,7 +159,7 @@ export default function Home() {
       />
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col min-w-0 h-screen ${
+      <div ref={mainContentRef} className={`flex-1 flex flex-col min-w-0 h-screen ${
         (activeTab === 'resume' && resumeMode === 'studio') ||
         (activeTab === 'linkedin' && linkedinMode === 'studio') ||
         (activeTab === 'github' && githubMode === 'studio')
@@ -245,14 +251,20 @@ export default function Home() {
                               setResumePreviewSample(sample);
                               setResumeMode('preview');
                             }}
+                            attachedTemplate={attachedResumeTemplate}
+                            onClearAttachedTemplate={() => setAttachedResumeTemplate(null)}
                             onUsePrompt={(promptText) => {
-                              // Resume skips template selection — go straight
-                              // into the Studio, auto-picking the closest
-                              // matching field so the AI has a sensible base
-                              // to work from rather than always the same one.
-                              const sample = matchResumeSampleToPrompt(promptText);
+                              // If a template was attached via "Use Template"
+                              // in the preview popup, that's the base — an
+                              // explicit user choice beats the closest-match
+                              // guess. Otherwise (typed straight into the
+                              // landing box) auto-pick the closest matching
+                              // field so the AI has a sensible base to work
+                              // from rather than always the same one.
+                              const sample = attachedResumeTemplate ?? matchResumeSampleToPrompt(promptText);
                               loadResumeField(sample);
-                              setResumeInitialPrompt(promptText);
+                              if (promptText.trim()) setResumeInitialPrompt(promptText);
+                              setAttachedResumeTemplate(null);
                             }}
                             onOpenEditorDirectly={() => setResumeMode('editor')}
                           />
@@ -551,22 +563,30 @@ export default function Home() {
         onSuccess={() => setIsAuthOpen(false)}
       />
 
-      {/* Confirm-to-load instead of a full preview popup — the actual
-          editable/exportable resume lives in the Chat Studio anyway, so this
-          just asks before committing. Rendered here at the top level (not
-          nested inside the resume tab's motion.div) so its "fixed inset-0"
-          backdrop is positioned against the real viewport and dims the
-          sidebar instantly — nesting it inside an animating motion.div made
-          the backdrop bounded by that div's box until its transform
-          settled, so the sidebar visibly dimmed a beat later than the rest. */}
+      {/* Full resume preview before committing — rendered here at the top
+          level (not nested inside the resume tab's motion.div) so its
+          "fixed inset-0" backdrop is positioned against the real viewport.
+          Nesting it inside an animating motion.div was the actual root
+          cause of the earlier blink/jump bug: Framer Motion keeps a
+          `transform` style on that element, which makes it the containing
+          block for any `position: fixed` descendant, so the backdrop was
+          boxed into just the tab content's area and only "caught up" to
+          cover the full screen once that transform settled a beat later. */}
       {resumeMode === 'preview' && resumePreviewSample && (
-        <ConfirmDialog
-          title="Load this template?"
-          message={`This loads the "${resumePreviewSample.label}" template into your Resume Studio, where you can edit it and refine it further with AI.`}
-          confirmLabel="Load Template"
-          cancelLabel="Cancel"
-          onConfirm={() => loadResumeField(resumePreviewSample)}
-          onCancel={() => setResumeMode('landing')}
+        <ResumeTemplatePreview
+          sample={resumePreviewSample}
+          onUse={() => {
+            // Doesn't jump into the Studio directly — closes back to the
+            // landing page with this attached, so the user can add an
+            // instruction (or just send empty to use it as-is) first.
+            // Scrolls back to the top so the attached-template chip above
+            // the prompt box is immediately visible — the user clicked this
+            // from a template card that can be scrolled well below it.
+            setAttachedResumeTemplate(resumePreviewSample);
+            setResumeMode('landing');
+            mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onClose={() => setResumeMode('landing')}
         />
       )}
 

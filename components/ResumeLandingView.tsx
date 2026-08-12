@@ -2,18 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Plus, 
-  FileText, 
-  Folder, 
-  PenTool, 
-  Check, 
-  ChevronDown, 
-  Mic, 
-  ArrowUpRight, 
+import {
+  Plus,
+  FileText,
+  Folder,
+  PenTool,
+  Check,
+  ChevronDown,
+  Mic,
+  ArrowUpRight,
   Sparkles,
   Sliders,
-  Send
+  Send,
+  X
 } from 'lucide-react';
 import { LMS_RESUME_SAMPLES, LmsResumeSample } from '../lib/resumeSamples';
 import { ResumeTemplateThumbnail } from './ResumeTemplateThumbnail';
@@ -29,6 +30,11 @@ interface ResumeLandingViewProps {
   onSelectTemplate?: (sample: LmsResumeSample) => void;
   onUsePrompt: (promptText: string) => void;
   onOpenEditorDirectly: () => void;
+  /** Set after "Use Template" is clicked in the preview popup — shown as a
+   *  removable chip; carried into the Studio on send along with whatever
+   *  (if anything) was typed in the box. */
+  attachedTemplate?: LmsResumeSample | null;
+  onClearAttachedTemplate?: () => void;
 }
 
 export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
@@ -36,7 +42,9 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
   onSelectField,
   onSelectTemplate,
   onUsePrompt,
-  onOpenEditorDirectly
+  onOpenEditorDirectly,
+  attachedTemplate,
+  onClearAttachedTemplate
 }) => {
   const [promptInput, setPromptInput] = useState('');
   const [selectedModel, setSelectedModel] = useState('Flash');
@@ -96,13 +104,17 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
     }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (promptInput.trim()) {
+  const submitPrompt = () => {
+    if (promptInput.trim() || attachedTemplate) {
       onUsePrompt(promptInput);
     } else {
       onOpenEditorDirectly();
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitPrompt();
   };
 
   return (
@@ -126,11 +138,38 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
           onSubmit={handleSubmit}
           className="w-full bg-white border border-slate-200 rounded-3xl p-4 shadow-sm focus-within:shadow-md focus-within:border-slate-400 transition-all space-y-3"
         >
+          {attachedTemplate && (
+            <div className="flex items-center">
+              <span className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
+                <FileText className="w-3 h-3" />
+                <span>{attachedTemplate.label}</span>
+                <button
+                  type="button"
+                  onClick={onClearAttachedTemplate}
+                  className="w-4 h-4 rounded-full hover:bg-blue-100 flex items-center justify-center transition-colors"
+                  title="Remove attached template"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </span>
+            </div>
+          )}
+
           <textarea
             rows={2}
             value={promptInput}
             onChange={(e) => setPromptInput(e.target.value)}
-            placeholder={animatedPlaceholder || "Ask anything..."}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitPrompt();
+              }
+            }}
+            placeholder={
+              attachedTemplate
+                ? `Add instructions for "${attachedTemplate.label}" (optional)…`
+                : animatedPlaceholder || "Ask anything..."
+            }
             className="w-full text-sm text-slate-800 placeholder-slate-400 focus:outline-none resize-none bg-transparent"
           />
 

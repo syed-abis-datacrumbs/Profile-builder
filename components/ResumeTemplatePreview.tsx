@@ -1,0 +1,102 @@
+'use client';
+
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { ArrowLeft, SquarePen } from 'lucide-react';
+import { LmsResumeSample } from '../lib/resumeSamples';
+import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
+import { CvPreview } from './CvPreview';
+
+const DESIGN_WIDTH = 794;
+
+interface ResumeTemplatePreviewProps {
+  sample: LmsResumeSample;
+  onUse: () => void;
+  onClose: () => void;
+}
+
+// Full preview of the actual resume UI (real CvPreview, not a scaled-down
+// peek or a hand-built mockup) before committing to it. Scaled to always
+// fill the panel's full width — a short resume just leaves blank space
+// below, a long one scrolls vertically inside the panel.
+//
+// Combining transform:scale with a scrollable container needs care: scale
+// only changes how content PAINTS, not its layout box, so the scaled div's
+// own box stays at its full unscaled height. Left alone, the scroll
+// container would size its scrollbar off that unscaled height instead of
+// the visually-shrunk one. The spacer div below is explicitly sized to
+// naturalHeight * scale — the real visual height — so the scroll area
+// always matches what's actually on screen.
+export const ResumeTemplatePreview: React.FC<ResumeTemplatePreviewProps> = ({ sample, onUse, onClose }) => {
+  const cv = cvMarkdownToHtml(sample.data as CvData);
+
+  const panelRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0);
+  const [naturalHeight, setNaturalHeight] = useState(0);
+
+  const measure = useCallback(() => {
+    const panel = panelRef.current;
+    const content = contentRef.current;
+    if (!panel || !content) return;
+    setScale(panel.clientWidth / DESIGN_WIDTH);
+    setNaturalHeight(content.scrollHeight);
+  }, []);
+
+  useLayoutEffect(() => {
+    measure();
+    const panel = panelRef.current;
+    const content = contentRef.current;
+    if (!panel || !content) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(panel);
+    ro.observe(content);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6">
+      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onClose} />
+
+      <div className="relative w-full max-w-4xl flex flex-col min-h-0 h-full max-h-[92vh]">
+        {/* Top toolbar */}
+        <div className="shrink-0 bg-white rounded-2xl shadow-xl px-5 py-3.5 flex items-center justify-between gap-4 mb-3">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 font-semibold text-sm transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to templates</span>
+          </button>
+
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm text-slate-500 hidden sm:inline">
+              Preset: <span className="font-bold text-slate-900">{sample.label}</span>
+            </span>
+            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 whitespace-nowrap">
+              98% ATS Match
+            </span>
+            <button
+              onClick={onUse}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors shadow-sm whitespace-nowrap"
+            >
+              <SquarePen className="w-3.5 h-3.5" />
+              <span>Use Template</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Resume panel — always fills the full width; scrolls vertically
+            only if the resume is taller than the panel at that width. */}
+        <div ref={panelRef} className="flex-1 min-h-0 bg-white rounded-t-2xl shadow-2xl overflow-y-auto">
+          <div style={{ height: naturalHeight * scale, visibility: scale ? 'visible' : 'hidden' }}>
+            <div style={{ width: DESIGN_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+              <div ref={contentRef}>
+                <CvPreview data={cv} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
