@@ -574,6 +574,185 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
           </div>
         </div>
 
+        {/* INTERACTIVE FEATURE: AI RECRUITER COLD OUTREACH & INMAIL GENERATOR */}
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-3xl p-6 text-white shadow-xl space-y-5 border border-indigo-500/30">
+          <div className="flex items-center justify-between flex-wrap gap-3 border-b border-white/10 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/30">
+                <Send className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-xl text-white flex items-center gap-2">
+                  <span>AI Recruiter Cold Outreach & InMail Generator</span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider">
+                    PRO FEATURE
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-300 font-medium">
+                  Bypass the application black hole with personalized DMs, elevator pitches & 1-click tracking
+                </p>
+              </div>
+            </div>
+
+            <div className="text-xs font-semibold text-slate-400">
+              Target Role: <strong className="text-white font-bold">{activeRole}</strong>
+            </div>
+          </div>
+
+          {/* OUTREACH CONTROLS GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            {/* Target Audience */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-300 block uppercase text-[10px] tracking-wider">
+                1. Target Audience:
+              </label>
+              <select
+                value={sheetSearchQuery ? sheetSearchQuery : 'Hiring Manager'}
+                onChange={(e) => {
+                  const target = e.target.value;
+                  const sampleHooks: Record<string, string> = {
+                    'Hiring Manager': `Architected high-throughput microservices using ${activeRole} stack, reducing latency by 40%.`,
+                    'Talent Recruiter': `Experienced ${activeRole} with proven track record of shipping scalable production web apps.`,
+                    'Peer Referral': `Followed your recent work on open-source dev tools and loved your engineering architecture.`,
+                    'VP of Engineering': `Led cross-functional team of 6 engineers delivering enterprise SaaS platform under deadline.`
+                  };
+                  if (sampleHooks[target]) setSheetSearchQuery('');
+                }}
+                className="w-full bg-white/10 border border-white/15 rounded-xl px-3 py-2.5 text-white font-medium focus:outline-none focus:border-indigo-400 cursor-pointer"
+              >
+                <option value="Hiring Manager" className="bg-slate-900 text-white font-bold">Hiring Manager (Engineering Lead)</option>
+                <option value="Talent Recruiter" className="bg-slate-900 text-white font-bold">Talent Recruiter / HR Lead</option>
+                <option value="Peer Referral" className="bg-slate-900 text-white font-bold">Peer Developer (Internal Referral)</option>
+                <option value="VP of Engineering" className="bg-slate-900 text-white font-bold">VP of Engineering / CTO</option>
+              </select>
+            </div>
+
+            {/* Outreach Goal */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-300 block uppercase text-[10px] tracking-wider">
+                2. Outreach Goal:
+              </label>
+              <select
+                className="w-full bg-white/10 border border-white/15 rounded-xl px-3 py-2.5 text-white font-medium focus:outline-none focus:border-indigo-400 cursor-pointer"
+              >
+                <option value="Initial DM" className="bg-slate-900 text-white font-bold">Initial Cold DM Pitch (3 Sentences)</option>
+                <option value="7-Day Followup" className="bg-slate-900 text-white font-bold">7-Day Polite Follow-Up Note</option>
+                <option value="Post Interview" className="bg-slate-900 text-white font-bold">Post-Interview Thank You & Recap</option>
+                <option value="Salary Counter" className="bg-slate-900 text-white font-bold">Salary Counter-Proposal Script</option>
+              </select>
+            </div>
+
+            {/* Key Hook / Accomplishment */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-300 block uppercase text-[10px] tracking-wider">
+                3. Key Metric / Hook:
+              </label>
+              <input
+                type="text"
+                defaultValue={`Built scalable ${activeRole} system reducing load times by 45% for 100k+ MAU`}
+                className="w-full bg-white/10 border border-white/15 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-indigo-400 text-xs placeholder-slate-400"
+                placeholder="e.g. Optimized DB queries by 60%..."
+              />
+            </div>
+          </div>
+
+          {/* GENERATED PITCH CARDS DISPLAY */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            
+            {/* Pitch Format 1: 3-Sentence LinkedIn InMail */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3 relative group">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[10px] font-extrabold uppercase">
+                  Option A: 3-Sentence LinkedIn DM
+                </span>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(`Hi [Name], loved your team's recent updates on engineering scaling. I'm a ${activeRole} with a strong track record of shipping high-impact features (e.g. reduced latency by 45% at previous role). Would love to connect and share a tailored 1-page resume if you're building out the team!`, 101)}
+                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold transition-all flex items-center gap-1"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{copiedIndex === 101 ? 'Copied!' : 'Copy DM'}</span>
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-200 leading-relaxed font-mono bg-slate-950/60 p-3 rounded-xl border border-white/10">
+                "Hi [Name], loved your team's recent updates on engineering scaling. I'm a <strong>{activeRole}</strong> with a strong track record of shipping high-impact features (e.g. reduced latency by 45% at previous role). Would love to connect and share a tailored 1-page resume if you're building out the team!"
+              </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const todayFormatted = formatDateOrdinal();
+                  const newRow: SheetRow = {
+                    id: Date.now().toString(),
+                    company: 'Target Company',
+                    contact: 'Recruiter Contact',
+                    role: activeRole,
+                    dateAdded: todayFormatted,
+                    lastStageDate: todayFormatted,
+                    status: 'Approached / Cold DM',
+                    notes: `Sent LinkedIn DM: "Hi [Name], loved your team's recent updates on engineering scaling..."`
+                  };
+                  setSheetRows([newRow, ...sheetRows]);
+                  copyToClipboard('Logged to Data Sheet!', 101);
+                }}
+                className="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log to Data Sheet Tracker</span>
+              </button>
+            </div>
+
+            {/* Pitch Format 2: Formal Cold Email */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3 relative group">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-extrabold uppercase">
+                  Option B: Cold Email with Subject Line
+                </span>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(`Subject: ${activeRole} Candidate - Ex-Startup Engineer\n\nHi [Hiring Manager Name],\n\nI noticed [Company Name] is actively expanding its core product team. As a ${activeRole}, I've spent the last 4 years architecting resilient frontend/backend systems that scale seamlessly.\n\n3 Quick Highlights:\n• Re-architected API data layer reducing response times by 45%\n• Standardized Next.js 15 micro-frontend architecture for 100k+ MAU\n• Built automated CI/CD pipelines cutting deployment cycles in half\n\nI've attached my 1-page resume for your review. Would you be open to a 10-minute introductory call next Tuesday?\n\nBest regards,\n[Your Name]`, 102)}
+                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold transition-all flex items-center gap-1"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{copiedIndex === 102 ? 'Copied!' : 'Copy Email'}</span>
+                </button>
+              </div>
+
+              <div className="text-xs text-slate-200 leading-relaxed font-mono bg-slate-950/60 p-3 rounded-xl border border-white/10 space-y-1.5">
+                <div className="text-emerald-400 font-bold">Subject: {activeRole} Candidate - Product Scaling</div>
+                <p className="text-[11px] text-slate-300 leading-normal">
+                  Hi [Hiring Manager], noticed [Company] is expanding its core team. As a {activeRole}, I recently optimized Next.js micro-frontends reducing latency by 45% for 100k MAU. Attached is my 1-page resume for review!
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const todayFormatted = formatDateOrdinal();
+                  const newRow: SheetRow = {
+                    id: Date.now().toString(),
+                    company: 'Target Company',
+                    contact: 'Engineering Manager',
+                    role: activeRole,
+                    dateAdded: todayFormatted,
+                    lastStageDate: todayFormatted,
+                    status: 'Approached / Cold DM',
+                    notes: `Sent Cold Email: Subject: ${activeRole} Candidate - Product Scaling`
+                  };
+                  setSheetRows([newRow, ...sheetRows]);
+                  copyToClipboard('Logged to Data Sheet!', 102);
+                }}
+                className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log to Data Sheet Tracker</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
         {/* STEP 3: INTERACTIVE JOB HUNTING MCQ PRACTICE CAROUSEL */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs transition-all space-y-5">
           <div className="flex items-start justify-between gap-4 flex-wrap">
