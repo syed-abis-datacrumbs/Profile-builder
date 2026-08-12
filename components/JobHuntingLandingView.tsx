@@ -1212,22 +1212,19 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
             </div>
           </div>
 
-          {/* MODE 1: KANBAN PIPELINE BOARD */}
+          {/* MODE 1: KANBAN PIPELINE BOARD (6 INDIVIDUAL SEPARATE STAGES) */}
           {trackerMode === 'kanban' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-              {[
-                { title: '📩 Applied / Outreached', key: 'Applied', color: 'border-blue-300 bg-blue-50/60 text-blue-900', statuses: ['Saved', 'Applied', 'Connection Request Sent', 'Approached / Cold DM'] },
-                { title: '📞 Recruiter Screen', key: 'Screening', color: 'border-amber-300 bg-amber-50/60 text-amber-900', statuses: ['Recruiter Call', 'Following Up'] },
-                { title: '💻 Tech Interview', key: 'Interview', color: 'border-purple-300 bg-purple-50/60 text-purple-900', statuses: ['Technical Interview'] },
-                { title: '🎉 Offer Received', key: 'Offer', color: 'border-emerald-300 bg-emerald-50/60 text-emerald-900', statuses: ['Offer Received'] }
-              ].map((col) => {
-                const columnRows = filteredSheetRows.filter(row => {
-                  if (col.key === 'Applied') return ['Saved', 'Applied', 'Connection Request Sent', 'Approached / Cold DM'].includes(row.status);
-                  if (col.key === 'Screening') return ['Recruiter Call', 'Following Up'].includes(row.status);
-                  if (col.key === 'Interview') return row.status === 'Technical Interview';
-                  if (col.key === 'Offer') return row.status === 'Offer Received';
-                  return false;
-                });
+            <div className="overflow-x-auto pb-4">
+              <div className="flex gap-3.5 pt-2 min-w-[1280px]">
+                {[
+                  { title: '📩 Connection Sent', key: 'Connection Request Sent', color: 'border-indigo-300 bg-indigo-50/60 text-indigo-900' },
+                  { title: '💬 Cold DM Sent', key: 'Approached / Cold DM', color: 'border-blue-300 bg-blue-50/60 text-blue-900' },
+                  { title: '⏳ Following Up', key: 'Following Up', color: 'border-cyan-300 bg-cyan-50/60 text-cyan-900' },
+                  { title: '📞 Recruiter Call', key: 'Recruiter Call', color: 'border-amber-300 bg-amber-50/60 text-amber-900' },
+                  { title: '💻 Tech Interview', key: 'Technical Interview', color: 'border-purple-300 bg-purple-50/60 text-purple-900' },
+                  { title: '🎉 Offer Received', key: 'Offer Received', color: 'border-emerald-300 bg-emerald-50/60 text-emerald-900' }
+                ].map((col) => {
+                  const columnRows = filteredSheetRows.filter(row => row.status === col.key);
 
                 return (
                   <div key={col.key} className="flex flex-col rounded-2xl bg-slate-50/90 border border-slate-200/90 p-2.5 space-y-3 min-h-[420px]">
@@ -1279,6 +1276,7 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
                   </div>
                 );
               })}
+              </div>
             </div>
           )}
 
