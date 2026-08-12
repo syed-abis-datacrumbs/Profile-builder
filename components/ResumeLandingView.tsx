@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -16,11 +16,8 @@ import {
   Send,
   X
 } from 'lucide-react';
-import { LMS_RESUME_SAMPLES, LmsResumeSample } from '../lib/resumeSamples';
+import { LMS_RESUME_SAMPLES, LmsResumeSample, getResumeAccentColor } from '../lib/resumeSamples';
 import { ResumeTemplateThumbnail } from './ResumeTemplateThumbnail';
-
-// Accent colours cycled across the preview cards (like the original design).
-const ACCENTS = ['#dc2626', '#1e3a8a', '#059669', '#7c3aed', '#d97706', '#0891b2', '#db2777', '#4338ca'];
 
 interface ResumeLandingViewProps {
   userName?: string;
@@ -48,6 +45,15 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
 }) => {
   const [promptInput, setPromptInput] = useState('');
   const [selectedModel, setSelectedModel] = useState('Flash');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // "Use Template" closes the popup and attaches the chip here, but never
+  // moves focus into the box — so pressing Enter right away (without first
+  // clicking in) had nowhere to go. Focusing on attach means Enter with no
+  // typed text works immediately, matching the Send button.
+  useEffect(() => {
+    if (attachedTemplate) textareaRef.current?.focus();
+  }, [attachedTemplate]);
 
   // Animated Typewriter Placeholder State
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -156,6 +162,7 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
           )}
 
           <textarea
+            ref={textareaRef}
             rows={2}
             value={promptInput}
             onChange={(e) => setPromptInput(e.target.value)}
@@ -283,7 +290,7 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {LMS_RESUME_SAMPLES.map((sample, i) => {
-            const accent = ACCENTS[i % ACCENTS.length];
+            const accent = getResumeAccentColor(sample);
             const fullName = (sample.data.personalInfo && sample.data.personalInfo.fullName) || 'Your Name';
             return (
               <motion.div

@@ -26,6 +26,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { CvData } from '../lib/cvTypes';
+import { getResumeAccentColor } from '../lib/resumeSamples';
 import { CvPreview } from './CvPreview';
 
 // Blank breathing room reserved at the BOTTOM of every page and the TOP of
@@ -142,6 +143,11 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   onRequireAuth,
   initialPrompt,
 }) => {
+  // Same accent stripe the template's grid card and preview popup show —
+  // derived from fieldLabel (the loaded template's name), so it stays
+  // consistent everywhere without threading a colour prop around.
+  const accent = getResumeAccentColor(fieldLabel ? { label: fieldLabel } : null);
+
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -515,6 +521,26 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
         {/* Chat Scroll Container */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4 bg-white text-sm">
+          {messages.length === 0 && !loading && (
+            <div className="pt-2 space-y-2">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Try asking</p>
+              <div className="flex flex-col gap-2">
+                {[
+                  'Update my contact details (phone, email, LinkedIn, GitHub)',
+                  'Add another work experience or project',
+                  'Make my bullet points sound more senior and impactful',
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => send(suggestion)}
+                    className="text-left px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
@@ -806,20 +832,25 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
         {/* Live Resume Canvas Area */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex justify-center items-start">
-          <div ref={exportRef} className="relative w-full max-w-[820px] bg-white shadow-xl rounded-sm my-2">
-            <CvPreview key={revision} data={cv} onChange={recordChange} />
-            {pageLines.map((y, i) => (
-              <div
-                key={i}
-                data-page-break="true"
-                className="pointer-events-none absolute left-0 right-0 border-t border-dashed border-red-300"
-                style={{ top: y }}
-              >
-                <span className="absolute right-1 -top-4 text-[9px] font-sans text-red-400 bg-white px-1">
-                  Page {i + 2}
-                </span>
-              </div>
-            ))}
+          {/* Accent border lives on this wrapper, not exportRef itself —
+              exportRef is captured pixel-for-pixel for PDF/PNG export, and
+              this stripe is an editor-only cue, not part of the resume. */}
+          <div className="w-full max-w-[820px] my-2 rounded-sm" style={{ borderTop: `4px solid ${accent}` }}>
+            <div ref={exportRef} className="relative w-full bg-white shadow-xl rounded-b-sm">
+              <CvPreview key={revision} data={cv} onChange={recordChange} />
+              {pageLines.map((y, i) => (
+                <div
+                  key={i}
+                  data-page-break="true"
+                  className="pointer-events-none absolute left-0 right-0 border-t border-dashed border-red-300"
+                  style={{ top: y }}
+                >
+                  <span className="absolute right-1 -top-4 text-[9px] font-sans text-red-400 bg-white px-1">
+                    Page {i + 2}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

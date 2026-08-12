@@ -8,6 +8,18 @@ function normalizeUrl(url: string): string {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
+/** True if an HTML field has no real text left in it. A plain `!html` check
+ *  isn't enough: clearing a block-style contentEditable field (a <div>, not
+ *  a <span>) down to nothing commonly leaves the browser's own residual
+ *  "<br>" behind instead of a true empty string, which is truthy and
+ *  silently defeats a raw falsy check even though the field looks and acts
+ *  completely empty. Stripping tags/nbsp and checking what's left is what
+ *  actually matches what the user sees on screen. */
+function isBlank(html?: string): boolean {
+  if (!html) return true;
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() === '';
+}
+
 function Bullet({ children, marker = '•' }: { children: React.ReactNode; marker?: string }) {
   return (
     <div className="flex gap-1.5">
@@ -53,6 +65,7 @@ function RichText({
   placeholder,
   block,
   bullet,
+  onEmptyBackspace,
 }: {
   html: string;
   onCommit: (v: string) => void;
@@ -60,6 +73,11 @@ function RichText({
   placeholder?: string;
   block?: boolean;
   bullet?: BulletKeys;
+  /** Backspace pressed while this field is ALREADY empty (nothing left to
+   *  delete) — used to remove the whole entry once every one of its fields
+   *  is empty, so an already-cleared field doesn't just sit there forever
+   *  showing its placeholder hint with no way to make it disappear. */
+  onEmptyBackspace?: () => void;
 }) {
   const Tag = (block ? 'div' : 'span') as 'div';
   return (
@@ -69,14 +87,44 @@ function RichText({
       data-ph={placeholder}
       dangerouslySetInnerHTML={{ __html: html || '' }}
       className={`${className || ''} outline-none rounded-sm hover:bg-slate-50/60 cursor-text empty:before:content-[attr(data-ph)] empty:before:text-slate-300`}
+      onBeforeInput={(e) => {
+        // beforeinput is the modern, purpose-built event for intercepting
+        // contentEditable edits — deleting the selected Range ourselves
+        // here (rather than trying to fully suppress the browser's own
+        // deletion from keydown) is the reliable way to guarantee the
+        // WHOLE selection goes, not just part of it. Native selection
+        // deletion in contentEditable is known to be unreliable in some
+        // browsers once a selection spans multiple nodes (crossing a
+        // <strong> boundary, wrapping across visual lines, etc.) — this
+        // sidesteps that class of bug entirely instead of guessing at it.
+        const native = e.nativeEvent as InputEvent;
+        if (native.inputType === 'deleteContentBackward' || native.inputType === 'deleteContentForward') {
+          const sel = window.getSelection();
+          if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            if (e.currentTarget.contains(range.commonAncestorContainer)) {
+              e.preventDefault();
+              range.deleteContents();
+            }
+          }
+        }
+      }}
       onKeyDown={(e) => {
-        if (!bullet) return;
-        if (e.key === 'Enter' && !e.shiftKey) {
+        const isEmpty = (e.currentTarget.textContent ?? '') === '';
+        if (bullet) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            bullet.onEnter(e.currentTarget.innerHTML);
+            return;
+          } else if (e.key === 'Backspace' && isEmpty) {
+            e.preventDefault();
+            bullet.onBackspaceEmpty();
+            return;
+          }
+        }
+        if (onEmptyBackspace && e.key === 'Backspace' && isEmpty) {
           e.preventDefault();
-          bullet.onEnter(e.currentTarget.innerHTML);
-        } else if (e.key === 'Backspace' && (e.currentTarget.textContent ?? '') === '') {
-          e.preventDefault();
-          bullet.onBackspaceEmpty();
+          onEmptyBackspace();
         }
       }}
       onPaste={(e) => {
@@ -111,18 +159,92 @@ function CvPreviewBase({
 
   const setPersonal = (patch: Partial<CvPersonalInfo>) =>
     commit({ ...data, personalInfo: { ...data.personalInfo, ...patch } });
-  const setEdu = (i: number, patch: Partial<CvData['education'][number]>) =>
-    commit({ ...data, education: data.education.map((e, j) => (j === i ? { ...e, ...patch } : e)) });
-  const setWork = (i: number, patch: Partial<CvData['workExperience'][number]>) =>
-    commit({ ...data, workExperience: data.workExperience.map((w, j) => (j === i ? { ...w, ...patch } : w)) });
-  const setProj = (i: number, patch: Partial<CvData['projects'][number]>) =>
-    commit({ ...data, projects: data.projects.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
-  const setWs = (i: number, patch: Partial<NonNullable<CvData['workshops']>[number]>) =>
-    commit({ ...data, workshops: (data.workshops ?? []).map((w, j) => (j === i ? { ...w, ...patch } : w)) });
-  const setCert = (i: number, patch: Partial<CvData['certifications'][number]>) =>
-    commit({ ...data, certifications: data.certifications.map((c, j) => (j === i ? { ...c, ...patch } : c)) });
+
+  // Clearing a field's text via keyboard only empties that ONE field — it
+  // used to just sit there showing its placeholder hint forever, since the
+  // editable view renders every entry regardless of content (so blank
+  // slots stay usable to add new content). Instead, once EVERY field of an
+  // entry is empty (same "is this entry meaningful" test the read-only
+  // view already uses below), auto-remove the whole entry here rather than
+  // leaving a dead placeholder row behind.
+  const setEdu = (i: number, patch: Partial<CvData['education'][number]>) => {
+    const next = { ...data.education[i], ...patch };
+    const isEmpty = isBlank(next.institution) && isBlank(next.degree);
+    commit({
+      ...data,
+      education: isEmpty ? data.education.filter((_, j) => j !== i) : data.education.map((e, j) => (j === i ? next : e)),
+    });
+  };
+  const setWork = (i: number, patch: Partial<CvData['workExperience'][number]>) => {
+    const next = { ...data.workExperience[i], ...patch };
+    const isEmpty = isBlank(next.company) && isBlank(next.title) && isBlank(next.bullets);
+    commit({
+      ...data,
+      workExperience: isEmpty
+        ? data.workExperience.filter((_, j) => j !== i)
+        : data.workExperience.map((w, j) => (j === i ? next : w)),
+    });
+  };
+  const setProj = (i: number, patch: Partial<CvData['projects'][number]>) => {
+    const next = { ...data.projects[i], ...patch };
+    const isEmpty = isBlank(next.title) && isBlank(next.description);
+    commit({
+      ...data,
+      projects: isEmpty ? data.projects.filter((_, j) => j !== i) : data.projects.map((p, j) => (j === i ? next : p)),
+    });
+  };
+  const setWs = (i: number, patch: Partial<NonNullable<CvData['workshops']>[number]>) => {
+    const workshops = data.workshops ?? [];
+    const next = { ...workshops[i], ...patch };
+    const isEmpty = isBlank(next.title) && isBlank(next.description);
+    commit({
+      ...data,
+      workshops: isEmpty ? workshops.filter((_, j) => j !== i) : workshops.map((w, j) => (j === i ? next : w)),
+    });
+  };
+  const setCert = (i: number, patch: Partial<CvData['certifications'][number]>) => {
+    const next = { ...data.certifications[i], ...patch };
+    const isEmpty = isBlank(next.name) && isBlank(next.organization);
+    commit({
+      ...data,
+      certifications: isEmpty
+        ? data.certifications.filter((_, j) => j !== i)
+        : data.certifications.map((c, j) => (j === i ? next : c)),
+    });
+  };
   const setAdditional = (patch: Partial<CvData['additional']>) =>
     commit({ ...data, additional: { ...data.additional, ...patch } });
+
+  // Backspace on a field that's ALREADY empty — the setX() auto-remove
+  // above only fires when a field's content actually changes, so a field
+  // that was already blank (nothing left to type over) never reaches it.
+  // These re-check ALL of the entry's relevant fields directly from
+  // current data (whichever field the Backspace happened in is confirmed
+  // empty by the keydown condition that calls these — that's true no
+  // matter which one it was), and remove the whole entry only once every
+  // one of them is empty; a still-filled sibling field is left alone.
+  const eduEmptyBackspace = (i: number) => {
+    const e = data.education[i];
+    if (isBlank(e.institution) && isBlank(e.degree)) commit({ ...data, education: data.education.filter((_, j) => j !== i) });
+  };
+  const workEmptyBackspace = (i: number) => {
+    const w = data.workExperience[i];
+    if (isBlank(w.company) && isBlank(w.title) && isBlank(w.bullets))
+      commit({ ...data, workExperience: data.workExperience.filter((_, j) => j !== i) });
+  };
+  const projectEmptyBackspace = (i: number) => {
+    const p = data.projects[i];
+    if (isBlank(p.title) && isBlank(p.description)) commit({ ...data, projects: data.projects.filter((_, j) => j !== i) });
+  };
+  const workshopEmptyBackspace = (i: number) => {
+    const w = (data.workshops ?? [])[i];
+    if (isBlank(w.title) && isBlank(w.description))
+      commit({ ...data, workshops: (data.workshops ?? []).filter((_, j) => j !== i) });
+  };
+  const certEmptyBackspace = (i: number) => {
+    const c = data.certifications[i];
+    if (isBlank(c.name) && isBlank(c.organization)) commit({ ...data, certifications: data.certifications.filter((_, j) => j !== i) });
+  };
 
   // Bullet editing (editable mode renders ALL lines incl. empty, so line index
   // == raw index — Enter/Backspace/paste act directly on the "\n"-joined list).
@@ -157,11 +279,15 @@ function CvPreviewBase({
 
   const isStudent = data.cvType === 'student';
 
-  const eduList = editable ? data.education : data.education.filter((e) => e.institution || e.degree);
-  const workList = editable ? data.workExperience : data.workExperience.filter((w) => w.company || w.title || w.bullets);
-  const workshopList = editable ? (data.workshops ?? []) : (data.workshops ?? []).filter((w) => w.title || w.description);
-  const projectList = editable ? data.projects : data.projects.filter((p) => p.title || p.description);
-  const certList = editable ? data.certifications : data.certifications.filter((c) => c.name || c.organization);
+  const eduList = editable ? data.education : data.education.filter((e) => !isBlank(e.institution) || !isBlank(e.degree));
+  const workList = editable
+    ? data.workExperience
+    : data.workExperience.filter((w) => !isBlank(w.company) || !isBlank(w.title) || !isBlank(w.bullets));
+  const workshopList = editable
+    ? data.workshops ?? []
+    : (data.workshops ?? []).filter((w) => !isBlank(w.title) || !isBlank(w.description));
+  const projectList = editable ? data.projects : data.projects.filter((p) => !isBlank(p.title) || !isBlank(p.description));
+  const certList = editable ? data.certifications : data.certifications.filter((c) => !isBlank(c.name) || !isBlank(c.organization));
   const hasAdditional = editable || data.additional.skills || data.additional.interests;
 
   const certRows: CvData['certifications'][] = [];
@@ -220,7 +346,7 @@ function CvPreviewBase({
                 {pos === 0 && <SectionHeading>Education</SectionHeading>}
                 <div className="flex justify-between items-baseline gap-3">
                   <span className="font-bold">
-                    {editable ? <RichText html={edu.institution} placeholder="Institution" onCommit={(v) => setEdu(i, { institution: v })} /> : <Html html={edu.institution} />}
+                    {editable ? <RichText html={edu.institution} placeholder="Institution" onCommit={(v) => setEdu(i, { institution: v })} onEmptyBackspace={() => eduEmptyBackspace(i)} /> : <Html html={edu.institution} />}
                   </span>
                   <span className="text-slate-600 text-[16px] shrink-0 whitespace-nowrap">
                     {editable ? (
@@ -233,7 +359,7 @@ function CvPreviewBase({
                     )}
                   </span>
                 </div>
-                {editable ? <RichText block html={edu.degree} placeholder="Degree" onCommit={(v) => setEdu(i, { degree: v })} /> : edu.degree && <div><Html html={edu.degree} /></div>}
+                {editable ? <RichText block html={edu.degree} placeholder="Degree" onCommit={(v) => setEdu(i, { degree: v })} onEmptyBackspace={() => eduEmptyBackspace(i)} /> : edu.degree && <div><Html html={edu.degree} /></div>}
               </div>
             );
           })}
@@ -253,9 +379,9 @@ function CvPreviewBase({
                   <span className="font-bold">
                     {editable ? (
                       <>
-                        <RichText html={job.company} placeholder="Company" onCommit={(v) => setWork(i, { company: v })} />
+                        <RichText html={job.company} placeholder="Company" onCommit={(v) => setWork(i, { company: v })} onEmptyBackspace={() => workEmptyBackspace(i)} />
                         {' – '}
-                        <RichText html={job.title} placeholder="Title" onCommit={(v) => setWork(i, { title: v })} />
+                        <RichText html={job.title} placeholder="Title" onCommit={(v) => setWork(i, { title: v })} onEmptyBackspace={() => workEmptyBackspace(i)} />
                       </>
                     ) : (
                       <>
@@ -302,11 +428,11 @@ function CvPreviewBase({
                 <Bullet marker={data.projectsBulletStyle === 'number' ? `${pos + 1}.` : '•'}>
                   {editable ? (
                     <>
-                      <RichText html={proj.title} placeholder="Project" onCommit={(v) => setProj(i, { title: v })} className="font-bold" />
+                      <RichText html={proj.title} placeholder="Project" onCommit={(v) => setProj(i, { title: v })} onEmptyBackspace={() => projectEmptyBackspace(i)} className="font-bold" />
                       {' ('}
                       <RichText html={proj.technologies} placeholder="Tech" onCommit={(v) => setProj(i, { technologies: v })} />
                       {') – '}
-                      <RichText html={proj.description} placeholder="Description" onCommit={(v) => setProj(i, { description: v })} />
+                      <RichText html={proj.description} placeholder="Description" onCommit={(v) => setProj(i, { description: v })} onEmptyBackspace={() => projectEmptyBackspace(i)} />
                     </>
                   ) : (
                     <>
@@ -333,9 +459,9 @@ function CvPreviewBase({
                 <Bullet marker={data.workshopsBulletStyle === 'number' ? `${pos + 1}.` : '•'}>
                   {editable ? (
                     <>
-                      <RichText html={ws.title} placeholder="Workshop" onCommit={(v) => setWs(i, { title: v })} className="font-bold" />
+                      <RichText html={ws.title} placeholder="Workshop" onCommit={(v) => setWs(i, { title: v })} onEmptyBackspace={() => workshopEmptyBackspace(i)} className="font-bold" />
                       {': '}
-                      <RichText html={ws.description} placeholder="Description" onCommit={(v) => setWs(i, { description: v })} />
+                      <RichText html={ws.description} placeholder="Description" onCommit={(v) => setWs(i, { description: v })} onEmptyBackspace={() => workshopEmptyBackspace(i)} />
                     </>
                   ) : (
                     <>
@@ -361,10 +487,10 @@ function CvPreviewBase({
                   return (
                     <div key={i}>
                       <div className="font-bold">
-                        {editable ? <RichText html={cert.name} placeholder="Certification" onCommit={(v) => setCert(i, { name: v })} /> : <Html html={cert.name} />}
+                        {editable ? <RichText html={cert.name} placeholder="Certification" onCommit={(v) => setCert(i, { name: v })} onEmptyBackspace={() => certEmptyBackspace(i)} /> : <Html html={cert.name} />}
                       </div>
                       {editable ? (
-                        <div className="text-slate-600">(<RichText html={cert.organization} placeholder="Organization" onCommit={(v) => setCert(i, { organization: v })} />)</div>
+                        <div className="text-slate-600">(<RichText html={cert.organization} placeholder="Organization" onCommit={(v) => setCert(i, { organization: v })} onEmptyBackspace={() => certEmptyBackspace(i)} />)</div>
                       ) : (
                         cert.organization && <div className="text-slate-600">(<Html html={cert.organization} />)</div>
                       )}

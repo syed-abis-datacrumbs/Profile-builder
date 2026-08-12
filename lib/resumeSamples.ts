@@ -1595,3 +1595,14 @@ export function matchResumeSampleToPrompt(prompt: string): LmsResumeSample {
     LMS_RESUME_SAMPLES[0]
   );
 }
+
+// Single source of truth for a template's accent colour, cycled by its
+// position in LMS_RESUME_SAMPLES — so the same template always gets the
+// same colour everywhere it's shown (grid card, preview popup, Studio
+// canvas) without threading the colour through props at every call site.
+export const RESUME_TEMPLATE_ACCENTS = ['#dc2626', '#1e3a8a', '#059669', '#7c3aed', '#d97706', '#0891b2', '#db2777', '#4338ca'];
+
+export function getResumeAccentColor(sample?: { label: string } | null): string {
+  const idx = sample ? LMS_RESUME_SAMPLES.findIndex((s) => s.label === sample.label) : -1;
+  return RESUME_TEMPLATE_ACCENTS[(idx < 0 ? 0 : idx) % RESUME_TEMPLATE_ACCENTS.length];
+}

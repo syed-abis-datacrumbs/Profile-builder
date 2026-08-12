@@ -2,7 +2,7 @@
 
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft, SquarePen } from 'lucide-react';
-import { LmsResumeSample } from '../lib/resumeSamples';
+import { LmsResumeSample, getResumeAccentColor } from '../lib/resumeSamples';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { CvPreview } from './CvPreview';
 
@@ -28,6 +28,7 @@ interface ResumeTemplatePreviewProps {
 // always matches what's actually on screen.
 export const ResumeTemplatePreview: React.FC<ResumeTemplatePreviewProps> = ({ sample, onUse, onClose }) => {
   const cv = cvMarkdownToHtml(sample.data as CvData);
+  const accent = getResumeAccentColor(sample);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -87,7 +88,11 @@ export const ResumeTemplatePreview: React.FC<ResumeTemplatePreviewProps> = ({ sa
 
         {/* Resume panel — always fills the full width; scrolls vertically
             only if the resume is taller than the panel at that width. */}
-        <div ref={panelRef} className="flex-1 min-h-0 bg-white rounded-t-2xl shadow-2xl overflow-y-auto">
+        <div
+          ref={panelRef}
+          className="flex-1 min-h-0 bg-white rounded-t-2xl shadow-2xl overflow-y-auto"
+          style={{ borderTop: `4px solid ${accent}` }}
+        >
           <div style={{ height: naturalHeight * scale, visibility: scale ? 'visible' : 'hidden' }}>
             <div style={{ width: DESIGN_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
               <div ref={contentRef}>
