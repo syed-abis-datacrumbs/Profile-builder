@@ -15,7 +15,7 @@ import { GithubEditor } from '../components/GithubEditor';
 import { LinkedinLandingView } from '../components/LinkedinLandingView';
 import { LinkedinEditor } from '../components/LinkedinEditor';
 import { LinkedinTemplatePreview } from '../components/LinkedinTemplatePreview';
-import { ResumeTemplatePreview } from '../components/ResumeTemplatePreview';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { GithubTemplatePreview } from '../components/GithubTemplatePreview';
 import { JobHuntingLandingView } from '../components/JobHuntingLandingView';
 import { FreelancingLandingView } from '../components/FreelancingLandingView';
@@ -199,7 +199,7 @@ export default function Home() {
                 <AnimatePresence mode="wait">
                   {activeTab === 'resume' && (
                     <motion.div
-                      key={`tab-resume-${resumeMode}`}
+                      key={`tab-resume-${resumeMode === 'preview' ? 'landing' : resumeMode}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
@@ -256,33 +256,6 @@ export default function Home() {
                             }}
                             onOpenEditorDirectly={() => setResumeMode('editor')}
                           />
-
-                          {/* No animation on this popup, on purpose — it
-                              wraps the REAL, heavy resume DOM (many text
-                              nodes across every section), and any entrance
-                              animation here (even just an opacity fade on
-                              the backdrop) was competing with that mount for
-                              the same frame and reading as lag/blink. Plain
-                              instant show/hide instead. */}
-                          {resumeMode === 'preview' && resumePreviewSample && (
-                            <div
-                              className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm p-4 sm:p-8"
-                              style={{ scrollbarGutter: 'stable' }}
-                              onClick={(e) => {
-                                if (e.target === e.currentTarget) setResumeMode('landing');
-                              }}
-                            >
-                              <div className="w-full max-w-4xl mx-auto my-4">
-                                <ResumeTemplatePreview
-                                  sample={resumePreviewSample}
-                                  onBack={() => setResumeMode('landing')}
-                                  onEdit={() => {
-                                    loadResumeField(resumePreviewSample);
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          )}
                         </>
                       )}
                     </motion.div>
@@ -577,6 +550,25 @@ export default function Home() {
         onClose={() => setIsAuthOpen(false)}
         onSuccess={() => setIsAuthOpen(false)}
       />
+
+      {/* Confirm-to-load instead of a full preview popup — the actual
+          editable/exportable resume lives in the Chat Studio anyway, so this
+          just asks before committing. Rendered here at the top level (not
+          nested inside the resume tab's motion.div) so its "fixed inset-0"
+          backdrop is positioned against the real viewport and dims the
+          sidebar instantly — nesting it inside an animating motion.div made
+          the backdrop bounded by that div's box until its transform
+          settled, so the sidebar visibly dimmed a beat later than the rest. */}
+      {resumeMode === 'preview' && resumePreviewSample && (
+        <ConfirmDialog
+          title="Load this template?"
+          message={`This loads the "${resumePreviewSample.label}" template into your Resume Studio, where you can edit it and refine it further with AI.`}
+          confirmLabel="Load Template"
+          cancelLabel="Cancel"
+          onConfirm={() => loadResumeField(resumePreviewSample)}
+          onCancel={() => setResumeMode('landing')}
+        />
+      )}
 
       {/* Prompt was typed on the GitHub landing page — pick a template, then
           the AI runs the prompt on top of it inside the Chat Studio. */}

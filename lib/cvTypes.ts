@@ -30,6 +30,8 @@ export interface CvWorkExperience {
   end: string;
   /** One bullet per line ("\n"-separated); "**bold**" is the only markup. */
   bullets: string;
+  /** Marker style for the bullets above. Absent = 'bullet' (back-compat). */
+  bulletStyle?: 'bullet' | 'number';
 }
 
 export interface CvProject {
@@ -58,11 +60,17 @@ export interface CvData {
   workExperience: CvWorkExperience[];
   /** Only rendered for the "student" layout. */
   workshops?: CvWorkshop[];
+  /** Marker style for the workshop list above. Absent = 'bullet'. */
+  workshopsBulletStyle?: 'bullet' | 'number';
   projects: CvProject[];
+  /** Marker style for the project list above. Absent = 'bullet'. */
+  projectsBulletStyle?: 'bullet' | 'number';
   certifications: CvCertification[];
   additional: {
     skills: string;
     interests: string;
+    /** Marker style for the Skills/Interests bullets. Absent = 'bullet'. */
+    bulletStyle?: 'bullet' | 'number';
   };
 }
 

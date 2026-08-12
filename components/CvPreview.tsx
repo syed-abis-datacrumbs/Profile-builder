@@ -8,10 +8,10 @@ function normalizeUrl(url: string): string {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-function Bullet({ children }: { children: React.ReactNode }) {
+function Bullet({ children, marker = '•' }: { children: React.ReactNode; marker?: string }) {
   return (
     <div className="flex gap-1.5">
-      <span className="shrink-0">•</span>
+      <span className="shrink-0">{marker}</span>
       <span className="flex-1 min-w-0">{children}</span>
     </div>
   );
@@ -278,9 +278,9 @@ function CvPreviewBase({
                   </span>
                 </div>
                 {lines.length > 0 && (
-                  <div className="mt-0.5 space-y-0.5">
+                  <div className="mt-0.5 space-y-0.5" data-bullet-group={`we-${i}`}>
                     {lines.map((line, j) => (
-                      <Bullet key={j}>
+                      <Bullet key={j} marker={job.bulletStyle === 'number' ? `${j + 1}.` : '•'}>
                         {editable ? <RichText block html={line} placeholder="Bullet point" onCommit={(v) => setBulletLine(i, j, v)} bullet={keysFor(i, j)} /> : <Html html={line} />}
                       </Bullet>
                     ))}
@@ -293,13 +293,13 @@ function CvPreviewBase({
       )}
 
       {(editable || projectList.length > 0) && (
-        <section>
+        <section data-bullet-group="projects">
           {projectList.map((proj, pos) => {
             const i = data.projects.indexOf(proj);
             return (
               <div key={i} data-cv-block className="mb-1">
                 {pos === 0 && <SectionHeading>Projects</SectionHeading>}
-                <Bullet>
+                <Bullet marker={data.projectsBulletStyle === 'number' ? `${pos + 1}.` : '•'}>
                   {editable ? (
                     <>
                       <RichText html={proj.title} placeholder="Project" onCommit={(v) => setProj(i, { title: v })} className="font-bold" />
@@ -324,13 +324,13 @@ function CvPreviewBase({
 
       {/* Workshops — student layout only, right after Projects. */}
       {isStudent && (editable || workshopList.length > 0) && (
-        <section>
+        <section data-bullet-group="workshops">
           {workshopList.map((ws, pos) => {
             const i = (data.workshops ?? []).indexOf(ws);
             return (
               <div key={i} data-cv-block className="mb-1">
                 {pos === 0 && <SectionHeading>Workshops</SectionHeading>}
-                <Bullet>
+                <Bullet marker={data.workshopsBulletStyle === 'number' ? `${pos + 1}.` : '•'}>
                   {editable ? (
                     <>
                       <RichText html={ws.title} placeholder="Workshop" onCommit={(v) => setWs(i, { title: v })} className="font-bold" />
@@ -378,16 +378,16 @@ function CvPreviewBase({
       )}
 
       {hasAdditional && (
-        <section>
+        <section data-bullet-group="additional">
           <div data-cv-block>
             <SectionHeading>Additional</SectionHeading>
             <div className="space-y-0.5">
-              <Bullet>
+              <Bullet marker={data.additional.bulletStyle === 'number' ? '1.' : '•'}>
                 <span className="font-bold">Technical Skills:</span>{' '}
                 {editable ? <RichText html={data.additional.skills} placeholder="Skills…" onCommit={(v) => setAdditional({ skills: v })} /> : <Html html={data.additional.skills} />}
               </Bullet>
               {(editable || data.additional.interests) && (
-                <Bullet>
+                <Bullet marker={data.additional.bulletStyle === 'number' ? '2.' : '•'}>
                   <span className="font-bold">Interests:</span>{' '}
                   {editable ? <RichText html={data.additional.interests} placeholder="Interests…" onCommit={(v) => setAdditional({ interests: v })} /> : <Html html={data.additional.interests} />}
                 </Bullet>

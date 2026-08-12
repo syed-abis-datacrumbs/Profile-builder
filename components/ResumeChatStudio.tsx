@@ -167,7 +167,49 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [revision, setRevision] = useState(0);
+
+  // Real undo/redo history of CvData snapshots. document.execCommand('undo')
+  // relies on the browser's native contentEditable edit history, which never
+  // sees these changes — fields commit via React state on blur
+  // (dangerouslySetInnerHTML), and structural changes (bullet style, AI
+  // edits, cvType) go through `external` directly, none of which registers
+  // as native browser input history. So Undo/Redo need their own stack.
+  const [past, setPast] = useState<CvData[]>([]);
+  const [future, setFuture] = useState<CvData[]>([]);
+
+  // Ordinary field edits (typing commits on blur, bullet Enter/Backspace/
+  // paste) — one history entry per commit, not per keystroke, since RichText
+  // only calls onChange on blur. No remount: keeps whatever field the user
+  // is still focused in from being ripped out mid-edit.
+  const recordChange = (next: CvData) => {
+    setPast((p) => [...p.slice(-99), cv]);
+    setFuture([]);
+    onChange(next);
+  };
+
+  // Structural changes (toolbar toggles, AI-generated content, cvType
+  // switch) — these replace content the currently-focused field doesn't
+  // own, so force a remount to refresh every field's displayed HTML.
   const external = (next: CvData) => {
+    setPast((p) => [...p.slice(-99), cv]);
+    setFuture([]);
+    onChange(next);
+    setRevision((r) => r + 1);
+  };
+
+  const handleUndo = () => {
+    if (past.length === 0) return;
+    const prev = past[past.length - 1];
+    setPast((p) => p.slice(0, -1));
+    setFuture((f) => [cv, ...f]);
+    onChange(prev);
+    setRevision((r) => r + 1);
+  };
+  const handleRedo = () => {
+    if (future.length === 0) return;
+    const next = future[0];
+    setFuture((f) => f.slice(1));
+    setPast((p) => [...p, cv]);
     onChange(next);
     setRevision((r) => r + 1);
   };
@@ -187,6 +229,34 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
     document.addEventListener('selectionchange', refreshFmt);
     return () => document.removeEventListener('selectionchange', refreshFmt);
   }, []);
+
+  // None of the resume's bullets are real <ul>/<li> elements (each line is
+  // its own single-line editable field with a hand-drawn "•"), so the
+  // browser's insertUnorderedList/insertOrderedList commands have nothing
+  // valid to act on. Instead, find which bullet group the caret is currently
+  // in (data-bullet-group, set in CvPreview) and flip its marker style.
+  // Work Experience entries each have their own growable list ("we-<i>"), so
+  // the style is per-entry; Projects/Workshops/Additional render one bullet
+  // per item with no per-entry sub-list, so their style is per-section.
+  const setBulletStyleAtFocus = (style: 'bullet' | 'number') => {
+    const group = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('[data-bullet-group]');
+    const key = group?.dataset.bulletGroup;
+    if (!key) return;
+    if (key.startsWith('we-')) {
+      const idx = Number(key.slice(3));
+      if (Number.isNaN(idx)) return;
+      external({
+        ...cv,
+        workExperience: cv.workExperience.map((w, i) => (i === idx ? { ...w, bulletStyle: style } : w)),
+      });
+    } else if (key === 'projects') {
+      external({ ...cv, projectsBulletStyle: style });
+    } else if (key === 'workshops') {
+      external({ ...cv, workshopsBulletStyle: style });
+    } else if (key === 'additional') {
+      external({ ...cv, additional: { ...cv.additional, bulletStyle: style } });
+    }
+  };
 
   const exportRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState<null | 'pdf' | 'png'>(null);
@@ -513,15 +583,17 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
             <div className="flex items-center gap-1">
               <button
                 title="Undo"
-                onMouseDown={(e) => { e.preventDefault(); document.execCommand('undo'); }}
-                className="w-6 h-6 rounded-md flex items-center justify-center text-slate-600 hover:bg-slate-100"
+                onMouseDown={(e) => { e.preventDefault(); handleUndo(); }}
+                disabled={past.length === 0}
+                className={`w-6 h-6 rounded-md flex items-center justify-center ${past.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}`}
               >
                 <Undo className="w-3.5 h-3.5" />
               </button>
               <button
                 title="Redo"
-                onMouseDown={(e) => { e.preventDefault(); document.execCommand('redo'); }}
-                className="w-6 h-6 rounded-md flex items-center justify-center text-slate-600 hover:bg-slate-100"
+                onMouseDown={(e) => { e.preventDefault(); handleRedo(); }}
+                disabled={future.length === 0}
+                className={`w-6 h-6 rounded-md flex items-center justify-center ${future.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}`}
               >
                 <Redo className="w-3.5 h-3.5" />
               </button>
@@ -578,10 +650,24 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
 
             {/* Alignments & Lists */}
             <div className="flex items-center gap-0.5">
-              <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('insertUnorderedList'); }} className="w-6 h-6 rounded-md text-slate-600 hover:bg-slate-100 flex items-center justify-center" title="Bullet List">
+              <button
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setBulletStyleAtFocus('bullet');
+                }}
+                className="w-6 h-6 rounded-md text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                title="Bullet List"
+              >
                 <List className="w-3.5 h-3.5" />
               </button>
-              <button onMouseDown={(e) => { e.preventDefault(); document.execCommand('insertOrderedList'); }} className="w-6 h-6 rounded-md text-slate-600 hover:bg-slate-100 flex items-center justify-center" title="Numbered List">
+              <button
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setBulletStyleAtFocus('number');
+                }}
+                className="w-6 h-6 rounded-md text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                title="Numbered List"
+              >
                 <ListOrdered className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -624,7 +710,7 @@ If it's easier, paste your current resume or LinkedIn "About" + Experience secti
         {/* Live Resume Canvas Area */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex justify-center items-start">
           <div ref={exportRef} className="relative w-full max-w-[820px] bg-white shadow-xl rounded-sm my-2">
-            <CvPreview key={revision} data={cv} onChange={onChange} />
+            <CvPreview key={revision} data={cv} onChange={recordChange} />
             {pageLines.map((y, i) => (
               <div
                 key={i}
