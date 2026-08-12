@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Saved resumes for the Resume Studio — one row per save. Lives in the same
+// physical database as the LMS app (shared Clerk accounts), but is its own
+// table, independent of LMS's own CvSavedVersion. No DB-level FK to LMS's
+// User table: a Profile-builder-only user (who never touched LMS) may not
+// have a User row there, so ownership is enforced purely by filtering on
+// the Clerk userId in every query here, not by a foreign key.
+model ResumeSave {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("profile_builder_resumes")
+}
