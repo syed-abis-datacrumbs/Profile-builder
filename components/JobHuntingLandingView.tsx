@@ -55,9 +55,12 @@ interface SheetRow {
   company: string;
   contact: string;
   role: string;
+  salary?: string;
+  location?: string;
   dateAdded: string;
   lastStageDate: string;
-  status: 'Connection Request Sent' | 'Approached / Cold DM' | 'Following Up' | 'Recruiter Call' | 'Technical Interview' | 'Offer Received' | 'Rejected';
+  daysInactive?: number;
+  status: 'Saved' | 'Applied' | 'Connection Request Sent' | 'Approached / Cold DM' | 'Following Up' | 'Recruiter Call' | 'Technical Interview' | 'Offer Received' | 'Rejected';
   notes: string;
 }
 
@@ -102,6 +105,12 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
+  // View Mode: Kanban Pipeline vs Data Sheet Table
+  const [trackerMode, setTrackerMode] = useState<'kanban' | 'table'>('kanban');
+
+  // Application Details Modal State (Click card to open full details)
+  const [selectedCard, setSelectedCard] = useState<SheetRow | null>(null);
+
   // Interactive Quiz & Carousel State
   const [userAnswers, setUserAnswers] = useState<{ [key: number]: number }>({});
   const [revealedAnswers, setRevealedAnswers] = useState<{ [key: number]: boolean }>({});
@@ -120,8 +129,11 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
       company: 'Stripe',
       contact: 'Sarah Jenkins (Tech Recruiter)',
       role: 'Senior Full Stack Engineer',
+      salary: '$160,000 - $185,000',
+      location: 'Remote (US/Global)',
       dateAdded: '15th July',
       lastStageDate: '28th July',
+      daysInactive: 2,
       status: 'Recruiter Call',
       notes: 'Passed 20-min initial screen. System Architecture round scheduled for Friday 3 PM.'
     },
@@ -130,8 +142,11 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
       company: 'Datadog',
       contact: 'Michael Chen (Senior Recruiter)',
       role: 'Backend Systems Engineer',
+      salary: '$150,000 - $170,000',
+      location: 'New York / Hybrid',
       dateAdded: '30th July',
       lastStageDate: '30th July',
+      daysInactive: 7,
       status: 'Connection Request Sent',
       notes: 'Sent LinkedIn connection note mentioning shared interest in eBPF kernel tooling.'
     },
@@ -140,8 +155,11 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
       company: 'Vercel',
       contact: 'Alex Rivera (Engineering Lead)',
       role: 'Full Stack Engineer (Next.js)',
+      salary: '$170,000 + Equity',
+      location: 'Remote',
       dateAdded: '20th July',
       lastStageDate: '29th July',
+      daysInactive: 6,
       status: 'Approached / Cold DM',
       notes: 'Sent tailored 3-sentence LinkedIn DM with link to Next.js 15 showcase project.'
     },
@@ -150,8 +168,11 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
       company: 'Figma',
       contact: 'Jessica Alba (Talent Manager)',
       role: 'Product Engineer',
+      salary: '$165,000',
+      location: 'San Francisco',
       dateAdded: '18th July',
       lastStageDate: '27th July',
+      daysInactive: 8,
       status: 'Following Up',
       notes: 'Sent 7-day polite follow-up DM on LinkedIn after initial screening chat.'
     },
@@ -160,8 +181,11 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
       company: 'Linear',
       contact: 'Marcus Vance (Talent Acquisition)',
       role: 'Product Engineer',
+      salary: '$155,000',
+      location: 'Remote (EU/US)',
       dateAdded: '10th July',
       lastStageDate: '25th July',
+      daysInactive: 1,
       status: 'Technical Interview',
       notes: 'Completed live coding round. Recruiter mentioned positive feedback, awaiting team sync.'
     },
@@ -170,10 +194,13 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
       company: 'OpenAI',
       contact: 'Elena Rostova (Tech Sourcing Lead)',
       role: 'AI Infrastructure Engineer',
+      salary: '$210,000 + Equity',
+      location: 'San Francisco, CA',
       dateAdded: '5th July',
       lastStageDate: '22nd July',
+      daysInactive: 3,
       status: 'Offer Received',
-      notes: 'Initial offer band shared ($185k base + equity). Reviewing compensation by Wednesday.'
+      notes: 'Initial offer band shared ($210k base + equity). Reviewing compensation by Wednesday.'
     }
   ]);
 
@@ -1045,25 +1072,56 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
           </div>
         </div>
 
-        {/* STEP 5: INTERACTIVE JOB HUNTING SPREADSHEET / SHEET TRACKER */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-5">
-          <div className="flex items-center justify-between flex-wrap gap-4">
+        {/* STEP 5: VISUAL JOB APPLICATION TRACKER (KANBAN CRM BOARD & SPREADSHEET) */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-6">
+          
+          {/* HEADER & TOGGLE CONTROLS */}
+          <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-100 pb-4">
             <div className="flex items-center gap-3">
-              <span className="w-9 h-9 rounded-2xl font-extrabold text-sm flex items-center justify-center bg-emerald-600 text-white">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/20">
                 05
-              </span>
+              </div>
               <div>
-                <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                  <TableIcon className="w-5 h-5 text-emerald-600" />
-                  <span>Recruiter Outreach & Call Data Sheet</span>
+                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-emerald-600" />
+                  <span>Visual Job Application Tracker & CRM</span>
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  Spreadsheet tracker to edit, filter, and export contacts approached and recruiter screening calls
+                  Organize job applications, track recruiter interactions, and get automated follow-up alerts
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Kanban vs Table View Toggle */}
+              <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setTrackerMode('kanban')}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                    trackerMode === 'kanban'
+                      ? 'bg-white text-emerald-950 shadow-xs border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Kanban CRM</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTrackerMode('table')}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                    trackerMode === 'table'
+                      ? 'bg-white text-emerald-950 shadow-xs border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <TableIcon className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Spreadsheet Table</span>
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={handleExportCSV}
@@ -1076,30 +1134,65 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
               <button
                 type="button"
                 onClick={handleAddSheetRow}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm shadow-emerald-600/20"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add Row</span>
+                <span>Add Application</span>
               </button>
             </div>
           </div>
 
-          {/* SPREADSHEET SHEET CONTROLS & FILTERS */}
-          <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-b border-slate-100 pb-3">
+          {/* AUTOMATED FOLLOW-UP ALERT BANNER */}
+          {(() => {
+            const followUpNeeded = sheetRows.filter(r => (r.daysInactive || 0) >= 5 || r.status === 'Following Up' || r.status === 'Approached / Cold DM');
+            if (followUpNeeded.length === 0) return null;
+
+            return (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/15 to-orange-500/10 border border-amber-300/60 flex items-center justify-between flex-wrap gap-3 text-xs text-amber-950">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0 shadow-xs animate-pulse">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <strong className="font-extrabold block text-amber-950">
+                      Automated Follow-Up Reminder ({followUpNeeded.length} Applications Pending)
+                    </strong>
+                    <p className="text-amber-900 text-[11px]">
+                      {followUpNeeded.map(r => r.company).join(', ')} have had no recruiter updates in 5+ days. Send a 3-sentence polite check-in note!
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('outreach-generator-card');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-xs transition-all shrink-0"
+                >
+                  Generate Follow-Up Pitch →
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* SEARCH & STAGE FILTERS */}
+          <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
             <div className="relative flex-1 min-w-[200px] max-w-md">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search spreadsheet rows (Company, Recruiter, Role, Notes)..."
+                placeholder="Search applications by company, role, recruiter, salary..."
                 value={sheetSearchQuery}
                 onChange={(e) => setSheetSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white"
               />
             </div>
 
             <div className="flex items-center gap-1.5 flex-wrap">
               <Filter className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-xs font-bold text-slate-500">Status:</span>
+              <span className="text-xs font-bold text-slate-500">Stage Filter:</span>
               {(['All', 'Connection Request Sent', 'Approached / Cold DM', 'Following Up', 'Recruiter Call', 'Technical Interview', 'Offer Received'] as const).map((st) => (
                 <button
                   key={st}
@@ -1119,147 +1212,224 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
             </div>
           </div>
 
-          {/* SPREADSHEET TABLE GRID CONTAINER */}
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-2xs">
-            <table className="w-full text-left border-collapse font-sans text-xs">
-              <thead>
-                <tr className="bg-slate-100 text-slate-700 uppercase text-[10px] font-extrabold tracking-wider border-b border-slate-200">
-                  <th className="py-2.5 px-3 w-10 text-center border-r border-slate-200">#</th>
-                  <th className="py-2.5 px-3 min-w-[130px] border-r border-slate-200">Company</th>
-                  <th className="py-2.5 px-3 min-w-[150px] border-r border-slate-200">Contact / Recruiter</th>
-                  <th className="py-2.5 px-3 min-w-[140px] border-r border-slate-200">Role</th>
-                  <th className="py-2.5 px-3 min-w-[110px] border-r border-slate-200">Date Added</th>
-                  <th className="py-2.5 px-3 min-w-[125px] border-r border-slate-200">Last Stage Date</th>
-                  <th className="py-2.5 px-3 min-w-[170px] border-r border-slate-200">Status Stage</th>
-                  <th className="py-2.5 px-3 min-w-[220px] border-r border-slate-200">Call / Outreach Notes</th>
-                  <th className="py-2.5 px-2 text-center w-12">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 bg-white font-medium text-slate-800">
-                {filteredSheetRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="text-center py-8 text-slate-400 italic">
-                      No rows match the spreadsheet filter. Click "+ Add Row" above to add new data.
-                    </td>
+          {/* MODE 1: KANBAN PIPELINE BOARD */}
+          {trackerMode === 'kanban' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3.5 pt-2">
+              {[
+                { title: '📌 Saved', key: 'Saved', color: 'border-slate-300 bg-slate-100/70 text-slate-800', statuses: ['Saved'] },
+                { title: '📩 Applied / Outreached', key: 'Applied', color: 'border-blue-300 bg-blue-50/60 text-blue-900', statuses: ['Applied', 'Connection Request Sent', 'Approached / Cold DM'] },
+                { title: '📞 Recruiter Screen', key: 'Screening', color: 'border-amber-300 bg-amber-50/60 text-amber-900', statuses: ['Recruiter Call', 'Following Up'] },
+                { title: '💻 Tech Interview', key: 'Interview', color: 'border-purple-300 bg-purple-50/60 text-purple-900', statuses: ['Technical Interview'] },
+                { title: '🎉 Offer Received', key: 'Offer', color: 'border-emerald-300 bg-emerald-50/60 text-emerald-900', statuses: ['Offer Received'] },
+                { title: '📦 Archived', key: 'Archived', color: 'border-rose-300 bg-rose-50/60 text-rose-900', statuses: ['Rejected'] }
+              ].map((col) => {
+                const columnRows = filteredSheetRows.filter(row => {
+                  if (col.key === 'Saved') return row.status === 'Saved';
+                  if (col.key === 'Applied') return ['Applied', 'Connection Request Sent', 'Approached / Cold DM'].includes(row.status);
+                  if (col.key === 'Screening') return ['Recruiter Call', 'Following Up'].includes(row.status);
+                  if (col.key === 'Interview') return row.status === 'Technical Interview';
+                  if (col.key === 'Offer') return row.status === 'Offer Received';
+                  if (col.key === 'Archived') return row.status === 'Rejected';
+                  return false;
+                });
+
+                return (
+                  <div key={col.key} className="flex flex-col rounded-2xl bg-slate-50/90 border border-slate-200/90 p-2.5 space-y-3 min-h-[420px]">
+                    {/* Column Header */}
+                    <div className="flex items-center justify-between px-1 pt-1 border-b border-slate-200/60 pb-2">
+                      <h4 className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5">
+                        <span>{col.title}</span>
+                      </h4>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${col.color}`}>
+                        {columnRows.length}
+                      </span>
+                    </div>
+
+                    {/* Column Cards Container */}
+                    <div className="space-y-2.5 flex-1 overflow-y-auto">
+                      {columnRows.length === 0 ? (
+                        <div className="h-32 border border-dashed border-slate-200 rounded-xl flex items-center justify-center text-[11px] text-slate-400 italic text-center p-2">
+                          No applications in this stage
+                        </div>
+                      ) : (
+                        columnRows.map((row) => {
+                          const isFollowUpAlert = (row.daysInactive || 0) >= 5 || row.status === 'Following Up';
+
+                          return (
+                            <div
+                              key={row.id}
+                              onClick={() => setSelectedCard(row)}
+                              className={`p-3 rounded-xl bg-white border cursor-pointer shadow-2xs hover:shadow-md hover:border-emerald-500 hover:-translate-y-0.5 transition-all flex items-center justify-between gap-2 group ${
+                                isFollowUpAlert ? 'border-amber-300 bg-amber-50/30 ring-1 ring-amber-400/40' : 'border-slate-200'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 overflow-hidden">
+                                <span className="font-black text-xs text-slate-900 truncate group-hover:text-emerald-700 transition-colors">
+                                  {row.company}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {isFollowUpAlert && (
+                                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" title="Follow-up due" />
+                                )}
+                                <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-600 transition-colors" />
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* MODE 2: SPREADSHEET TABLE GRID CONTAINER */}
+          {trackerMode === 'table' && (
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-2xs">
+              <table className="w-full text-left border-collapse font-sans text-xs">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 uppercase text-[10px] font-extrabold tracking-wider border-b border-slate-200">
+                    <th className="py-2.5 px-3 w-10 text-center border-r border-slate-200">#</th>
+                    <th className="py-2.5 px-3 min-w-[130px] border-r border-slate-200">Company</th>
+                    <th className="py-2.5 px-3 min-w-[150px] border-r border-slate-200">Contact / Recruiter</th>
+                    <th className="py-2.5 px-3 min-w-[140px] border-r border-slate-200">Role</th>
+                    <th className="py-2.5 px-3 min-w-[120px] border-r border-slate-200">Salary Range</th>
+                    <th className="py-2.5 px-3 min-w-[110px] border-r border-slate-200">Date Added</th>
+                    <th className="py-2.5 px-3 min-w-[170px] border-r border-slate-200">Status Stage</th>
+                    <th className="py-2.5 px-3 min-w-[220px] border-r border-slate-200">Call / Outreach Notes</th>
+                    <th className="py-2.5 px-2 text-center w-12">Action</th>
                   </tr>
-                ) : (
-                  filteredSheetRows.map((row, idx) => (
-                    <tr key={row.id} className="hover:bg-emerald-50/30 transition-colors group">
-                      {/* Row Index */}
-                      <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px] border-r border-slate-200 bg-slate-50/50">
-                        {idx + 1}
-                      </td>
-
-                      {/* Company Name Cell */}
-                      <td className="py-1.5 px-2 border-r border-slate-200">
-                        <input
-                          type="text"
-                          value={row.company}
-                          onChange={(e) => handleUpdateSheetCell(row.id, 'company', e.target.value)}
-                          className="w-full bg-transparent px-2 py-1 rounded font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </td>
-
-                      {/* Contact / Recruiter Cell */}
-                      <td className="py-1.5 px-2 border-r border-slate-200">
-                        <input
-                          type="text"
-                          value={row.contact}
-                          onChange={(e) => handleUpdateSheetCell(row.id, 'contact', e.target.value)}
-                          className="w-full bg-transparent px-2 py-1 rounded text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </td>
-
-                      {/* Role Title Cell */}
-                      <td className="py-1.5 px-2 border-r border-slate-200">
-                        <input
-                          type="text"
-                          value={row.role}
-                          onChange={(e) => handleUpdateSheetCell(row.id, 'role', e.target.value)}
-                          className="w-full bg-transparent px-2 py-1 rounded text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </td>
-
-                      {/* Date Added Cell */}
-                      <td className="py-1.5 px-2 border-r border-slate-200">
-                        <input
-                          type="text"
-                          value={row.dateAdded}
-                          onChange={(e) => handleUpdateSheetCell(row.id, 'dateAdded', e.target.value)}
-                          className="w-full bg-transparent px-1 py-1 rounded text-slate-700 font-semibold text-[11px] focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          placeholder="e.g. 24th June"
-                        />
-                      </td>
-
-                      {/* Last Stage Date Cell */}
-                      <td className="py-1.5 px-2 border-r border-slate-200">
-                        <input
-                          type="text"
-                          value={row.lastStageDate}
-                          onChange={(e) => handleUpdateSheetCell(row.id, 'lastStageDate', e.target.value)}
-                          className="w-full bg-transparent px-1 py-1 rounded text-slate-700 font-semibold text-[11px] focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          placeholder="e.g. 28th July"
-                        />
-                      </td>
-
-                      {/* Status Dropdown Cell */}
-                      <td className="py-1.5 px-2 border-r border-slate-200">
-                        <select
-                          value={row.status}
-                          onChange={(e) => handleUpdateSheetCell(row.id, 'status', e.target.value as SheetRow['status'])}
-                          className={`w-full px-2 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer focus:outline-none transition-colors ${getStatusBadge(row.status)}`}
-                        >
-                          <option value="Connection Request Sent" className="bg-indigo-50 text-indigo-900 font-bold">Connection Request Sent</option>
-                          <option value="Approached / Cold DM" className="bg-blue-50 text-blue-900 font-bold">Approached / Cold DM</option>
-                          <option value="Following Up" className="bg-cyan-50 text-cyan-900 font-bold">Following Up</option>
-                          <option value="Recruiter Call" className="bg-amber-50 text-amber-900 font-bold">Recruiter Call</option>
-                          <option value="Technical Interview" className="bg-purple-50 text-purple-900 font-bold">Technical Interview</option>
-                          <option value="Offer Received" className="bg-emerald-50 text-emerald-900 font-bold">Offer Received</option>
-                          <option value="Rejected" className="bg-rose-50 text-rose-900 font-bold">Rejected</option>
-                        </select>
-                      </td>
-
-                      {/* Notes / Call Log Cell */}
-                      <td className="py-1.5 px-2 border-r border-slate-200">
-                        <input
-                          type="text"
-                          value={row.notes}
-                          onChange={(e) => handleUpdateSheetCell(row.id, 'notes', e.target.value)}
-                          placeholder="Add call notes or follow-up status..."
-                          className="w-full bg-transparent px-2 py-1 rounded text-slate-600 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
-                      </td>
-
-                      {/* Action Cell */}
-                      <td className="py-1.5 px-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteSheetRow(row.id)}
-                          className="p-1 rounded text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                          title="Delete row"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white font-medium text-slate-800">
+                  {filteredSheetRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="text-center py-8 text-slate-400 italic">
+                        No rows match the search filter. Click "+ Add Application" above to add new data.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    filteredSheetRows.map((row, idx) => (
+                      <tr key={row.id} className="hover:bg-emerald-50/30 transition-colors group">
+                        {/* Row Index */}
+                        <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px] border-r border-slate-200 bg-slate-50/50">
+                          {idx + 1}
+                        </td>
+
+                        {/* Company Name Cell */}
+                        <td className="py-1.5 px-2 border-r border-slate-200">
+                          <input
+                            type="text"
+                            value={row.company}
+                            onChange={(e) => handleUpdateSheetCell(row.id, 'company', e.target.value)}
+                            className="w-full bg-transparent px-2 py-1 rounded font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </td>
+
+                        {/* Contact / Recruiter Cell */}
+                        <td className="py-1.5 px-2 border-r border-slate-200">
+                          <input
+                            type="text"
+                            value={row.contact}
+                            onChange={(e) => handleUpdateSheetCell(row.id, 'contact', e.target.value)}
+                            className="w-full bg-transparent px-2 py-1 rounded text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </td>
+
+                        {/* Role Title Cell */}
+                        <td className="py-1.5 px-2 border-r border-slate-200">
+                          <input
+                            type="text"
+                            value={row.role}
+                            onChange={(e) => handleUpdateSheetCell(row.id, 'role', e.target.value)}
+                            className="w-full bg-transparent px-2 py-1 rounded text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </td>
+
+                        {/* Salary Range Cell */}
+                        <td className="py-1.5 px-2 border-r border-slate-200">
+                          <input
+                            type="text"
+                            value={row.salary || ''}
+                            onChange={(e) => handleUpdateSheetCell(row.id, 'salary', e.target.value)}
+                            placeholder="e.g. $160k"
+                            className="w-full bg-transparent px-2 py-1 rounded font-mono text-emerald-800 font-bold text-[11px] focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </td>
+
+                        {/* Date Added Cell */}
+                        <td className="py-1.5 px-2 border-r border-slate-200">
+                          <input
+                            type="text"
+                            value={row.dateAdded}
+                            onChange={(e) => handleUpdateSheetCell(row.id, 'dateAdded', e.target.value)}
+                            className="w-full bg-transparent px-1 py-1 rounded text-slate-700 font-semibold text-[11px] focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            placeholder="e.g. 24th June"
+                          />
+                        </td>
+
+                        {/* Status Dropdown Cell */}
+                        <td className="py-1.5 px-2 border-r border-slate-200">
+                          <select
+                            value={row.status}
+                            onChange={(e) => handleUpdateSheetCell(row.id, 'status', e.target.value as SheetRow['status'])}
+                            className={`w-full px-2 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer focus:outline-none transition-colors ${getStatusBadge(row.status)}`}
+                          >
+                            <option value="Saved" className="bg-slate-50 text-slate-900 font-bold">📌 Saved</option>
+                            <option value="Connection Request Sent" className="bg-indigo-50 text-indigo-900 font-bold">📩 Connection Sent</option>
+                            <option value="Approached / Cold DM" className="bg-blue-50 text-blue-900 font-bold">📩 Cold DM Sent</option>
+                            <option value="Following Up" className="bg-cyan-50 text-cyan-900 font-bold">📞 Following Up</option>
+                            <option value="Recruiter Call" className="bg-amber-50 text-amber-900 font-bold">📞 Recruiter Call</option>
+                            <option value="Technical Interview" className="bg-purple-50 text-purple-900 font-bold">💻 Tech Interview</option>
+                            <option value="Offer Received" className="bg-emerald-50 text-emerald-900 font-bold">🎉 Offer Received</option>
+                            <option value="Rejected" className="bg-rose-50 text-rose-900 font-bold">📦 Archived</option>
+                          </select>
+                        </td>
+
+                        {/* Notes / Call Log Cell */}
+                        <td className="py-1.5 px-2 border-r border-slate-200">
+                          <input
+                            type="text"
+                            value={row.notes}
+                            onChange={(e) => handleUpdateSheetCell(row.id, 'notes', e.target.value)}
+                            placeholder="Add call notes or follow-up status..."
+                            className="w-full bg-transparent px-2 py-1 rounded text-slate-600 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </td>
+
+                        {/* Action Cell */}
+                        <td className="py-1.5 px-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSheetRow(row.id)}
+                            className="p-1 rounded text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Delete row"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* SPREADSHEET FOOTER METRICS SUMMARY */}
           <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-slate-500 font-medium pt-1 px-1">
-            <span className="font-bold text-slate-700">Total Tracked: <strong className="text-emerald-700 font-black">{filteredSheetRows.length} Rows</strong></span>
+            <span className="font-bold text-slate-700">Total Pipeline: <strong className="text-emerald-700 font-black">{filteredSheetRows.length} Applications</strong></span>
             <div className="flex items-center gap-3 flex-wrap">
-              <span>Connection Sent: <strong className="text-indigo-700 font-bold">{sheetRows.filter(r => r.status === 'Connection Request Sent').length}</strong></span>
-              <span>Approached: <strong className="text-blue-700 font-bold">{sheetRows.filter(r => r.status === 'Approached / Cold DM').length}</strong></span>
+              <span>Outreached: <strong className="text-indigo-700 font-bold">{sheetRows.filter(r => ['Connection Request Sent', 'Approached / Cold DM'].includes(r.status)).length}</strong></span>
               <span>Follow Ups: <strong className="text-cyan-700 font-bold">{sheetRows.filter(r => r.status === 'Following Up').length}</strong></span>
-              <span>Calls: <strong className="text-amber-700 font-bold">{sheetRows.filter(r => r.status === 'Recruiter Call').length}</strong></span>
-              <span>Interviews: <strong className="text-purple-700 font-bold">{sheetRows.filter(r => r.status === 'Technical Interview').length}</strong></span>
-              <span>Offers: <strong className="text-emerald-700 font-bold">{sheetRows.filter(r => r.status === 'Offer Received').length}</strong></span>
+              <span>Recruiter Screen: <strong className="text-amber-700 font-bold">{sheetRows.filter(r => r.status === 'Recruiter Call').length}</strong></span>
+              <span>Tech Interview: <strong className="text-purple-700 font-bold">{sheetRows.filter(r => r.status === 'Technical Interview').length}</strong></span>
+              <span>Offer: <strong className="text-emerald-700 font-bold">{sheetRows.filter(r => r.status === 'Offer Received').length}</strong></span>
             </div>
           </div>
+
         </div>
 
         {/* STEP 6: Weekly Targets */}
@@ -1294,6 +1464,133 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
         </div>
 
       </div>
+
+      {/* APPLICATION DETAILS MODAL (FULL DETAILS ON KANBAN CARD CLICK) */}
+      {selectedCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-slate-900 to-emerald-950 text-white flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-extrabold uppercase tracking-wider">
+                  {selectedCard.status}
+                </span>
+                <h3 className="text-2xl font-black tracking-tight text-white">{selectedCard.company}</h3>
+                <p className="text-xs text-emerald-300 font-semibold">{selectedCard.role}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedCard(null)}
+                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 text-xs">
+              
+              {/* Follow Up Alert Banner if applicable */}
+              {((selectedCard.daysInactive || 0) >= 5 || selectedCard.status === 'Following Up') && (
+                <div className="p-3 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex items-center justify-between font-bold">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Follow-up due ({selectedCard.daysInactive || 7} days since last recruiter contact)</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Salary Range</span>
+                  <div className="font-extrabold text-slate-900 font-mono text-xs">{selectedCard.salary || 'Not specified'}</div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Location / Work Type</span>
+                  <div className="font-extrabold text-slate-900 text-xs">{selectedCard.location || 'Remote'}</div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Recruiter Contact</span>
+                  <div className="font-bold text-slate-800 text-xs">{selectedCard.contact}</div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Date Applied</span>
+                  <div className="font-bold text-slate-800 text-xs">{selectedCard.dateAdded}</div>
+                </div>
+              </div>
+
+              {/* Change Stage Dropdown */}
+              <div className="space-y-1.5">
+                <label className="font-extrabold text-slate-800 block text-xs">Pipeline Stage:</label>
+                <select
+                  value={selectedCard.status}
+                  onChange={(e) => {
+                    const newStatus = e.target.value as SheetRow['status'];
+                    handleUpdateSheetCell(selectedCard.id, 'status', newStatus);
+                    setSelectedCard({ ...selectedCard, status: newStatus });
+                  }}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold text-xs text-slate-900 focus:outline-none focus:border-emerald-600 cursor-pointer"
+                >
+                  <option value="Saved">📌 Saved</option>
+                  <option value="Connection Request Sent">📩 Connection Request Sent</option>
+                  <option value="Approached / Cold DM">📩 Approached / Cold DM</option>
+                  <option value="Following Up">📞 Following Up</option>
+                  <option value="Recruiter Call">📞 Recruiter Call</option>
+                  <option value="Technical Interview">💻 Technical Interview</option>
+                  <option value="Offer Received">🎉 Offer Received</option>
+                  <option value="Rejected">📦 Archived / Rejected</option>
+                </select>
+              </div>
+
+              {/* Call & Recruiter Notes */}
+              <div className="space-y-1.5">
+                <label className="font-extrabold text-slate-800 block text-xs">Interviews & Recruiter Notes:</label>
+                <textarea
+                  rows={3}
+                  value={selectedCard.notes}
+                  onChange={(e) => {
+                    handleUpdateSheetCell(selectedCard.id, 'notes', e.target.value);
+                    setSelectedCard({ ...selectedCard, notes: e.target.value });
+                  }}
+                  placeholder="Add interview feedback, tech stack notes, key dates..."
+                  className="w-full text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:border-emerald-600 resize-none"
+                />
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDeleteSheetRow(selectedCard.id);
+                    setSelectedCard(null);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition-colors flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Application</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedCard(null)}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
+                >
+                  Save & Done
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
