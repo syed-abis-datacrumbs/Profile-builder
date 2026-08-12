@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { 
   ArrowLeft, 
   Send, 
@@ -25,7 +25,7 @@ import {
   SlidersHorizontal,
   Trash2
 } from 'lucide-react';
-import { CvData } from '../lib/cvTypes';
+import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { getResumeAccentColor } from '../lib/resumeSamples';
 import { CvPreview } from './CvPreview';
 
@@ -169,11 +169,26 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   // paste) — one history entry per commit, not per keystroke, since RichText
   // only calls onChange on blur. No remount: keeps whatever field the user
   // is still focused in from being ripped out mid-edit.
-  const recordChange = (next: CvData) => {
-    setPast((p) => [...p.slice(-99), cv]);
-    setFuture([]);
-    onChange(next);
-  };
+  //
+  // Wrapped in useCallback (keyed on `cv`/`onChange`, not recreated on
+  // every render) so this stays referentially stable whenever `cv` itself
+  // hasn't changed. CvPreview is React.memo'd on its `data`/`onChange`
+  // props specifically so unrelated Studio re-renders (chat input, the
+  // page-break ResizeObserver, ATS popover, etc.) don't touch it — but a
+  // fresh `recordChange` function every render defeated that: React saw
+  // `onChange` as "changed" every time and re-rendered CvPreview anyway,
+  // which re-applies `dangerouslySetInnerHTML` and silently wipes out any
+  // direct DOM edit (like a manual text-selection delete) made in the
+  // brief window before that field's next blur/commit — proven live: a
+  // correct deletion was reverted ~13ms later by exactly this cascade.
+  const recordChange = useCallback(
+    (next: CvData) => {
+      setPast((p) => [...p.slice(-99), cv]);
+      setFuture([]);
+      onChange(next);
+    },
+    [cv, onChange]
+  );
 
   // Structural changes (toolbar toggles, AI-generated content, cvType
   // switch) — these replace content the currently-focused field doesn't
@@ -307,7 +322,12 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       if (!res.ok) return;
       const json = await res.json();
       if (json.data) {
-        external(json.data as CvData);
+        // A resume saved before the Projects/Workshops field merge would
+        // still have the old { title, technologies, description } shape —
+        // cvMarkdownToHtml migrates that into the new single `content`
+        // field (it's a no-op on already-migrated data), so an old save
+        // doesn't break or silently lose its projects/workshops on load.
+        external(cvMarkdownToHtml(json.data as CvData));
         setResumeMenuOpen(false);
       }
     } finally {

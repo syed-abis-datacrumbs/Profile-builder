@@ -87,29 +87,27 @@ function RichText({
       data-ph={placeholder}
       dangerouslySetInnerHTML={{ __html: html || '' }}
       className={`${className || ''} outline-none rounded-sm hover:bg-slate-50/60 cursor-text empty:before:content-[attr(data-ph)] empty:before:text-slate-300`}
-      onBeforeInput={(e) => {
-        // beforeinput is the modern, purpose-built event for intercepting
-        // contentEditable edits — deleting the selected Range ourselves
-        // here (rather than trying to fully suppress the browser's own
-        // deletion from keydown) is the reliable way to guarantee the
-        // WHOLE selection goes, not just part of it. Native selection
-        // deletion in contentEditable is known to be unreliable in some
-        // browsers once a selection spans multiple nodes (crossing a
-        // <strong> boundary, wrapping across visual lines, etc.) — this
-        // sidesteps that class of bug entirely instead of guessing at it.
-        const native = e.nativeEvent as InputEvent;
-        if (native.inputType === 'deleteContentBackward' || native.inputType === 'deleteContentForward') {
+      onKeyDown={(e) => {
+        // Deleting a text SELECTION ourselves here, at keydown — an
+        // earlier attempt did this from onBeforeInput instead (the
+        // "purpose-built" event for intercepting contentEditable edits),
+        // but live testing showed it's unreliable in practice: it didn't
+        // fire at all for some Backspace presses, and even fired with
+        // inputType undefined for plain typing in this React version.
+        // keydown always fires, no ambiguity — verified live that
+        // preventDefault() here does stop the browser's own deletion, so
+        // deleteContents() is the only thing that runs.
+        if (e.key === 'Backspace' || e.key === 'Delete') {
           const sel = window.getSelection();
           if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
             const range = sel.getRangeAt(0);
             if (e.currentTarget.contains(range.commonAncestorContainer)) {
               e.preventDefault();
               range.deleteContents();
+              return;
             }
           }
         }
-      }}
-      onKeyDown={(e) => {
         const isEmpty = (e.currentTarget.textContent ?? '') === '';
         if (bullet) {
           if (e.key === 'Enter' && !e.shiftKey) {
@@ -185,21 +183,21 @@ function CvPreviewBase({
         : data.workExperience.map((w, j) => (j === i ? next : w)),
     });
   };
-  const setProj = (i: number, patch: Partial<CvData['projects'][number]>) => {
-    const next = { ...data.projects[i], ...patch };
-    const isEmpty = isBlank(next.title) && isBlank(next.description);
+  const setProj = (i: number, content: string) => {
+    const isEmpty = isBlank(content);
     commit({
       ...data,
-      projects: isEmpty ? data.projects.filter((_, j) => j !== i) : data.projects.map((p, j) => (j === i ? next : p)),
+      projects: isEmpty
+        ? data.projects.filter((_, j) => j !== i)
+        : data.projects.map((p, j) => (j === i ? { content } : p)),
     });
   };
-  const setWs = (i: number, patch: Partial<NonNullable<CvData['workshops']>[number]>) => {
+  const setWs = (i: number, content: string) => {
     const workshops = data.workshops ?? [];
-    const next = { ...workshops[i], ...patch };
-    const isEmpty = isBlank(next.title) && isBlank(next.description);
+    const isEmpty = isBlank(content);
     commit({
       ...data,
-      workshops: isEmpty ? workshops.filter((_, j) => j !== i) : workshops.map((w, j) => (j === i ? next : w)),
+      workshops: isEmpty ? workshops.filter((_, j) => j !== i) : workshops.map((w, j) => (j === i ? { content } : w)),
     });
   };
   const setCert = (i: number, patch: Partial<CvData['certifications'][number]>) => {
@@ -233,13 +231,11 @@ function CvPreviewBase({
       commit({ ...data, workExperience: data.workExperience.filter((_, j) => j !== i) });
   };
   const projectEmptyBackspace = (i: number) => {
-    const p = data.projects[i];
-    if (isBlank(p.title) && isBlank(p.description)) commit({ ...data, projects: data.projects.filter((_, j) => j !== i) });
+    if (isBlank(data.projects[i].content)) commit({ ...data, projects: data.projects.filter((_, j) => j !== i) });
   };
   const workshopEmptyBackspace = (i: number) => {
-    const w = (data.workshops ?? [])[i];
-    if (isBlank(w.title) && isBlank(w.description))
-      commit({ ...data, workshops: (data.workshops ?? []).filter((_, j) => j !== i) });
+    const workshops = data.workshops ?? [];
+    if (isBlank(workshops[i].content)) commit({ ...data, workshops: workshops.filter((_, j) => j !== i) });
   };
   const certEmptyBackspace = (i: number) => {
     const c = data.certifications[i];
@@ -283,10 +279,8 @@ function CvPreviewBase({
   const workList = editable
     ? data.workExperience
     : data.workExperience.filter((w) => !isBlank(w.company) || !isBlank(w.title) || !isBlank(w.bullets));
-  const workshopList = editable
-    ? data.workshops ?? []
-    : (data.workshops ?? []).filter((w) => !isBlank(w.title) || !isBlank(w.description));
-  const projectList = editable ? data.projects : data.projects.filter((p) => !isBlank(p.title) || !isBlank(p.description));
+  const workshopList = editable ? data.workshops ?? [] : (data.workshops ?? []).filter((w) => !isBlank(w.content));
+  const projectList = editable ? data.projects : data.projects.filter((p) => !isBlank(p.content));
   const certList = editable ? data.certifications : data.certifications.filter((c) => !isBlank(c.name) || !isBlank(c.organization));
   const hasAdditional = editable || data.additional.skills || data.additional.interests;
 
@@ -427,19 +421,15 @@ function CvPreviewBase({
                 {pos === 0 && <SectionHeading>Projects</SectionHeading>}
                 <Bullet marker={data.projectsBulletStyle === 'number' ? `${pos + 1}.` : '•'}>
                   {editable ? (
-                    <>
-                      <RichText html={proj.title} placeholder="Project" onCommit={(v) => setProj(i, { title: v })} onEmptyBackspace={() => projectEmptyBackspace(i)} className="font-bold" />
-                      {' ('}
-                      <RichText html={proj.technologies} placeholder="Tech" onCommit={(v) => setProj(i, { technologies: v })} />
-                      {') – '}
-                      <RichText html={proj.description} placeholder="Description" onCommit={(v) => setProj(i, { description: v })} onEmptyBackspace={() => projectEmptyBackspace(i)} />
-                    </>
+                    <RichText
+                      block
+                      html={proj.content}
+                      placeholder="Project Title (Technologies) – Description"
+                      onCommit={(v) => setProj(i, v)}
+                      onEmptyBackspace={() => projectEmptyBackspace(i)}
+                    />
                   ) : (
-                    <>
-                      <span className="font-bold"><Html html={proj.title} /></span>
-                      {proj.technologies && <span> (<Html html={proj.technologies} />)</span>}
-                      {proj.description && <span> – <Html html={proj.description} /></span>}
-                    </>
+                    <Html html={proj.content} />
                   )}
                 </Bullet>
               </div>
@@ -458,16 +448,15 @@ function CvPreviewBase({
                 {pos === 0 && <SectionHeading>Workshops</SectionHeading>}
                 <Bullet marker={data.workshopsBulletStyle === 'number' ? `${pos + 1}.` : '•'}>
                   {editable ? (
-                    <>
-                      <RichText html={ws.title} placeholder="Workshop" onCommit={(v) => setWs(i, { title: v })} onEmptyBackspace={() => workshopEmptyBackspace(i)} className="font-bold" />
-                      {': '}
-                      <RichText html={ws.description} placeholder="Description" onCommit={(v) => setWs(i, { description: v })} onEmptyBackspace={() => workshopEmptyBackspace(i)} />
-                    </>
+                    <RichText
+                      block
+                      html={ws.content}
+                      placeholder="Workshop Title: Description"
+                      onCommit={(v) => setWs(i, v)}
+                      onEmptyBackspace={() => workshopEmptyBackspace(i)}
+                    />
                   ) : (
-                    <>
-                      <span className="font-bold"><Html html={ws.title} /></span>
-                      {ws.description && <span>: <Html html={ws.description} /></span>}
-                    </>
+                    <Html html={ws.content} />
                   )}
                 </Bullet>
               </div>

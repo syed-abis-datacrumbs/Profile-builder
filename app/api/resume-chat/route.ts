@@ -16,8 +16,8 @@ Resume JSON schema (keep this exact shape and keys — do NOT include a "cvType"
   "personalInfo": { "fullName": "", "phone": "", "email": "", "linkedin": "", "linkedinLabel": "Linkedin", "github": "", "githubLabel": "GitHub", "kaggle": "", "kaggleLabel": "Kaggle" },
   "education": [ { "institution": "", "degree": "", "start": "", "end": "" } ],
   "workExperience": [ { "company": "", "title": "", "start": "", "end": "", "bullets": "one bullet per line\\nseparated by newlines" } ],
-  "workshops": [ { "title": "", "description": "" } ],
-  "projects": [ { "title": "", "technologies": "", "description": "" } ],
+  "workshops": [ { "content": "<strong>Workshop Title</strong>: One or two descriptive sentences." } ],
+  "projects": [ { "content": "<strong>Project Title</strong> (Technologies used) – Description with impact." } ],
   "certifications": [ { "name": "", "organization": "" } ],
   "additional": { "skills": "", "interests": "" }
 }
@@ -30,6 +30,7 @@ Rules:
 - Exception: contact fields (phone, email, linkedin, github, kaggle) are the one place NOT to invent realistic-looking specifics, since those are personal to the student and could be mistaken for real. If the user hasn't given you their own, use obviously-generic placeholder values — phone "+92 3XX XXXXXXX", email "your.email@example.com", and leave linkedin/github/kaggle as empty strings ("") rather than guessing a URL from their name. Never build a name-based or otherwise plausible-looking fake phone number, email, or profile URL.
 - Write concise, quantified, professional resume content. For emphasis inside bullets/descriptions use inline HTML tags — <strong>…</strong> for bold, <em>…</em> for italic, <u>…</u> for underline. Do NOT use markdown "**".
 - "workExperience" bullets: one bullet per line, newline-separated (no leading "-" or "•").
+- "projects"/"workshops" entries are ONE combined "content" field each (title, technologies if any, and description all together as shown in the schema) — not separate fields. Bold the title with <strong>.
 - Return the WHOLE cv every time; preserve every field the user already gave real content for — only fill in what's genuinely still missing.
 - If the user asks to remove/delete an entry (a certification, education entry, project, work experience, workshop, etc.), remove that WHOLE object from its array. Never leave it in place with its fields blanked out — an empty entry left behind still shows up in the resume as an empty placeholder slot, which looks broken.
 - Output valid JSON only.`;
@@ -92,18 +93,39 @@ export async function POST(request: Request) {
     // of deleting the entry, which otherwise leaves a ghost placeholder
     // slot in the resume. Same "is this entry empty" rule CvPreview's own
     // read-only view already uses, so behavior stays consistent.
+    //
+    // personalInfo/additional are defaulted here too — the model has
+    // occasionally omitted one of these top-level keys entirely (valid
+    // JSON, just an incomplete object), and CvPreview dereferences fields
+    // on both unconditionally (e.g. `data.additional.bulletStyle`), so a
+    // missing one crashed the whole page instead of just losing that
+    // section. Falling back through the pre-call draft first means real
+    // content isn't lost, only ever replaced by empty defaults as a last
+    // resort.
+    const defaultPersonalInfo: CvData['personalInfo'] = {
+      fullName: '',
+      phone: '',
+      email: '',
+      linkedin: '',
+      github: '',
+      githubLabel: 'GitHub',
+      kaggle: '',
+      kaggleLabel: 'Kaggle',
+    };
+    const defaultAdditional: CvData['additional'] = { skills: '', interests: '' };
+
     const safeCv: CvData = {
       ...nextCv,
       cvType,
+      personalInfo: nextCv.personalInfo ?? cv.personalInfo ?? defaultPersonalInfo,
       education: (nextCv.education ?? []).filter((e) => e.institution || e.degree),
       workExperience: (cvType === 'student' ? cv.workExperience ?? [] : nextCv.workExperience ?? []).filter(
         (w) => w.company || w.title || w.bullets
       ),
-      workshops: (cvType === 'student' ? nextCv.workshops ?? [] : cv.workshops ?? []).filter(
-        (w) => w.title || w.description
-      ),
-      projects: (nextCv.projects ?? []).filter((p) => p.title || p.description),
+      workshops: (cvType === 'student' ? nextCv.workshops ?? [] : cv.workshops ?? []).filter((w) => (w.content || '').trim()),
+      projects: (nextCv.projects ?? []).filter((p) => (p.content || '').trim()),
       certifications: (nextCv.certifications ?? []).filter((c) => c.name || c.organization),
+      additional: nextCv.additional ?? cv.additional ?? defaultAdditional,
     };
 
     return Response.json({
