@@ -1214,22 +1214,18 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
 
           {/* MODE 1: KANBAN PIPELINE BOARD */}
           {trackerMode === 'kanban' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3.5 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
               {[
-                { title: '📌 Saved', key: 'Saved', color: 'border-slate-300 bg-slate-100/70 text-slate-800', statuses: ['Saved'] },
-                { title: '📩 Applied / Outreached', key: 'Applied', color: 'border-blue-300 bg-blue-50/60 text-blue-900', statuses: ['Applied', 'Connection Request Sent', 'Approached / Cold DM'] },
+                { title: '📩 Applied / Outreached', key: 'Applied', color: 'border-blue-300 bg-blue-50/60 text-blue-900', statuses: ['Saved', 'Applied', 'Connection Request Sent', 'Approached / Cold DM'] },
                 { title: '📞 Recruiter Screen', key: 'Screening', color: 'border-amber-300 bg-amber-50/60 text-amber-900', statuses: ['Recruiter Call', 'Following Up'] },
                 { title: '💻 Tech Interview', key: 'Interview', color: 'border-purple-300 bg-purple-50/60 text-purple-900', statuses: ['Technical Interview'] },
-                { title: '🎉 Offer Received', key: 'Offer', color: 'border-emerald-300 bg-emerald-50/60 text-emerald-900', statuses: ['Offer Received'] },
-                { title: '📦 Archived', key: 'Archived', color: 'border-rose-300 bg-rose-50/60 text-rose-900', statuses: ['Rejected'] }
+                { title: '🎉 Offer Received', key: 'Offer', color: 'border-emerald-300 bg-emerald-50/60 text-emerald-900', statuses: ['Offer Received'] }
               ].map((col) => {
                 const columnRows = filteredSheetRows.filter(row => {
-                  if (col.key === 'Saved') return row.status === 'Saved';
-                  if (col.key === 'Applied') return ['Applied', 'Connection Request Sent', 'Approached / Cold DM'].includes(row.status);
+                  if (col.key === 'Applied') return ['Saved', 'Applied', 'Connection Request Sent', 'Approached / Cold DM'].includes(row.status);
                   if (col.key === 'Screening') return ['Recruiter Call', 'Following Up'].includes(row.status);
                   if (col.key === 'Interview') return row.status === 'Technical Interview';
                   if (col.key === 'Offer') return row.status === 'Offer Received';
-                  if (col.key === 'Archived') return row.status === 'Rejected';
                   return false;
                 });
 
