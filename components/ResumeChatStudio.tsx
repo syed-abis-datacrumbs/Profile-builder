@@ -627,7 +627,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             </div>
 
             {/* Resume Save/Load Dropdown */}
-            <div className="relative">
+            <div>
               <button
                 onClick={toggleResumeMenu}
                 className="h-7 px-3 rounded-lg bg-slate-100 text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1.5 leading-none cursor-pointer"
@@ -639,8 +639,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
               {resumeMenuOpen && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setResumeMenuOpen(false)} />
-                  <div className="absolute left-0 mt-1 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-20 overflow-hidden text-xs">
+                  <div className="fixed inset-0 z-40" onClick={() => setResumeMenuOpen(false)} />
+                  <div className="fixed top-12 left-4 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden text-xs">
                     <div className="p-3 border-b border-slate-100 space-y-1.5">
                       <div className="flex items-center gap-1.5">
                         <input
@@ -819,7 +819,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             <div className="h-4 w-px bg-slate-200" />
 
             {/* Download Action */}
-            <div className="relative">
+            <div>
               <button
                 type="button"
                 onClick={() => setDlMenu((o) => !o)}
@@ -834,8 +834,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
               {dlMenu && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setDlMenu(false)} />
-                  <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-20 overflow-hidden text-xs">
+                  <div className="fixed inset-0 z-40" onClick={() => setDlMenu(false)} />
+                  <div className="fixed top-12 right-4 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden text-xs">
                     <button onClick={() => download('pdf')} className="w-full text-left px-3.5 py-2.5 text-slate-700 hover:bg-slate-50 font-semibold border-b border-slate-100">
                       Download PDF
                     </button>
