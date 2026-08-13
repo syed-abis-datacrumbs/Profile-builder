@@ -26,7 +26,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
-import { getResumeAccentColor } from '../lib/resumeSamples';
+import { getResumeAccentColor } from '../lib/resumeHelpers';
 import { CvPreview } from './CvPreview';
 
 // Blank breathing room reserved at the BOTTOM of every page and the TOP of
@@ -633,7 +633,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 className="h-7 px-3 rounded-lg bg-slate-100 text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1.5 leading-none cursor-pointer"
               >
                 <FileText className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                <span className="leading-none">Resume</span>
+                <span className="leading-none">Saved Resumes</span>
                 <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
               </button>
 

@@ -2,7 +2,8 @@
 
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft, SquarePen } from 'lucide-react';
-import { LmsResumeSample, getResumeAccentColor } from '../lib/resumeSamples';
+import { LmsResumeSample } from '../lib/resumeSamples';
+import { getResumeAccentColor } from '../lib/resumeHelpers';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { CvPreview } from './CvPreview';
 

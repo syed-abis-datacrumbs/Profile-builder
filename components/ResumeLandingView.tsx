@@ -16,7 +16,8 @@ import {
   Send,
   X
 } from 'lucide-react';
-import { LMS_RESUME_SAMPLES, LmsResumeSample, getResumeAccentColor } from '../lib/resumeSamples';
+import { LMS_RESUME_SAMPLES, LmsResumeSample } from '../lib/resumeSamples';
+import { getResumeAccentColor } from '../lib/resumeHelpers';
 import { ResumeTemplateThumbnail } from './ResumeTemplateThumbnail';
 
 interface ResumeLandingViewProps {
@@ -168,6 +169,10 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
             
             {/* Left Controls */}
             <div className="flex items-center gap-1.5 flex-wrap">
+            </div>
+
+            {/* Right Controls */}
+            <div className="flex items-center gap-2">
               {attachedTemplate ? (
                 <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold shadow-2xs">
                   <FileText className="w-3.5 h-3.5" />
@@ -188,17 +193,6 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
                   <span>Resume</span>
                 </span>
               )}
-            </div>
-
-            {/* Right Controls */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 flex items-center gap-1 border border-slate-200/80 transition-colors"
-              >
-                <span>{selectedModel}</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
-              </button>
 
               <motion.button
                 whileHover={{ scale: 1.08 }}

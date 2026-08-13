@@ -33,7 +33,8 @@ import { LinkedinRichProfile, buildInitialRichProfile } from '../lib/linkedinRic
 import { ActiveTab, ResumeData, GithubProfileData, LinkedinProfileData, SavedProfile } from '../types';
 import { defaultResumeData, defaultGithubData, defaultLinkedinData } from '../lib/defaultData';
 import { applyRolePresetToGithub, GithubRolePreset, GITHUB_ROLE_PRESETS } from '../lib/githubRolePresets';
-import { LmsResumeSample, matchResumeSampleToPrompt } from '../lib/resumeSamples';
+import { LmsResumeSample } from '../lib/resumeSamples';
+import { matchResumeSampleToPrompt } from '../lib/resumeHelpers';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { ResumeChatStudio } from '../components/ResumeChatStudio';
 import { motion, AnimatePresence } from 'framer-motion';
