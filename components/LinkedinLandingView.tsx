@@ -17,6 +17,7 @@ import { linkedinCovers } from '../lib/linkedinCovers';
 import { LinkedinTemplateThumbnail } from './LinkedinTemplateThumbnail';
 
 interface LinkedinLandingViewProps {
+  userName?: string;
   attachedTemplate: string | null;
   onClearAttachedTemplate: () => void;
   onSelectTemplate: (templateId: string) => void;
@@ -91,11 +92,7 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (promptInput.trim()) {
-      onUsePrompt(promptInput);
-    } else {
-      onOpenEditorDirectly();
-    }
+    onUsePrompt(promptInput.trim());
   };
 
   return (
@@ -123,6 +120,12 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
             rows={2}
             value={promptInput}
             onChange={(e) => setPromptInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e as unknown as React.FormEvent);
+              }
+            }}
             placeholder={
               attachedTemplate
                 ? `Add instructions for template "${attachedTemplate}" (optional)…`

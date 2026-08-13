@@ -265,11 +265,7 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (promptInput.trim()) {
-      onUsePrompt(promptInput);
-    } else {
-      onOpenEditorDirectly();
-    }
+    onUsePrompt(promptInput.trim());
   };
 
   return (
@@ -297,6 +293,12 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
             rows={2}
             value={promptInput}
             onChange={(e) => setPromptInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e as unknown as React.FormEvent);
+              }
+            }}
             placeholder={
               attachedTemplate
                 ? `Add instructions for "${attachedTemplate.name}" (optional)…`

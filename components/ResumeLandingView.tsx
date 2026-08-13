@@ -112,11 +112,7 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
   ];
 
   const submitPrompt = () => {
-    if (promptInput.trim() || attachedTemplate) {
-      onUsePrompt(promptInput);
-    } else {
-      onOpenEditorDirectly();
-    }
+    onUsePrompt(promptInput.trim());
   };
 
   const handleSubmit = (e: React.FormEvent) => {
