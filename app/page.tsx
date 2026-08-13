@@ -334,37 +334,7 @@ export default function Home() {
                             onOpenEditorDirectly={() => setGithubMode('editor')}
                           />
 
-                          <AnimatePresence>
-                            {githubMode === 'preview' && githubPreviewTemplate && (
-                              <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm p-4 sm:p-8"
-                                onClick={(e) => {
-                                  if (e.target === e.currentTarget) setGithubMode('landing');
-                                }}
-                              >
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                                  className="w-full max-w-4xl mx-auto my-4"
-                                >
-                                  <GithubTemplatePreview
-                                    template={githubPreviewTemplate}
-                                    onBack={() => setGithubMode('landing')}
-                                    onEdit={() => {
-                                      const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === githubPreviewTemplate.presetId) || GITHUB_ROLE_PRESETS[0];
-                                      openGithubStudio(preset, githubPreviewTemplate.theme);
-                                    }}
-                                  />
-                                </motion.div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
+
                         </>
                       )}
                     </motion.div>
@@ -425,38 +395,6 @@ export default function Home() {
                             onOpenEditorDirectly={() => setLinkedinMode('editor')}
                           />
 
-                          <AnimatePresence>
-                            {linkedinMode === 'preview' && linkedinPreviewTemplateId && (
-                              <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm p-4 sm:p-8"
-                                onClick={(e) => {
-                                  if (e.target === e.currentTarget) setLinkedinMode('landing');
-                                }}
-                              >
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                                  className="w-full max-w-3xl mx-auto my-4"
-                                >
-                                  <LinkedinTemplatePreview
-                                    templateId={linkedinPreviewTemplateId}
-                                    onBack={() => setLinkedinMode('landing')}
-                                    onEdit={() => {
-                                      setLinkedinRichProfile(buildInitialRichProfile(linkedinPreviewTemplateId));
-                                      setLinkedinInitialPrompt('');
-                                      setLinkedinMode('studio');
-                                    }}
-                                  />
-                                </motion.div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
                         </>
                       )}
                     </motion.div>
@@ -588,6 +526,32 @@ export default function Home() {
             mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onClose={() => setResumeMode('landing')}
+        />
+      )}
+
+      {/* Same as Resume, place Github and Linkedin preview modals at the root 
+          so they are not nested inside Framer Motion transforms that might trap
+          their fixed positioning. */}
+      {githubMode === 'preview' && githubPreviewTemplate && (
+        <GithubTemplatePreview
+          template={githubPreviewTemplate}
+          onBack={() => setGithubMode('landing')}
+          onEdit={() => {
+            const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === githubPreviewTemplate.presetId) || GITHUB_ROLE_PRESETS[0];
+            openGithubStudio(preset, githubPreviewTemplate.theme);
+          }}
+        />
+      )}
+
+      {linkedinMode === 'preview' && linkedinPreviewTemplateId && (
+        <LinkedinTemplatePreview
+          templateId={linkedinPreviewTemplateId}
+          onBack={() => setLinkedinMode('landing')}
+          onEdit={() => {
+            setLinkedinRichProfile(buildInitialRichProfile(linkedinPreviewTemplateId));
+            setLinkedinInitialPrompt('');
+            setLinkedinMode('studio');
+          }}
         />
       )}
 

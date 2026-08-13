@@ -301,38 +301,6 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
             
             {/* Left Controls */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
-                title="Attach file"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                type="button"
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
-                title="Browse docs"
-              >
-                <Folder className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                type="button"
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
-                title="Format style"
-              >
-                <PenTool className="w-3.5 h-3.5" />
-              </button>
-
-              <div className="h-4 w-px bg-slate-200 mx-1" />
-
-              {/* Auto Pill */}
-              <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium flex items-center gap-1 border border-slate-200/60">
-                <Check className="w-3 h-3 text-slate-500" />
-                <span>Auto</span>
-              </span>
-
               {/* GitHub Pill */}
               <span className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
                 <GithubIcon className="w-3.5 h-3.5 text-white" />
