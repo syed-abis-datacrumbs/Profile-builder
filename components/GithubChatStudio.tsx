@@ -12,6 +12,7 @@ interface Msg {
 }
 
 import { GithubReadmePreview } from './GithubReadmePreview';
+import { PaymentModal } from './PaymentModal';
 
 /** Curated banner options — a mix of a Cloudinary-hosted photo banner (same as
  *  the LMS) and capsule-render dynamic gradient headers. */
@@ -79,6 +80,18 @@ export const GithubChatStudio: React.FC<{
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, loading]);
+
+  // README.md is plain text, not an image — there's no raster to bake a
+  // watermark into like Resume's PDF/PNG, so the same one-time-payment
+  // unlock instead gates the download itself (Copy stays free either way).
+  const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  useEffect(() => {
+    fetch('/api/payment/status')
+      .then((r) => r.json())
+      .then((d: { unlocked: boolean }) => setUnlocked(d.unlocked))
+      .catch(() => setUnlocked(false));
+  }, []);
 
   const send = async (overrideText?: string) => {
     const text = (overrideText ?? input).trim();
@@ -321,14 +334,29 @@ export const GithubChatStudio: React.FC<{
               {copied ? 'Copied' : 'Copy'}
             </button>
             <button
-              onClick={downloadReadme}
+              onClick={() => {
+                if (!isLoggedIn) { onRequireAuth(); return; }
+                if (unlocked === false) { setShowPaymentModal(true); return; }
+                downloadReadme();
+              }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
             >
-              <Download className="w-3.5 h-3.5" />
-              README.md
+              {unlocked === false ? <Sparkles className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
+              {unlocked === false ? 'Unlock Download' : 'README.md'}
             </button>
           </div>
         </div>
+
+        {showPaymentModal && (
+          <PaymentModal
+            reason="Unlock your README.md download"
+            onApproved={() => {
+              setUnlocked(true);
+              setShowPaymentModal(false);
+            }}
+            onClose={() => setShowPaymentModal(false)}
+          />
+        )}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex justify-center items-start">
           <GithubReadmePreview 
             github={github} 

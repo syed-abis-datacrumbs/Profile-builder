@@ -23,3 +23,46 @@ model ResumeSave {
   @@index([userId])
   @@map("profile_builder_resumes")
 }
+
+// One-time-payment unlock: watermark-free Resume PDF/PNG exports and GitHub
+// README downloads, both gated by this single shared flag — same "pay once,
+// permanently unlocked" model as LMS's CV Builder (User.cvDownloadUnlocked),
+// kept as its own table rather than reusing that field since paying for
+// Profile-builder shouldn't be conflated with paying for LMS's CV Builder.
+model PaymentUnlock {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  unlockedAt DateTime @default(now())
+
+  @@map("profile_builder_payment_unlocks")
+}
+
+// Audit log of every payment-screenshot verification attempt — mirrors
+// LMS's CvPaymentProof field-for-field (same verification pipeline: fuzzy
+// title/account/amount matching, dHash duplicate detection, EXIF tamper
+// flag, recency window), ported rather than reusing LMS's table so this
+// app's payment history stays independent of LMS's.
+model PaymentProof {
+  id                     String   @id @default(cuid())
+  userId                 String
+  imageUrl               String
+  imageHash              String
+  transactionRef         String?
+  extractedMethod        String?
+  extractedTitle         String?
+  extractedAccountNumber String?
+  extractedAmount        String?
+  titleMatched           Boolean  @default(false)
+  numberMatched          Boolean  @default(false)
+  amountMatched          Boolean  @default(false)
+  duplicateOfProofId     String?
+  tamperSignal           Boolean  @default(false)
+  status                 String   @default("PENDING")
+  decisionReason         String?
+  createdAt              DateTime @default(now())
+
+  @@index([userId])
+  @@index([imageHash])
+  @@index([status])
+  @@map("profile_builder_payment_proofs")
+}

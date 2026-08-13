@@ -29,6 +29,7 @@ import {
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { getResumeAccentColor } from '../lib/resumeHelpers';
 import { CvPreview } from './CvPreview';
+import { PaymentModal } from './PaymentModal';
 
 // Blank breathing room reserved at the BOTTOM of every page and the TOP of
 // every continuation page (page 2+), so content never runs flush to a page
@@ -325,13 +326,72 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const [downloading, setDownloading] = useState<null | 'pdf' | 'png'>(null);
   const [dlMenu, setDlMenu] = useState(false);
 
+  // Whether this account has paid to remove the watermark — null until the
+  // first status check resolves. Same one-time-payment model as LMS's CV
+  // Builder ("everyone can build/export for free; paying removes a
+  // watermark baked into the exported file, download itself is never
+  // blocked"). Re-checked on mount only; the PaymentModal flips this to
+  // true directly on approval rather than re-fetching.
+  const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/payment/status')
+      .then((r) => r.json())
+      .then((d: { unlocked: boolean }) => setUnlocked(d.unlocked))
+      .catch(() => setUnlocked(false));
+  }, []);
+
+  // Temporarily injects rotated, translucent "Momentum" watermark divs into
+  // the live export DOM, positioned absolutely (so they scroll with content,
+  // tiled one per page-height band) — removed again right after export.
+  // Both the canvas-based PNG export AND the native-print PDF export
+  // ultimately capture/print whatever is actually in `el`'s DOM, so
+  // injecting into the DOM itself (rather than drawing on a canvas, which
+  // only the PNG path has) is what makes ONE mechanism cover both formats.
+  const injectWatermarks = (el: HTMLElement): HTMLElement[] => {
+    const injected: HTMLElement[] = [];
+    const contentWidth = el.scrollWidth || el.offsetWidth;
+    const contentHeight = el.scrollHeight || el.offsetHeight;
+    const step = Math.round(contentWidth * 1.1);
+    for (let y = Math.round(step / 2); y < contentHeight + step; y += step) {
+      const div = document.createElement('div');
+      div.setAttribute('data-watermark', 'true');
+      Object.assign(div.style, {
+        position: 'absolute',
+        left: '0',
+        top: `${y}px`,
+        width: '100%',
+        textAlign: 'center',
+        transform: 'rotate(-30deg)',
+        fontSize: `${Math.round(contentWidth * 0.1)}px`,
+        fontWeight: '700',
+        fontFamily: 'Arial, sans-serif',
+        color: 'rgba(15, 23, 42, 0.12)',
+        pointerEvents: 'none',
+        userSelect: 'none',
+        zIndex: '9999',
+      });
+      div.textContent = 'Momentum';
+      el.appendChild(div);
+      injected.push(div);
+    }
+    return injected;
+  };
+  const removeWatermarks = (injected: HTMLElement[]) => injected.forEach((n) => n.remove());
+
   const download = async (format: 'pdf' | 'png') => {
     const el = exportRef.current;
     if (!el || downloading) return;
+    // Injected BEFORE either export path reads the DOM (toPng captures it,
+    // the PDF path copies el.innerHTML into the print iframe) so one
+    // mechanism covers both formats; always removed in `finally` below so
+    // the editor itself never shows a watermark.
+    const watermarkNodes = unlocked ? [] : injectWatermarks(el);
     try {
       setDownloading(format);
       const name = (cv.personalInfo.fullName || 'Resume').replace(/[^a-z0-9]/gi, '_');
-      
+
       if (format === 'png') {
         const { toPng } = await import('html-to-image');
         const opts = {
@@ -413,6 +473,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     } catch (err) {
       console.error('Resume download failed', err);
     } finally {
+      removeWatermarks(watermarkNodes);
       setDownloading(null);
     }
   };
@@ -787,18 +848,42 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               {dlMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setDlMenu(false)} />
-                  <div className="fixed top-12 right-4 w-40 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden text-xs">
+                  <div className="fixed top-12 right-4 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden text-xs">
                     <button onClick={() => download('pdf')} className="w-full text-left px-3.5 py-2.5 text-slate-700 hover:bg-slate-50 font-semibold border-b border-slate-100">
                       Download PDF
                     </button>
                     <button onClick={() => download('png')} className="w-full text-left px-3.5 py-2.5 text-slate-700 hover:bg-slate-50 font-semibold">
                       Download PNG
                     </button>
+                    {unlocked === false && (
+                      <button
+                        onClick={() => {
+                          setDlMenu(false);
+                          if (!isLoggedIn) { onRequireAuth(); return; }
+                          setShowPaymentModal(true);
+                        }}
+                        className="w-full text-left px-3.5 py-2.5 text-blue-700 hover:bg-blue-50 font-semibold border-t border-slate-100 flex items-center gap-1.5"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Remove Watermark
+                      </button>
+                    )}
                   </div>
                 </>
               )}
             </div>
           </div>
+
+          {showPaymentModal && (
+            <PaymentModal
+              reason="Remove the watermark from your Resume downloads"
+              onApproved={() => {
+                setUnlocked(true);
+                setShowPaymentModal(false);
+              }}
+              onClose={() => setShowPaymentModal(false)}
+            />
+          )}
 
         </div>
 
