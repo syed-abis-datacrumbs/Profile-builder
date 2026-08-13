@@ -53,8 +53,10 @@ export default function Home() {
   const [attachedResumeTemplate, setAttachedResumeTemplate] = useState<LmsResumeSample | null>(null);
   const [githubMode, setGithubMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
   const [githubPreviewTemplate, setGithubPreviewTemplate] = useState<GithubTemplateCard | null>(null);
+  const [attachedGithubTemplate, setAttachedGithubTemplate] = useState<GithubTemplateCard | null>(null);
   const [linkedinMode, setLinkedinMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
   const [linkedinPreviewTemplateId, setLinkedinPreviewTemplateId] = useState<string | null>(null);
+  const [attachedLinkedinTemplate, setAttachedLinkedinTemplate] = useState<string | null>(null);
   const [linkedinRichProfile, setLinkedinRichProfile] = useState<LinkedinRichProfile | null>(null);
   const [selectedModel, setSelectedModel] = useState('Flash');
 
@@ -276,7 +278,7 @@ export default function Home() {
 
                   {activeTab === 'github' && (
                     <motion.div
-                      key={`tab-github-${githubMode}`}
+                      key={`tab-github-${githubMode === 'preview' ? 'landing' : githubMode}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
@@ -315,34 +317,32 @@ export default function Home() {
                           />
                         </div>
                       ) : (
-                        <>
-                          <GithubLandingView
-                            userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
-                            onOpenRolePicker={() => openGithubStudio(GITHUB_ROLE_PRESETS[0])}
-                            onSelectPreset={(preset, theme) => openGithubStudio(preset, theme)}
-                            onSelectTemplate={(template) => {
-                              setGithubPreviewTemplate(template);
-                              setGithubMode('preview');
-                            }}
-                            onUsePrompt={(promptText) => {
-                              // GitHub needs a template pick first — hold the
-                              // prompt and show the picker; the AI runs once
-                              // a template is chosen (see the modal below).
-                              setPendingPrompt(promptText);
-                              setShowGithubTemplatePicker(true);
-                            }}
-                            onOpenEditorDirectly={() => setGithubMode('editor')}
-                          />
-
-
-                        </>
+                        <GithubLandingView
+                          userName={user?.firstName || undefined}
+                          onOpenRolePicker={() => setShowGithubTemplatePicker(true)}
+                          onSelectPreset={(preset, theme) => openGithubStudio(preset, theme)}
+                          attachedTemplate={attachedGithubTemplate}
+                          onClearAttachedTemplate={() => setAttachedGithubTemplate(null)}
+                          onSelectTemplate={(t) => {
+                            setGithubPreviewTemplate(t);
+                            setGithubMode('preview');
+                          }}
+                          onUsePrompt={(promptText) => {
+                            const t = attachedGithubTemplate || GITHUB_TEMPLATES[0];
+                            const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
+                            openGithubStudio(preset, t.theme);
+                            setGithubInitialPrompt(promptText);
+                            setAttachedGithubTemplate(null);
+                          }}
+                          onOpenEditorDirectly={() => setGithubMode('editor')}
+                        />
                       )}
                     </motion.div>
                   )}
 
                   {activeTab === 'linkedin' && (
                     <motion.div
-                      key={`tab-linkedin-${linkedinMode}`}
+                      key={`tab-linkedin-${linkedinMode === 'preview' ? 'landing' : linkedinMode}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
@@ -379,23 +379,23 @@ export default function Home() {
                           initialPrompt={linkedinInitialPrompt}
                         />
                       ) : (
-                        <>
-                          <LinkedinLandingView
-                            userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
-                            onSelectTemplate={(templateId) => {
-                              setLinkedinPreviewTemplateId(templateId);
-                              setLinkedinMode('preview');
-                            }}
-                            onUsePrompt={(promptText) => {
-                              // LinkedIn also needs a template pick first —
-                              // same hand-off pattern as GitHub above.
-                              setPendingPrompt(promptText);
-                              setShowLinkedinTemplatePicker(true);
-                            }}
-                            onOpenEditorDirectly={() => setLinkedinMode('editor')}
-                          />
-
-                        </>
+                        <LinkedinLandingView
+                          userName={user?.firstName || undefined}
+                          attachedTemplate={attachedLinkedinTemplate}
+                          onClearAttachedTemplate={() => setAttachedLinkedinTemplate(null)}
+                          onSelectTemplate={(tid) => {
+                            setLinkedinPreviewTemplateId(tid);
+                            setLinkedinMode('preview');
+                          }}
+                          onUsePrompt={(promptText) => {
+                            const tid = attachedLinkedinTemplate || 'linkedin-1';
+                            setLinkedinRichProfile(buildInitialRichProfile(tid));
+                            setLinkedinInitialPrompt(promptText);
+                            setLinkedinMode('studio');
+                            setAttachedLinkedinTemplate(null);
+                          }}
+                          onOpenEditorDirectly={() => setLinkedinMode('editor')}
+                        />
                       )}
                     </motion.div>
                   )}
@@ -537,8 +537,9 @@ export default function Home() {
           template={githubPreviewTemplate}
           onBack={() => setGithubMode('landing')}
           onEdit={() => {
-            const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === githubPreviewTemplate.presetId) || GITHUB_ROLE_PRESETS[0];
-            openGithubStudio(preset, githubPreviewTemplate.theme);
+            setAttachedGithubTemplate(githubPreviewTemplate);
+            setGithubMode('landing');
+            mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
           }}
         />
       )}
@@ -548,9 +549,9 @@ export default function Home() {
           templateId={linkedinPreviewTemplateId}
           onBack={() => setLinkedinMode('landing')}
           onEdit={() => {
-            setLinkedinRichProfile(buildInitialRichProfile(linkedinPreviewTemplateId));
-            setLinkedinInitialPrompt('');
-            setLinkedinMode('studio');
+            setAttachedLinkedinTemplate(linkedinPreviewTemplateId);
+            setLinkedinMode('landing');
+            mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
           }}
         />
       )}

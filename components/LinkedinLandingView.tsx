@@ -9,14 +9,16 @@ import {
   Check, 
   ChevronDown, 
   ArrowUpRight, 
-  Send
+  Send,
+  X
 } from 'lucide-react';
 import { LinkedinIcon } from './icons';
 import { linkedinCovers } from '../lib/linkedinCovers';
 import { LinkedinTemplateThumbnail } from './LinkedinTemplateThumbnail';
 
 interface LinkedinLandingViewProps {
-  userName?: string;
+  attachedTemplate: string | null;
+  onClearAttachedTemplate: () => void;
   onSelectTemplate: (templateId: string) => void;
   onUsePrompt: (promptText: string) => void;
   onOpenEditorDirectly: () => void;
@@ -24,6 +26,8 @@ interface LinkedinLandingViewProps {
 
 export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
   userName = "Abis",
+  attachedTemplate,
+  onClearAttachedTemplate,
   onSelectTemplate,
   onUsePrompt,
   onOpenEditorDirectly
@@ -119,7 +123,11 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
             rows={2}
             value={promptInput}
             onChange={(e) => setPromptInput(e.target.value)}
-            placeholder={animatedPlaceholder || "Ask anything about LinkedIn optimization..."}
+            placeholder={
+              attachedTemplate
+                ? `Add instructions for template "${attachedTemplate}" (optional)…`
+                : animatedPlaceholder || "Ask anything about LinkedIn optimization..."
+            }
             className="w-full text-sm text-slate-800 placeholder-slate-400 focus:outline-none resize-none bg-transparent"
           />
 
@@ -128,12 +136,26 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
 
             {/* Left Controls */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              {/* LinkedIn Pill */}
-              <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs shrink-0">
-                <LinkedinIcon className="w-3.5 h-3.5 text-white shrink-0" />
-                <span className="sm:hidden">LinkedIn</span>
-                <span className="hidden sm:inline">LinkedIn Optimizer</span>
-              </span>
+              {attachedTemplate ? (
+                <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold shadow-2xs">
+                  <LinkedinIcon className="w-3.5 h-3.5" />
+                  <span>{linkedinCovers.find(c => c.id === attachedTemplate)?.name || attachedTemplate}</span>
+                  <button
+                    type="button"
+                    onClick={onClearAttachedTemplate}
+                    className="w-4 h-4 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+                    title="Remove attached template"
+                  >
+                    <X className="w-2.5 h-2.5 text-white" />
+                  </button>
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs shrink-0">
+                  <LinkedinIcon className="w-3.5 h-3.5 text-white shrink-0" />
+                  <span className="sm:hidden">LinkedIn</span>
+                  <span className="hidden sm:inline">LinkedIn Optimizer</span>
+                </span>
+              )}
             </div>
 
             {/* Right Controls */}

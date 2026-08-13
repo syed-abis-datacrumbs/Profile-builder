@@ -13,7 +13,8 @@ import {
   Sparkles,
   Layers,
   Terminal,
-  Code
+  Code,
+  X
 } from 'lucide-react';
 import { GithubIcon } from './icons';
 import { GITHUB_ROLE_PRESETS, GithubRolePreset } from '../lib/githubRolePresets';
@@ -25,6 +26,8 @@ interface GithubLandingViewProps {
   onOpenRolePicker: () => void;
   /** Selects a specific preset and theme directly to launch editor. */
   onSelectPreset?: (preset: GithubRolePreset, theme?: GithubProfileData['theme']) => void;
+  attachedTemplate: GithubTemplateCard | null;
+  onClearAttachedTemplate: () => void;
   onSelectTemplate?: (template: GithubTemplateCard) => void;
   onUsePrompt: (promptText: string) => void;
   onOpenEditorDirectly: () => void;
@@ -182,6 +185,8 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
   userName = "Abis",
   onOpenRolePicker,
   onSelectPreset,
+  attachedTemplate,
+  onClearAttachedTemplate,
   onSelectTemplate,
   onUsePrompt,
   onOpenEditorDirectly
@@ -292,7 +297,11 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
             rows={2}
             value={promptInput}
             onChange={(e) => setPromptInput(e.target.value)}
-            placeholder={animatedPlaceholder || "Ask anything about your GitHub profile..."}
+            placeholder={
+              attachedTemplate
+                ? `Add instructions for "${attachedTemplate.name}" (optional)…`
+                : animatedPlaceholder || "Ask anything about your GitHub profile..."
+            }
             className="w-full text-sm text-slate-800 placeholder-slate-400 focus:outline-none resize-none bg-transparent"
           />
 
@@ -301,11 +310,25 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
             
             {/* Left Controls */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              {/* GitHub Pill */}
-              <span className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
-                <GithubIcon className="w-3.5 h-3.5 text-white" />
-                <span>GitHub README</span>
-              </span>
+              {attachedTemplate ? (
+                <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-slate-900 text-white text-xs font-semibold shadow-2xs">
+                  <GithubIcon className="w-3.5 h-3.5" />
+                  <span>{attachedTemplate.name}</span>
+                  <button
+                    type="button"
+                    onClick={onClearAttachedTemplate}
+                    className="w-4 h-4 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+                    title="Remove attached template"
+                  >
+                    <X className="w-2.5 h-2.5 text-white" />
+                  </button>
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
+                  <GithubIcon className="w-3.5 h-3.5 text-white" />
+                  <span>GitHub README</span>
+                </span>
+              )}
             </div>
 
             {/* Right Controls */}
