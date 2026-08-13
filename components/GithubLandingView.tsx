@@ -406,13 +406,6 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
               <Code className="w-3.5 h-3.5" />
               <span>Browse All Roles</span>
             </button>
-
-            <button
-              onClick={onOpenEditorDirectly}
-              className="text-xs font-semibold text-blue-600 hover:underline"
-            >
-              Open Editor →
-            </button>
           </div>
         </div>
 

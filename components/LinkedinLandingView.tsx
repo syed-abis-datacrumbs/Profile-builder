@@ -217,12 +217,6 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
           <h3 className="text-sm font-semibold text-slate-700">
             Try a LinkedIn Cover Template
           </h3>
-          <button
-            onClick={onOpenEditorDirectly}
-            className="text-xs font-semibold text-blue-600 hover:underline shrink-0"
-          >
-            Open Optimizer Editor →
-          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
