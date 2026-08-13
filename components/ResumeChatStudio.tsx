@@ -23,7 +23,8 @@ import {
   Strikethrough,
   SquarePen,
   SlidersHorizontal,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { getResumeAccentColor } from '../lib/resumeHelpers';
@@ -77,6 +78,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [fontFamily, setFontFamily] = useState('Times New Roman');
+  const [targetJob, setTargetJob] = useState('');
+  const [targetJobModalOpen, setTargetJobModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [revision, setRevision] = useState(0);
@@ -280,13 +283,19 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const [atsPopoverOpen, setAtsPopoverOpen] = useState(false);
   const [atsError, setAtsError] = useState<string | null>(null);
   const atsScoredCvRef = useRef<CvData | null>(null);
+  const atsScoredJobRef = useRef<string>('');
 
   const handleCheckAts = async () => {
     if (!isLoggedIn) { onRequireAuth(); return; }
-    if (atsScore !== null && atsScoredCvRef.current === cv) {
+    // Always re-score — never use cache if job description or cv changed
+    const cvChanged = atsScoredCvRef.current !== cv;
+    const jobChanged = atsScoredJobRef.current !== targetJob;
+    if (atsScore !== null && !cvChanged && !jobChanged) {
+      // Nothing changed — just toggle the popover open/closed
       setAtsPopoverOpen((o) => !o);
       return;
     }
+    // Something changed (cv or job description) — always fire fresh API call
     setAtsLoading(true);
     setAtsError(null);
     setAtsPopoverOpen(true);
@@ -294,7 +303,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       const res = await fetch('/api/ats-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cv }),
+        body: JSON.stringify({ cv, jobDescription: targetJob }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -304,6 +313,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       setAtsScore(json.score);
       setAtsBreakdown(json.breakdown ?? []);
       atsScoredCvRef.current = cv;
+      atsScoredJobRef.current = targetJob;
     } catch {
       setAtsError('Failed to calculate score — check your connection.');
     } finally {
@@ -423,7 +433,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       const res = await fetch('/api/resume-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages, cv }),
+        body: JSON.stringify({ messages: nextMessages, cv, targetJob }),
       });
       const data = await res.json();
       if (data.error) {
@@ -517,7 +527,17 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         </div>
 
         {/* Bottom Input Area */}
-        <div className="shrink-0 p-3.5 bg-white border-t border-slate-200">
+        <div className="shrink-0 p-3.5 bg-white border-t border-slate-200 flex flex-col gap-2">
+          {targetJob.trim() && (
+            <button
+              onClick={() => send("Please analyze my resume against my target job description. Rewrite my bullet points and add missing keywords to perfectly match the ATS requirements.")}
+              disabled={loading}
+              className="self-start text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Auto-Inject ATS Keywords
+            </button>
+          )}
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-end gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all">
             <textarea
               rows={2}
@@ -748,7 +768,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               ))}
             </div>
 
-            <div className="h-4 w-px bg-slate-200" />
+
 
             {/* Download Action */}
             <div>
@@ -794,46 +814,108 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           </div>
         </div>
 
-        {/* Floating ATS Score Badge — click to calculate a real, AI-scored
-            rating for the current resume content (see /api/ats-score). */}
-        <div className="fixed bottom-6 right-8 z-30">
-          <button
-            onClick={handleCheckAts}
-            disabled={atsLoading}
-            className="bg-white border-2 border-emerald-500 rounded-full w-14 h-14 shadow-2xl flex flex-col items-center justify-center text-center font-bold hover:scale-105 transition-transform cursor-pointer disabled:opacity-70 disabled:hover:scale-100"
-          >
-            {atsLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
-            ) : (
+        {/* Floating Controls (Bottom Right) */}
+        <div className="fixed bottom-6 right-8 z-30 flex flex-col items-end gap-3">
+          
+          {/* Target Job Action */}
+          <div className="relative">
+            <button
+              onClick={() => setTargetJobModalOpen(!targetJobModalOpen)}
+              className={`h-10 px-4 rounded-full text-xs font-bold transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer border-2 ${
+                targetJob.trim()
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-500 hover:bg-emerald-100'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${targetJob.trim() ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+              <span>Target Job Match</span>
+            </button>
+
+            {targetJobModalOpen && (
               <>
-                <span className="text-sm font-black text-slate-900 leading-none">{atsScore ?? '–'}</span>
-                <span className="text-[8px] font-extrabold text-emerald-600 uppercase tracking-tighter">ATS</span>
+                <div className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[1px]" onClick={() => setTargetJobModalOpen(false)} />
+                <div className="absolute bottom-full right-0 mb-3 w-[400px] bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[80vh]">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                    <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                      🎯 Target Job Matcher
+                    </h3>
+                    <button onClick={() => setTargetJobModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col gap-3 min-h-0">
+                    <p className="text-[11px] text-slate-500 leading-relaxed text-left">
+                      Paste the raw text of the job description you are applying for. The ATS score and AI Chat will automatically adapt to aggressively optimize your resume for these specific requirements.
+                    </p>
+                    <textarea
+                      value={targetJob}
+                      onChange={(e) => setTargetJob(e.target.value)}
+                      placeholder="Paste job description here..."
+                      className="flex-1 min-h-[200px] w-full resize-none p-3 rounded-lg border border-slate-200 text-xs text-slate-800 bg-slate-50/50 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all text-left"
+                    />
+                  </div>
+                  <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
+                    <button
+                      onClick={() => {
+                        setTargetJob('');
+                        setTargetJobModalOpen(false);
+                      }}
+                      className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={() => setTargetJobModalOpen(false)}
+                      className="px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm"
+                    >
+                      {targetJob.trim() ? 'Save Target Job' : 'Close'}
+                    </button>
+                  </div>
+                </div>
               </>
             )}
-          </button>
+          </div>
 
-          {atsPopoverOpen && !atsLoading && (atsScore !== null || atsError) && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setAtsPopoverOpen(false)} />
-              <div className="absolute bottom-full right-0 mb-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-20 p-3.5 text-xs">
-                {atsError ? (
-                  <p className="text-red-600 font-medium">{atsError}</p>
-                ) : (
-                  <>
-                    <div className="font-bold text-slate-900 mb-2">ATS Score: {atsScore}</div>
-                    <ul className="space-y-1.5 text-slate-600">
-                      {atsBreakdown.map((b, i) => (
-                        <li key={i} className="flex gap-1.5">
-                          <span className="shrink-0">•</span>
-                          <span>{b}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </div>
-            </>
-          )}
+          {/* Floating ATS Score Badge */}
+          <div className="relative">
+            <button
+              onClick={handleCheckAts}
+              disabled={atsLoading}
+              className="bg-white border-2 border-emerald-500 rounded-full w-14 h-14 shadow-2xl flex flex-col items-center justify-center text-center font-bold hover:scale-105 transition-transform cursor-pointer disabled:opacity-70 disabled:hover:scale-100"
+            >
+              {atsLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+              ) : (
+                <>
+                  <span className="text-sm font-black text-slate-900 leading-none">{atsScore ?? '–'}</span>
+                  <span className="text-[8px] font-extrabold text-emerald-600 uppercase tracking-tighter">ATS</span>
+                </>
+              )}
+            </button>
+
+            {atsPopoverOpen && !atsLoading && (atsScore !== null || atsError) && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setAtsPopoverOpen(false)} />
+                <div className="absolute bottom-full right-0 mb-3 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-20 p-3.5 text-xs text-left">
+                  {atsError ? (
+                    <p className="text-red-600 font-medium">{atsError}</p>
+                  ) : (
+                    <>
+                      <div className="font-bold text-slate-900 mb-2">ATS Score: {atsScore}</div>
+                      <ul className="space-y-1.5 text-slate-600">
+                        {atsBreakdown.map((b, i) => (
+                          <li key={i} className="flex gap-1.5">
+                            <span className="shrink-0">•</span>
+                            <span>{b}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
       </div>

@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { messages?: ChatMessage[]; cv?: CvData };
+    const body = (await request.json()) as { messages?: ChatMessage[]; cv?: CvData; targetJob?: string };
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const cv = (body.cv ?? {}) as CvData;
     // Resume type is owned by the app's Professional/Student toggle, never
@@ -65,16 +65,27 @@ export async function POST(request: Request) {
     // "cvType" output allowed.
     const cvType: 'professional' | 'student' = cv.cvType === 'student' ? 'student' : 'professional';
 
+    const systemMessages: { role: 'system', content: string }[] = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: typeContextLine(cvType) },
+      { role: 'system', content: `The student's CURRENT resume as JSON:\n${JSON.stringify(cv)}` }
+    ];
+
+    if (body.targetJob && body.targetJob.trim().length > 0) {
+      systemMessages.push({
+        role: 'system',
+        content: `TARGET JOB DESCRIPTION:\n"""\n${body.targetJob}\n"""\n\nCRITICAL INSTRUCTION: The user is actively applying for the job above. Whenever you generate or update bullet points or skills, you MUST aggressively weave in missing hard skills, soft skills, tools, and keywords from the job description to optimize the resume for ATS (Applicant Tracking Systems). Do not fabricate experience, but adapt phrasing to match the job's required terminology exactly.`
+      });
+    }
+
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.4,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'system', content: typeContextLine(cvType) },
-        { role: 'system', content: `The student's CURRENT resume as JSON:\n${JSON.stringify(cv)}` },
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
+        ...systemMessages,
+        ...messages.map((m) => ({ role: m.role, content: m.content }) as { role: 'user' | 'assistant', content: string }),
       ],
     });
 

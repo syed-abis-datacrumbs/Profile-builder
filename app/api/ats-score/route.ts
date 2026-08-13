@@ -24,8 +24,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { cv?: CvData };
+    const body = (await request.json()) as { cv?: CvData; jobDescription?: string };
     if (!body.cv) return Response.json({ error: 'Missing resume data' }, { status: 400 });
+
+    let finalPrompt = SYSTEM_PROMPT;
+    if (body.jobDescription && body.jobDescription.trim().length > 0) {
+      finalPrompt += `\n\nCRITICAL TARGET JOB REQUIREMENT:\nThe user is applying for the following specific job description:\n"""\n${body.jobDescription}\n"""\nYou MUST aggressively score the resume against THIS specific job description. If the resume is missing core hard skills, soft skills, or tools mentioned in the job description, lower the score significantly. In the "breakdown", explicitly list the most critical missing keywords/skills that the user needs to inject to pass the ATS.`;
+    }
 
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
@@ -33,7 +38,7 @@ export async function POST(request: Request) {
       temperature: 0.3,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: finalPrompt },
         { role: 'user', content: `Resume JSON:\n${JSON.stringify(body.cv)}` },
       ],
     });
