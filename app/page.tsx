@@ -29,6 +29,8 @@ import { AskExpertModal } from '../components/AskExpertModal';
 import { GithubChatStudio } from '../components/GithubChatStudio';
 import { LinkedinChatStudio } from '../components/LinkedinChatStudio';
 import { LinkedinRichProfile, buildInitialRichProfile } from '../lib/linkedinRichProfile';
+import BlockScreen from '../components/BlockScreen';
+import { BUILDER_ACCESS_EMAILS } from '../lib/accessConfig';
 
 import { ActiveTab, ResumeData, GithubProfileData, LinkedinProfileData, SavedProfile } from '../types';
 import { defaultResumeData, defaultGithubData, defaultLinkedinData } from '../lib/defaultData';
@@ -91,9 +93,10 @@ export default function Home() {
   // User Auth State — real Clerk session, same account as the LMS
   // (lms.datacrumbs.org shares this Clerk app), so this is one source of
   // truth rather than locally-tracked login state.
-  const { isSignedIn, user } = useUser();
-  const isLoggedIn = isSignedIn ?? false;
-  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const { user } = useUser();
+  const userEmail = user?.primaryEmailAddress?.emailAddress || undefined;
+  const isLoggedIn = !!user;
+  const isAuthorized = isLoggedIn && BUILDER_ACCESS_EMAILS.has(userEmail || '');
   const [assistantPrompt, setAssistantPrompt] = useState('');
 
   // Calculate ATS Score
@@ -195,7 +198,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.995 }}
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className={`flex-1 flex flex-col w-full mx-auto ${
+              className={`relative flex-1 flex flex-col w-full mx-auto ${
                 (activeTab === 'resume' && resumeMode === 'studio') ||
                 (activeTab === 'linkedin' && linkedinMode === 'studio') ||
                 (activeTab === 'github' && githubMode === 'studio')
@@ -203,6 +206,7 @@ export default function Home() {
                   : 'p-4 sm:p-6 gap-4 max-w-7xl'
               }`}
             >
+              {activeTab !== 'resume' && !isAuthorized && <BlockScreen />}
               {/* Active Editor Component */}
               <div className="flex-1 h-full">
                 <AnimatePresence mode="wait">

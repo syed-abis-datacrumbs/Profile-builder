@@ -66,3 +66,46 @@ model PaymentProof {
   @@index([status])
   @@map("profile_builder_payment_proofs")
 }
+
+// Coupon codes that bypass the payment requirement — created in the LMS Admin
+// Panel and redeemed here. A code can be used by up to `maxUses` distinct
+// users (admin-controlled); each user may redeem a given code only once
+// (enforced by the unique pair on ProfileBuilderCouponRedemption).
+model ProfileBuilderCoupon {
+  id        String   @id @default(cuid())
+  /// What the student types. Stored UPPERCASE, trimmed.
+  code      String   @unique
+  /// Admin note, e.g. "August batch free download"
+  label     String?
+  /// Max number of users who can redeem this code.
+  maxUses   Int      @default(1)
+  /// How many distinct users have redeemed so far (incremented atomically).
+  usedCount Int      @default(0)
+  /// Optional expiry as ISO date string "YYYY-MM-DD" (Pakistan time). Null = never expires.
+  expiresAt String?
+  /// Admin can disable without deleting. Disabled codes are always rejected.
+  isActive  Boolean  @default(true)
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  redemptions ProfileBuilderCouponRedemption[]
+
+  @@map("profile_builder_coupons")
+}
+
+/// One row per user who has redeemed a given coupon.
+/// The UNIQUE pair (couponId, userId) is the database-level guard that
+/// prevents the same user from redeeming the same code twice.
+model ProfileBuilderCouponRedemption {
+  id         String   @id @default(cuid())
+  couponId   String
+  userId     String
+  redeemedAt DateTime @default(now())
+
+  coupon ProfileBuilderCoupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, userId])
+  @@index([userId])
+  @@map("profile_builder_coupon_redemptions")
+}
+

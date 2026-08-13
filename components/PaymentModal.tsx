@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, ShieldCheck, Clock, Landmark, Smartphone } from 'lucide-react';
+import { X, ShieldCheck, Clock, Landmark, Smartphone, Tag } from 'lucide-react';
 
 interface PaymentInstructions {
   bankName: string;
@@ -118,6 +118,10 @@ export function PaymentModal({ reason, onApproved, onClose }: PaymentModalProps)
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [showCoupon, setShowCoupon] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponSubmitting, setCouponSubmitting] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/payment/instructions')
@@ -172,6 +176,35 @@ export function PaymentModal({ reason, onApproved, onClose }: PaymentModalProps)
       clearInterval(progressTimer);
       setSubmitting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  async function handleCouponSubmit() {
+    if (!couponCode.trim() || couponSubmitting) return;
+    setCouponError(null);
+    setCouponSubmitting(true);
+    try {
+      const res = await fetch('/api/payment/coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode.trim() }),
+      });
+      const data: { status: 'APPROVED' | 'REJECTED'; message: string } = await res.json();
+      if (data.status === 'APPROVED') {
+        setApproved(true);
+        setCouponError(null);
+        setMessages((prev) => [
+          ...prev,
+          { from: 'bot', kind: 'text', text: data.message, tone: 'success' },
+        ]);
+        setTimeout(() => onApproved(), 900);
+      } else {
+        setCouponError(data.message);
+      }
+    } catch {
+      setCouponError('Something went wrong. Please try again.');
+    } finally {
+      setCouponSubmitting(false);
     }
   }
 
@@ -262,6 +295,46 @@ export function PaymentModal({ reason, onApproved, onClose }: PaymentModalProps)
           >
             {approved ? 'Payment verified' : submitting ? 'Verifying...' : '+ Attach payment screenshot'}
           </button>
+
+          {/* Coupon Section */}
+          {!approved && (
+            <div>
+              {!showCoupon ? (
+                <button
+                  onClick={() => setShowCoupon(true)}
+                  className="w-full flex items-center justify-center gap-1.5 text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold transition-colors py-0.5"
+                >
+                  <Tag className="w-3 h-3" />
+                  Have a coupon code?
+                </button>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter coupon code..."
+                      value={couponCode}
+                      onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleCouponSubmit(); }}
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-xs font-mono uppercase focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 placeholder:normal-case placeholder:font-sans tracking-widest"
+                      disabled={couponSubmitting}
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleCouponSubmit}
+                      disabled={couponSubmitting || !couponCode.trim()}
+                      className="px-3 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      {couponSubmitting ? '...' : 'Apply'}
+                    </button>
+                  </div>
+                  {couponError && (
+                    <p className="text-[11px] text-red-600 font-medium px-1">{couponError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400">
             <ShieldCheck className="w-3 h-3" />
             <span>Verified automatically and securely</span>
