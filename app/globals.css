@@ -50,30 +50,6 @@ body {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-/* Print Rules for Resume Export */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #resume-preview-area, #resume-preview-area * {
-    visibility: visible;
-  }
-  #resume-preview-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    background: white !important;
-    color: black !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-  .no-print {
-    display: none !important;
-  }
-}
 
 /* Global Interactive Cursor Pointer Rules */
 button,

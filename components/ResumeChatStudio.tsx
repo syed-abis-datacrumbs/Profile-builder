@@ -42,81 +42,6 @@ import { CvPreview } from './CvPreview';
 // gives borderline sections more room to actually fit before being pushed.
 const PAGE_MARGIN_PX = 32;
 
-/**
- * Block-aligned A4 page breaks (CSS px, relative to `el`) — a break never falls
- * inside an entry ([data-cv-block]); a block that would straddle the boundary
- * moves whole to the next page. Mirrors the LMS pagination so text is never cut.
- */
-function computePageBreaks(el: HTMLElement): number[] {
-  const rootTop = el.getBoundingClientRect().top;
-  const blocks = Array.from(el.querySelectorAll<HTMLElement>('[data-cv-block]'))
-    .map((b) => {
-      const r = b.getBoundingClientRect();
-      return { top: r.top - rootTop, bottom: r.bottom - rootTop };
-    })
-    .sort((a, b) => a.top - b.top);
-  const contentHeight = el.offsetHeight;
-  const pageH = (el.offsetWidth * 297) / 210; // A4 page height at this width
-  const breaks: number[] = [];
-  let start = 0;
-  let isFirst = true;
-  let guard = 0;
-  while (guard++ < 200) {
-    const topMargin = isFirst ? 0 : PAGE_MARGIN_PX;
-    // Everything left fits within this page's remaining height — no more
-    // breaks needed, so no bottom margin needs to be reserved for one.
-    if (contentHeight - start <= pageH - topMargin) break;
-
-    const limit = start + (pageH - topMargin - PAGE_MARGIN_PX);
-    let breakAt = 0;
-    for (const b of blocks) {
-      if (b.top >= start - 1 && b.bottom <= limit && b.bottom > breakAt) breakAt = b.bottom;
-    }
-    if (breakAt <= start) {
-      const straddler = blocks.find((b) => b.top > start + 1 && b.top < limit && b.bottom > limit);
-      breakAt = straddler ? straddler.top : limit;
-    }
-    breaks.push(breakAt);
-    start = breakAt;
-    isFirst = false;
-  }
-  return breaks;
-}
-
-/**
- * Finds the nearest fully-white (blank) horizontal row of the canvas to
- * `targetY`, within +/- `range` px. html-to-image can position individual
- * text lines a few px off from the live DOM (baseline/line-height
- * differences), so cutting at a DOM-derived Y can clip a line even when the
- * block math above is right. Snapping the cut to real whitespace guarantees
- * text is never sliced. Ported from the LMS's cvExport.ts (same bug, same fix).
- */
-function nearestBlankRow(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  heightLimit: number,
-  targetY: number,
-  range: number
-): number {
-  const rowIsBlank = (y: number): boolean => {
-    if (y < 0 || y >= heightLimit) return false;
-    const data = ctx.getImageData(0, y, width, 1).data;
-    for (let i = 0; i < data.length; i += 4) {
-      // Near-white on all channels (tolerates anti-aliasing).
-      if (data[i] < 248 || data[i + 1] < 248 || data[i + 2] < 248) return false;
-    }
-    return true;
-  };
-
-  const t = Math.round(targetY);
-  if (rowIsBlank(t)) return t;
-  for (let d = 1; d <= range; d++) {
-    if (rowIsBlank(t + d)) return t + d; // prefer snapping DOWN (keep the block whole on this page)
-    if (rowIsBlank(t - d)) return t - d;
-  }
-  return t; // no blank found — fall back to the target
-}
-
 interface Msg {
   role: 'user' | 'assistant';
   content: string;
@@ -393,71 +318,87 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const download = async (format: 'pdf' | 'png') => {
     const el = exportRef.current;
     if (!el || downloading) return;
-    setDlMenu(false);
-    setDownloading(format);
     try {
-      const name = (cv.personalInfo.fullName || 'resume').replace(/<[^>]+>/g, '').trim() || 'resume';
-      const { toPng, toCanvas } = await import('html-to-image');
-      const opts = {
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
-        cacheBust: true,
-        filter: (n: HTMLElement) => n?.dataset?.pageBreak !== 'true',
-      };
-      await toPng(el, opts).catch(() => undefined);
+      setDownloading(format);
+      const name = (cv.personalInfo.fullName || 'Resume').replace(/[^a-z0-9]/gi, '_');
+      
       if (format === 'png') {
+        const { toPng } = await import('html-to-image');
+        const opts = {
+          pixelRatio: 2,
+          backgroundColor: '#ffffff',
+          cacheBust: true,
+          filter: (n: HTMLElement) => n?.dataset?.pageBreak !== 'true',
+        };
         const dataUrl = await toPng(el, opts);
         const a = document.createElement('a');
         a.href = dataUrl;
         a.download = `${name}.png`;
         a.click();
       } else {
-        const cutsCss = computePageBreaks(el);
-        const canvas = await toCanvas(el, opts);
-        const scaleY = canvas.height / el.offsetHeight;
-        const canvasCtx = canvas.getContext('2d');
-        const snapRange = Math.round(40 * scaleY); // ~40 CSS px search window
-        // Snap each break to the nearest real blank row in the RENDERED canvas
-        // — html-to-image can shift a text line a few px from where the live
-        // DOM measured it, so cutting at the raw DOM coordinate can still
-        // slice through a line even though the block-boundary math is right.
-        const cuts = [
-          ...cutsCss.map((y) => {
-            const target = y * scaleY;
-            return canvasCtx
-              ? nearestBlankRow(canvasCtx, canvas.width, canvas.height, target, snapRange)
-              : Math.round(target);
-          }),
-          canvas.height,
-        ];
-
-        const { jsPDF } = await import('jspdf');
-        const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
-        const pdfW = pdf.internal.pageSize.getWidth();
-        const ptPerCssPx = pdfW / el.offsetWidth;
-        // Same PAGE_MARGIN_PX reserved by computePageBreaks — placing each
-        // continuation page's image this far down leaves real blank space at
-        // the top instead of starting flush against the page edge.
-        const marginPt = PAGE_MARGIN_PX * ptPerCssPx;
-
-        let start = 0;
-        cuts.forEach((end, idx) => {
-          const sliceH = Math.round(end - start);
-          if (sliceH <= 0) {
-            start = end;
-            return;
-          }
-          const slice = document.createElement('canvas');
-          slice.width = canvas.width;
-          slice.height = sliceH;
-          slice.getContext('2d')?.drawImage(canvas, 0, start, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-          const img = slice.toDataURL('image/png');
-          const imgH = (sliceH * pdfW) / canvas.width;
-          if (idx > 0) pdf.addPage();
-          pdf.addImage(img, 'PNG', 0, idx > 0 ? marginPt : 0, pdfW, imgH);
-          start = end;
-        });
-        pdf.save(`${name}.pdf`);
+        // Option 2: Browser Native Print via isolated iframe
+        // This generates a perfect 100% vector-based PDF with selectable text.
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'absolute';
+        iframe.style.left = '-9999px';
+        iframe.style.top = '-9999px';
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+        
+        // Grab all parent stylesheets (Tailwind, Google Fonts, etc.)
+        const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+          .map(node => node.outerHTML)
+          .join('');
+          
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+          doc.open();
+          doc.write(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>${name}</title>
+                ${styles}
+                <style>
+                  /* Print-specific resets for a perfect A4 vector PDF */
+                  @media print {
+                     body, html { margin: 0; padding: 0; background: white; }
+                     /* Use @page margins so every continuation page gets top/bottom spacing natively */
+                     @page { margin: 32px 0; size: A4; }
+                     /* Remove the hardcoded top/bottom padding from the root CvPreview div so it doesn't double-up with @page on page 1 */
+                     #cv-print-wrapper > div { padding-top: 0 !important; padding-bottom: 0 !important; }
+                     /* Hide the page-break preview dashed lines */
+                     [data-page-break="true"] { display: none !important; }
+                     /* Prevent resume blocks from splitting across pages */
+                     [data-cv-block] { break-inside: avoid; page-break-inside: avoid; }
+                  }
+                </style>
+              </head>
+              <body class="bg-white">
+                <div id="cv-print-wrapper" style="width: 800px; margin: 0 auto;">
+                  ${el.innerHTML}
+                </div>
+              </body>
+            </html>
+          `);
+          doc.close();
+          
+          // Give the iframe a moment to apply fonts and styles before triggering print
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          
+          // Cleanup
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 1000);
+        }
       }
     } catch (err) {
       console.error('Resume download failed', err);
@@ -505,16 +446,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [pageLines, setPageLines] = useState<number[]>([]);
-  useEffect(() => {
-    const el = exportRef.current;
-    if (!el) return;
-    const measure = () => setPageLines(computePageBreaks(el));
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+
 
   return (
     <div className="flex flex-col lg:flex-row h-full w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none">
@@ -858,18 +790,6 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           <div className="w-full max-w-[820px] my-2 rounded-sm" style={{ borderTop: `4px solid ${accent}` }}>
             <div ref={exportRef} className="relative w-full bg-white shadow-xl rounded-b-sm">
               <CvPreview key={revision} data={cv} onChange={recordChange} />
-              {pageLines.map((y, i) => (
-                <div
-                  key={i}
-                  data-page-break="true"
-                  className="pointer-events-none absolute left-0 right-0 border-t border-dashed border-red-300"
-                  style={{ top: y }}
-                >
-                  <span className="absolute right-1 -top-4 text-[9px] font-sans text-red-400 bg-white px-1">
-                    Page {i + 2}
-                  </span>
-                </div>
-              ))}
             </div>
           </div>
         </div>
