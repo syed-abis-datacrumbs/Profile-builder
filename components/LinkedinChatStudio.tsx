@@ -345,7 +345,7 @@ export const LinkedinChatStudio: React.FC<{
 
         {/* Bottom Input Area */}
         <div className="shrink-0 p-3.5 bg-white border-t border-slate-200">
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2 focus-within:border-slate-400 focus-within:bg-white transition-all">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl py-2 px-3 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all">
             <textarea
               rows={2}
               value={input}
@@ -357,33 +357,15 @@ export const LinkedinChatStudio: React.FC<{
                 }
               }}
               placeholder="Ask anything..."
-              className="w-full bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal"
+              className="flex-1 min-w-0 bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal"
             />
-
-            {/* Bottom Bar inside Input Box */}
-            <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-              <div className="flex items-center gap-1.5">
-                <button type="button" className="w-6 h-6 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-700 flex items-center justify-center font-bold text-xs">
-                  +
-                </button>
-                <span className="px-2 py-0.5 rounded-full bg-slate-200/70 text-slate-700 text-[10px] font-semibold flex items-center gap-1 border border-slate-300/50">
-                  <Check className="w-2.5 h-2.5 text-slate-500" />
-                  <span>Auto</span>
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-600 border border-slate-200">
-                  Flash
-                </span>
-                <button
-                  onClick={() => send()}
-                  disabled={loading || !input.trim()}
-                  className="w-7 h-7 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-xs"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+            <button
+              onClick={() => send()}
+              disabled={loading || !input.trim()}
+              className="w-7 h-7 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-xs"
+            >
+              <Send className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>
