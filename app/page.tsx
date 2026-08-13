@@ -249,8 +249,8 @@ export default function Home() {
                             userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
                             onSelectField={loadResumeField}
                             onSelectTemplate={(sample) => {
-                              setAttachedResumeTemplate(sample);
-                              mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                              setResumePreviewSample(sample);
+                              setResumeMode('preview');
                             }}
                             attachedTemplate={attachedResumeTemplate}
                             onClearAttachedTemplate={() => setAttachedResumeTemplate(null)}
