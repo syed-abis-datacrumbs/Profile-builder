@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     const browser = await puppeteer.launch({
       executablePath,
       args: chromiumArgs,
-      headless: true,
+      headless: isLambda ? 'shell' : true,
     });
 
     const page = await browser.newPage();

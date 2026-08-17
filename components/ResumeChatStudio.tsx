@@ -440,8 +440,9 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 10_000);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Resume download failed', err);
+      alert(`Download failed: ${err.message || 'Please try again.'}`);
     } finally {
       removeWatermarks(watermarkNodes);
       setDownloading(null);
