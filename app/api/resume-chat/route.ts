@@ -31,7 +31,7 @@ Rules:
 - Write concise, quantified, professional resume content. For emphasis inside bullets/descriptions use inline HTML tags — <strong>…</strong> for bold, <em>…</em> for italic, <u>…</u> for underline. Do NOT use markdown "**".
 - "workExperience" bullets: one bullet per line, newline-separated (no leading "-" or "•").
 - "projects"/"workshops" entries are ONE combined "content" field each (title, technologies if any, and description all together as shown in the schema) — not separate fields. Bold the title with <strong>.
-- Return the WHOLE cv every time; preserve every field the user already gave real content for — only fill in what's genuinely still missing.
+- Return the WHOLE cv every time. Preserve existing fields unless the user specifically asks to edit, remove, or add to them. If the user asks to add new projects, experiences, or education, YOU MUST append new entries to the corresponding array with realistic content!
 - If the user asks to remove/delete an entry (a certification, education entry, project, work experience, workshop, etc.), remove that WHOLE object from its array. Never leave it in place with its fields blanked out — an empty entry left behind still shows up in the resume as an empty placeholder slot, which looks broken.
 - Output valid JSON only.`;
 
