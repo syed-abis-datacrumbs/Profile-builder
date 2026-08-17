@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   FileText, 
   Plus, 
   Trash2, 
   Sparkles, 
   Download, 
-  Printer, 
   Palette, 
   Briefcase, 
   GraduationCap, 
@@ -22,6 +21,7 @@ import {
   Mail,
   Phone,
   MapPin,
+  Loader2,
 } from 'lucide-react';
 import { LinkedinIcon, GithubIcon } from './icons';
 import { ResumeData, ExperienceItem, EducationItem, ProjectItem } from '../types';
@@ -41,6 +41,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
   // LMS-style layout switch: Student leads with Education, Professional with Work Experience.
   const isStudent = data.resumeType === 'student';
   const [copiedPDF, setCopiedPDF] = useState(false);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   // Update sub-objects cleanly
   const updatePersonalInfo = (field: string, value: string) => {
@@ -99,10 +101,36 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
     });
   };
 
-  const handlePrintPDF = () => {
+  const handlePrintPDF = async () => {
+    const el = previewRef.current;
+    if (!el || downloadingPDF) return;
+    setDownloadingPDF(true);
     setCopiedPDF(true);
-    setTimeout(() => setCopiedPDF(false), 2500);
-    window.print();
+    try {
+      const name = (data.personalInfo?.fullName || 'Resume').replace(/[^a-z0-9]/gi, '_');
+      const inlineStyles = Array.from(document.querySelectorAll('style'))
+        .map((s) => s.textContent ?? '')
+        .join('\n');
+      const html = `<div style="width:800px;margin:0 auto;">${el.innerHTML}</div>`;
+      const res = await fetch('/api/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html, css: inlineStyles, name }),
+      });
+      if (!res.ok) throw new Error('PDF generation failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${name}.pdf`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (err) {
+      console.error('PDF download failed', err);
+    } finally {
+      setDownloadingPDF(false);
+      setTimeout(() => setCopiedPDF(false), 2500);
+    }
   };
 
   return (
@@ -542,16 +570,18 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
           <button
             onClick={handlePrintPDF}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/30"
+            disabled={downloadingPDF}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {copiedPDF ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Download className="w-3.5 h-3.5" />}
-            <span>{copiedPDF ? 'Opening Print / PDF...' : 'Download PDF / Print'}</span>
+            {downloadingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : copiedPDF ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Download className="w-3.5 h-3.5" />}
+            <span>{downloadingPDF ? 'Generating PDF...' : copiedPDF ? 'Downloading...' : 'Download PDF'}</span>
           </button>
         </div>
 
         {/* The Live Document Paper Sheet */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-950 rounded-2xl border border-slate-800 flex justify-center max-h-[calc(100vh-210px)]">
           <div
+            ref={previewRef}
             id="resume-preview-area"
             className="w-full max-w-[800px] min-h-[1050px] bg-white text-slate-900 p-8 sm:p-12 shadow-2xl rounded-sm text-sm font-sans flex flex-col justify-between"
             style={{ fontFamily: 'Georgia, serif' }}

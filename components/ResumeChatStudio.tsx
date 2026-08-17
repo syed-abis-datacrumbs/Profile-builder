@@ -401,69 +401,31 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         a.download = `${name}.png`;
         a.click();
       } else {
-        // Option 2: Browser Native Print via isolated iframe
-        // This generates a perfect 100% vector-based PDF with selectable text.
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'absolute';
-        iframe.style.left = '-9999px';
-        iframe.style.top = '-9999px';
-        iframe.style.width = '100%';
-        iframe.style.height = '100%';
-        iframe.style.border = '0';
-        iframe.style.visibility = 'hidden';
-        document.body.appendChild(iframe);
-        
-        // Grab all parent stylesheets (Tailwind, Google Fonts, etc.)
-        const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-          .map(node => node.outerHTML)
-          .join('');
-          
-        const doc = iframe.contentWindow?.document;
-        if (doc) {
-          doc.open();
-          doc.write(`
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>${name}</title>
-                ${styles}
-                <style>
-                  /* Print-specific resets for a perfect A4 vector PDF */
-                  @media print {
-                     body, html { margin: 0; padding: 0; background: white; }
-                     /* Use @page margins so every continuation page gets top/bottom spacing natively */
-                     @page { margin: 32px 0; size: A4; }
-                     /* Remove the hardcoded top/bottom padding from the root CvPreview div so it doesn't double-up with @page on page 1 */
-                     #cv-print-wrapper > div { padding-top: 0 !important; padding-bottom: 0 !important; }
-                     /* Hide the page-break preview dashed lines */
-                     [data-page-break="true"] { display: none !important; }
-                     /* Prevent resume blocks from splitting across pages */
-                     [data-cv-block] { break-inside: avoid; page-break-inside: avoid; }
-                  }
-                </style>
-              </head>
-              <body class="bg-white">
-                <div id="cv-print-wrapper" style="width: 800px; margin: 0 auto;">
-                  ${el.innerHTML}
-                </div>
-              </body>
-            </html>
-          `);
-          doc.close();
-          
-          // Give the iframe a moment to apply fonts and styles before triggering print
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          
-          // Cleanup
-          setTimeout(() => {
-            if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-            }
-          }, 1000);
+        // Server-side PDF via Puppeteer — no print popup, fully selectable text
+        const inlineStyles = Array.from(document.querySelectorAll('style'))
+          .map((s) => s.textContent ?? '')
+          .join('\n');
+
+        const html = `<div style="width:800px;margin:0 auto;">${el.innerHTML}</div>`;
+
+        const res = await fetch('/api/pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ html, css: inlineStyles, name }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.detail ?? 'PDF generation failed');
         }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${name}.pdf`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
       }
     } catch (err) {
       console.error('Resume download failed', err);
