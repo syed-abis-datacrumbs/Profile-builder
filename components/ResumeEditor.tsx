@@ -541,7 +541,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
         {/* Preview Control Bar */}
         <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-slate-950/80 border border-slate-800 no-print">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-            <Printer className="w-4 h-4 text-indigo-400" />
+            <FileText className="w-4 h-4 text-indigo-400" />
             <span>Live Printable Document</span>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               A4 Format Standard

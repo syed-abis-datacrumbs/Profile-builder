@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     // Emulate screen so Tailwind utility classes apply (they're screen-targeted)
     await page.emulateMediaType('screen');
     await page.setViewport({ width: 850, height: 1200, deviceScaleFactor: 1 });
-    await page.setContent(fullHtml, { waitUntil: 'networkidle0', timeout: 30_000 });
+    await page.setContent(fullHtml, { waitUntil: 'load', timeout: 30_000 });
 
     // Give Tailwind CDN a moment to finish generating all CSS from the DOM
     await new Promise((r) => setTimeout(r, 1500));
@@ -93,13 +93,16 @@ export async function POST(req: NextRequest) {
 
     await browser.close();
 
+    // Convert Uint8Array → Node Buffer (required by NextResponse BodyInit)
+    const buffer = Buffer.from(pdfBuffer);
+
     // Stream the PDF directly as a download
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(buffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${name.replace(/[^a-z0-9]/gi, '_')}.pdf"`,
-        'Content-Length': pdfBuffer.length.toString(),
+        'Content-Length': buffer.length.toString(),
       },
     });
   } catch (err) {
