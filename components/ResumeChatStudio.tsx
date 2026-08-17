@@ -597,7 +597,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       <div className="flex-1 flex flex-col bg-slate-100/90 h-full overflow-hidden relative">
 
         {/* MacOS Window Single Unified Toolbar Header */}
-        <div className="shrink-0 bg-white border-b border-slate-200 px-2 py-2 flex items-center justify-between gap-1.5 text-xs shadow-2xs overflow-hidden">
+        <div className="shrink-0 bg-white border-b border-slate-200 px-2 py-2 flex items-center justify-between gap-1.5 text-xs shadow-2xs overflow-visible z-30">
 
           {/* Left Controls Group */}
           <div className="flex items-center gap-1">
@@ -609,7 +609,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             </div>
 
             {/* Resume Save/Load Dropdown */}
-            <div>
+            <div className="relative">
               <button
                 onClick={toggleResumeMenu}
                 className="h-7 px-2 rounded-lg bg-slate-100 text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1 leading-none cursor-pointer"
@@ -622,7 +622,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               {resumeMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setResumeMenuOpen(false)} />
-                  <div className="fixed top-12 left-4 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden text-xs">
+                  <div className="absolute top-10 left-0 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden text-xs">
                     <div className="p-3 border-b border-slate-100 space-y-1.5">
                       <div className="flex items-center gap-1.5">
                         <input
