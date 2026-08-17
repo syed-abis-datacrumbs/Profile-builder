@@ -14,15 +14,6 @@ import {
   FileText,
   Undo,
   Redo,
-  Link,
-  List,
-  ListOrdered,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Strikethrough,
-  SquarePen,
-  SlidersHorizontal,
   Trash2,
   X
 } from 'lucide-react';
@@ -353,8 +344,12 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     const injected: HTMLElement[] = [];
     const contentWidth = el.scrollWidth || el.offsetWidth;
     const contentHeight = el.scrollHeight || el.offsetHeight;
-    const step = Math.round(contentWidth * 1.1);
-    for (let y = Math.round(step / 2); y < contentHeight + step; y += step) {
+    
+    // A4 page aspect ratio is roughly 1 : 1.4142
+    const pageHeight = Math.round(contentWidth * 1.4142);
+    
+    // Place one watermark perfectly centered on every page
+    for (let y = pageHeight / 2; y < contentHeight + pageHeight; y += pageHeight) {
       const div = document.createElement('div');
       div.setAttribute('data-watermark', 'true');
       Object.assign(div.style, {
@@ -363,7 +358,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         top: `${y}px`,
         width: '100%',
         textAlign: 'center',
-        transform: 'rotate(-30deg)',
+        transform: 'translateY(-50%) rotate(-30deg)',
         fontSize: `${Math.round(contentWidth * 0.1)}px`,
         fontWeight: '700',
         fontFamily: 'Arial, sans-serif',
@@ -628,10 +623,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       <div className="flex-1 flex flex-col bg-slate-100/90 h-full overflow-hidden relative">
         
         {/* MacOS Window Single Unified Toolbar Header */}
-        <div className="shrink-0 bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between gap-3 text-xs shadow-2xs overflow-x-auto">
+        <div className="shrink-0 bg-white border-b border-slate-200 px-2 py-2 flex items-center justify-between gap-1.5 text-xs shadow-2xs overflow-hidden">
           
           {/* Left Controls Group */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1">
             {/* MacOS Traffic Light Dots */}
             <div className="flex items-center gap-1.5 pr-1">
               <div className="w-3 h-3 rounded-full bg-red-500" />
@@ -643,10 +638,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             <div>
               <button
                 onClick={toggleResumeMenu}
-                className="h-7 px-3 rounded-lg bg-slate-100 text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1.5 leading-none cursor-pointer"
+                className="h-7 px-2 rounded-lg bg-slate-100 text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1 leading-none cursor-pointer"
               >
                 <FileText className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                <span className="leading-none">Saved Resumes</span>
+                <span className="leading-none">Resumes</span>
                 <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
               </button>
 
@@ -714,7 +709,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               )}
             </div>
 
-            <div className="h-4 w-px bg-slate-200 mx-0.5" />
+            <div className="h-4 w-px bg-slate-200" />
 
             {/* Undo / Redo */}
             <div className="flex items-center gap-0.5">
@@ -738,23 +733,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
             <div className="h-4 w-px bg-slate-200 mx-0.5" />
 
-            {/* Font Family Dropdown */}
-            <select
-              value={fontFamily}
-              onChange={(e) => {
-                setFontFamily(e.target.value);
-                document.execCommand('fontName', false, e.target.value);
-              }}
-              className="h-7 px-2.5 rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-800 focus:outline-none flex items-center justify-center leading-none cursor-pointer"
-            >
-              <option value="Times New Roman">Times New Roman</option>
-              <option value="Inter">Inter</option>
-              <option value="Roboto">Roboto</option>
-              <option value="Garamond">Garamond</option>
-              <option value="Calibri">Calibri</option>
-            </select>
-
-            <div className="h-4 w-px bg-slate-200 mx-0.5" />
+            {/* Font Family Dropdown removed as requested */}
 
             {/* Formatting Icons */}
             <div className="flex items-center gap-0.5">
@@ -762,7 +741,6 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 { cmd: 'bold', Icon: Bold, label: 'Bold' },
                 { cmd: 'italic', Icon: Italic, label: 'Italic' },
                 { cmd: 'underline', Icon: Underline, label: 'Underline' },
-                { cmd: 'strikeThrough', Icon: Strikethrough, label: 'Strikethrough' },
               ] as const).map(({ cmd, Icon, label }) => (
                 <button
                   key={cmd}
@@ -783,35 +761,11 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               ))}
             </div>
 
-            <div className="h-4 w-px bg-slate-200 mx-0.5" />
-
-            {/* Lists */}
-            <div className="flex items-center gap-0.5">
-              <button
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  setBulletStyleAtFocus('bullet');
-                }}
-                className="w-7 h-7 rounded-lg text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
-                title="Bullet List"
-              >
-                <List className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  setBulletStyleAtFocus('number');
-                }}
-                className="w-7 h-7 rounded-lg text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
-                title="Numbered List"
-              >
-                <ListOrdered className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            {/* Lists removed as requested */}
           </div>
 
           {/* Right Controls Group */}
-          <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <div className="flex items-center gap-1 shrink-0 ml-auto">
             {/* Professional / Student Pill */}
             <div className="h-7 flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5 border border-slate-200">
               {(['professional', 'student'] as const).map((t) => (
@@ -837,10 +791,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 type="button"
                 onClick={() => setDlMenu((o) => !o)}
                 disabled={!!downloading}
-                className="h-7 px-3.5 rounded-lg bg-blue-600 text-white text-xs font-bold shadow-xs hover:bg-blue-700 transition-all flex items-center justify-center gap-1.5 leading-none text-center cursor-pointer disabled:opacity-50"
+                className="h-7 px-2.5 rounded-lg bg-blue-600 text-white text-xs font-bold shadow-xs hover:bg-blue-700 transition-all flex items-center justify-center gap-1 leading-none text-center cursor-pointer disabled:opacity-50"
               >
                 {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                <span className="leading-none">
+                <span className="leading-none hidden sm:inline">
                   {downloading ? (downloading === 'pdf' ? 'PDF…' : 'PNG…') : 'Download'}
                 </span>
               </button>
@@ -893,7 +847,16 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               exportRef is captured pixel-for-pixel for PDF/PNG export, and
               this stripe is an editor-only cue, not part of the resume. */}
           <div className="w-full max-w-[820px] my-2 rounded-sm" style={{ borderTop: `4px solid ${accent}` }}>
-            <div ref={exportRef} className="relative w-full bg-white shadow-xl rounded-b-sm">
+            <div ref={exportRef} className="relative w-full bg-white shadow-xl rounded-b-sm min-h-[1122px]">
+              
+              {/* Visual Page Break Indicators (Editor Only, won't be captured by PDF generator due to z-index or we can hide it in print) */}
+              <div className="absolute inset-0 pointer-events-none z-10 flex flex-col overflow-hidden opacity-50 mix-blend-multiply print:hidden" data-html2canvas-ignore>
+                <div className="w-full shrink-0 border-b-2 border-dashed border-blue-400/50 flex items-end justify-end pr-2 pb-1 text-[10px] text-blue-400 font-medium" style={{ aspectRatio: '210/297' }}>Page 1 Break</div>
+                <div className="w-full shrink-0 border-b-2 border-dashed border-blue-400/50 flex items-end justify-end pr-2 pb-1 text-[10px] text-blue-400 font-medium" style={{ aspectRatio: '210/297' }}>Page 2 Break</div>
+                <div className="w-full shrink-0 border-b-2 border-dashed border-blue-400/50 flex items-end justify-end pr-2 pb-1 text-[10px] text-blue-400 font-medium" style={{ aspectRatio: '210/297' }}>Page 3 Break</div>
+                <div className="w-full shrink-0 border-b-2 border-dashed border-blue-400/50 flex items-end justify-end pr-2 pb-1 text-[10px] text-blue-400 font-medium" style={{ aspectRatio: '210/297' }}>Page 4 Break</div>
+              </div>
+
               <CvPreview key={revision} data={cv} onChange={recordChange} />
             </div>
           </div>
