@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { 
-  FileText, 
-  Plus, 
-  Trash2, 
-  Sparkles, 
-  Download, 
-  Palette, 
-  Briefcase, 
-  GraduationCap, 
-  Code, 
-  Award, 
-  User, 
+import {
+  FileText,
+  Plus,
+  Trash2,
+  Sparkles,
+  Download,
+  Palette,
+  Briefcase,
+  GraduationCap,
+  Code,
+  Award,
+  User,
   ExternalLink,
   ChevronRight,
   Wand2,
@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { LinkedinIcon, GithubIcon } from './icons';
 import { ResumeData, ExperienceItem, EducationItem, ProjectItem } from '../types';
+import { PaginatedCvPreview } from './PaginatedCvPreview';
+import { measureBlocks, paginateCvSmart, PAGE_WIDTH_PX } from '../lib/cvPagination';
 
 interface ResumeEditorProps {
   data: ResumeData;
@@ -111,11 +113,21 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
       const inlineStyles = Array.from(document.querySelectorAll('style'))
         .map((s) => s.textContent ?? '')
         .join('\n');
-      const html = `<div style="width:800px;margin:0 auto;">${el.innerHTML}</div>`;
+        
+      const contentHeight = el.offsetHeight;
+      const blocks = measureBlocks(el);
+      const pages = paginateCvSmart(contentHeight, blocks);
+
       const res = await fetch('/api/pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, css: inlineStyles, name }),
+        body: JSON.stringify({
+          html: el.innerHTML,
+          css: inlineStyles,
+          name,
+          pages,
+          contentWidth: PAGE_WIDTH_PX,
+        }),
       });
       if (!res.ok) throw new Error('PDF generation failed');
       const blob = await res.blob();
@@ -135,19 +147,18 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-      
+
       {/* Left Form Controls & Section Tabs */}
       <div className="lg:col-span-5 flex flex-col gap-4">
-        
+
         {/* Editor Toolbar & Section Switches */}
         <div className="glass-panel p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex items-center justify-between overflow-x-auto gap-1">
           <button
             onClick={() => setActiveSection('personal')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${
-              activeSection === 'personal'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${activeSection === 'personal'
                 ? 'bg-indigo-600 text-white'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
+              }`}
           >
             <User className="w-3.5 h-3.5" />
             <span>Info</span>
@@ -155,11 +166,10 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
           <button
             onClick={() => setActiveSection('experience')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${
-              activeSection === 'experience'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${activeSection === 'experience'
                 ? 'bg-indigo-600 text-white'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
+              }`}
           >
             <Briefcase className="w-3.5 h-3.5" />
             <span>Work</span>
@@ -167,11 +177,10 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
           <button
             onClick={() => setActiveSection('skills')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${
-              activeSection === 'skills'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${activeSection === 'skills'
                 ? 'bg-indigo-600 text-white'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
+              }`}
           >
             <Code className="w-3.5 h-3.5" />
             <span>Skills</span>
@@ -179,11 +188,10 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
           <button
             onClick={() => setActiveSection('education')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${
-              activeSection === 'education'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${activeSection === 'education'
                 ? 'bg-indigo-600 text-white'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
+              }`}
           >
             <GraduationCap className="w-3.5 h-3.5" />
             <span>Education</span>
@@ -191,11 +199,10 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
           <button
             onClick={() => setActiveSection('template')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${
-              activeSection === 'template'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${activeSection === 'template'
                 ? 'bg-indigo-600 text-white'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
+              }`}
           >
             <Palette className="w-3.5 h-3.5" />
             <span>Theme</span>
@@ -204,7 +211,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
         {/* Section Form Editor */}
         <div className="glass-panel p-5 rounded-2xl bg-slate-950/80 border border-slate-800 flex-1 overflow-y-auto space-y-4 max-h-[calc(100vh-210px)]">
-          
+
           {/* PERSONAL INFO */}
           {activeSection === 'personal' && (
             <div className="space-y-4">
@@ -517,11 +524,10 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
                     <button
                       key={tpl.id}
                       onClick={() => onChange({ ...data, template: tpl.id as any })}
-                      className={`p-3 rounded-xl text-left border transition-all ${
-                        data.template === tpl.id
+                      className={`p-3 rounded-xl text-left border transition-all ${data.template === tpl.id
                           ? 'bg-indigo-600/20 border-indigo-500 text-indigo-200'
                           : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                      }`}
+                        }`}
                     >
                       <div className="font-bold text-xs">{tpl.name}</div>
                       <div className="text-[10px] mt-1 text-slate-400">{tpl.desc}</div>
@@ -537,7 +543,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
       {/* Right Studio Live Printable Preview */}
       <div className="lg:col-span-7 flex flex-col gap-3">
-        
+
         {/* Preview Control Bar */}
         <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-slate-950/80 border border-slate-800 no-print">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
@@ -556,11 +562,10 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
                 <button
                   key={t}
                   onClick={() => onChange({ ...data, resumeType: t })}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold capitalize transition-colors ${
-                    (data.resumeType ?? 'professional') === t
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold capitalize transition-colors ${(data.resumeType ?? 'professional') === t
                       ? 'bg-indigo-600 text-white'
                       : 'text-slate-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   {t}
                 </button>
@@ -580,17 +585,14 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
         {/* The Live Document Paper Sheet */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-950 rounded-2xl border border-slate-800 flex justify-center max-h-[calc(100vh-210px)]">
-          <div
-            ref={previewRef}
-            id="resume-preview-area"
-            className="w-full max-w-[800px] min-h-[1050px] bg-white text-slate-900 p-8 sm:p-12 shadow-2xl rounded-sm text-sm font-sans flex flex-col justify-between"
-            style={{ fontFamily: 'Georgia, serif' }}
-          >
-            {/* flex-col so the sections below can be reordered by CSS `order`
-                depending on Professional vs Student, without moving markup. */}
-            <div className="flex flex-col">
+          <PaginatedCvPreview exportRef={previewRef} data={data as any}>
+            <div
+              className="w-full bg-white text-slate-900 p-8 sm:p-12 text-sm font-sans flex flex-col justify-between"
+              style={{ fontFamily: 'Georgia, serif' }}
+            >
+              <div className="flex flex-col">
               {/* Header */}
-              <div className="border-b-2 border-indigo-600 pb-4 mb-6">
+              <div data-cv-block className="border-b-2 border-indigo-600 pb-4 mb-6">
                 <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
                   {data.personalInfo.fullName || 'Your Name'}
                 </h1>
@@ -629,7 +631,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
               {/* Bio Summary */}
               {data.personalInfo.bio && (
-                <div className="mb-6 order-1">
+                <div data-cv-block className="mb-6 order-1">
                   <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1 mb-2 font-sans">
                     Executive Summary
                   </h2>
@@ -647,7 +649,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
                   </h2>
                   <div className="space-y-4">
                     {data.experiences.map((exp) => (
-                      <div key={exp.id}>
+                      <div key={exp.id} data-cv-block>
                         <div className="flex justify-between items-baseline font-sans">
                           <span className="font-bold text-sm text-slate-900">{exp.role}</span>
                           <span className="text-xs text-slate-500 font-medium">
@@ -670,7 +672,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
               {/* Technical Skills */}
               {data.skills.length > 0 && (
-                <div className="mb-6 order-3">
+                <div data-cv-block className="mb-6 order-3">
                   <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-200 pb-1 mb-2 font-sans">
                     Technical Expertise & Tools
                   </h2>
@@ -691,7 +693,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
                     Education
                   </h2>
                   {data.education.map((edu) => (
-                    <div key={edu.id} className="flex justify-between items-baseline text-xs font-sans">
+                    <div key={edu.id} data-cv-block className="flex justify-between items-baseline text-xs font-sans mb-3">
                       <div>
                         <span className="font-bold text-slate-900">{edu.degree}</span>
                         <span className="text-slate-600 font-normal"> – {edu.institution}</span>
@@ -708,7 +710,8 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
               Generated with ProfileArchitect AI Career Builder
             </div>
 
-          </div>
+            </div>
+          </PaginatedCvPreview>
         </div>
 
       </div>

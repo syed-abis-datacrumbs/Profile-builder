@@ -5,10 +5,12 @@ export const maxDuration = 60; // allow up to 60 s for Puppeteer
 
 export async function POST(req: NextRequest) {
   try {
-    const { html, css = '', name = 'Resume' } = await req.json() as {
+    const { html, css = '', name = 'Resume', pages, contentWidth = 794 } = await req.json() as {
       html: string;
       css?: string;
       name?: string;
+      pages?: { sliceStart: number; sliceHeight: number; topOffset: number }[];
+      contentWidth?: number;
     };
 
     if (!html) {
@@ -68,12 +70,33 @@ export async function POST(req: NextRequest) {
     <style>
       *, *::before, *::after { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; background: white; }
+      /* Prevent resume blocks from splitting across pages */
+      [data-cv-block] { break-inside: avoid; page-break-inside: avoid; }
       /* Extra inline styles captured from the running page */
       ${css}
+      
+      /* Explicit CSS Pagination if pages array is provided */
+      .pdf-page-box {
+        width: ${contentWidth}px;
+        height: 1123px; /* Exact A4 height at 96dpi */
+        page-break-after: always;
+        overflow: hidden;
+        position: relative;
+        background: white;
+      }
+      @page { margin: 0; }
     </style>
   </head>
   <body style="background:white;">
-    ${html}
+    ${pages && pages.length > 0 ? pages.map(page => `
+      <div class="pdf-page-box">
+        <div style="position: absolute; left: 0; top: ${page.topOffset}px; width: ${contentWidth}px; height: ${page.sliceHeight}px; overflow: hidden;">
+          <div style="transform: translateY(-${page.sliceStart}px);">
+            ${html}
+          </div>
+        </div>
+      </div>
+    `).join('') : html}
   </body>
 </html>`;
 
@@ -88,7 +111,7 @@ export async function POST(req: NextRequest) {
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '20px', bottom: '20px', left: '0', right: '0' },
+      margin: { top: '0', bottom: '0', left: '0', right: '0' },
     });
 
     await browser.close();

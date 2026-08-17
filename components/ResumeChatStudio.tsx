@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { 
-  ArrowLeft, 
-  Send, 
-  Sparkles, 
-  Loader2, 
-  Bold, 
-  Italic, 
-  Underline, 
-  Download, 
+import {
+  ArrowLeft,
+  Send,
+  Sparkles,
+  Loader2,
+  Bold,
+  Italic,
+  Underline,
+  Download,
   ChevronDown,
   FileText,
   Undo,
@@ -20,6 +20,8 @@ import {
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { getResumeAccentColor } from '../lib/resumeHelpers';
 import { CvPreview } from './CvPreview';
+import { PaginatedCvPreview } from './PaginatedCvPreview';
+import { measureBlocks, paginateCvSmart, PAGE_WIDTH_PX } from '../lib/cvPagination';
 import { PaymentModal } from './PaymentModal';
 
 // Blank breathing room reserved at the BOTTOM of every page and the TOP of
@@ -145,7 +147,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       const u = document.queryCommandState('underline');
       const s = document.queryCommandState('strikeThrough');
       setFmt((prev) => (prev.bold === b && prev.italic === i && prev.underline === u && prev.strikethrough === s ? prev : { bold: b, italic: i, underline: u, strikethrough: s }));
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => {
@@ -344,10 +346,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     const injected: HTMLElement[] = [];
     const contentWidth = el.scrollWidth || el.offsetWidth;
     const contentHeight = el.scrollHeight || el.offsetHeight;
-    
+
     // A4 page aspect ratio is roughly 1 : 1.4142
     const pageHeight = Math.round(contentWidth * 1.4142);
-    
+
     // Place one watermark perfectly centered on every page
     for (let y = pageHeight / 2; y < contentHeight + pageHeight; y += pageHeight) {
       const div = document.createElement('div');
@@ -401,17 +403,28 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         a.download = `${name}.png`;
         a.click();
       } else {
-        // Server-side PDF via Puppeteer — no print popup, fully selectable text
+        // Server-side PDF via Puppeteer — no print popup, fully selectable text.
+        // We send the JS-calculated slice positions so Puppeteer clips each page
+        // to EXACTLY the same range as the editor's paginated preview.
         const inlineStyles = Array.from(document.querySelectorAll('style'))
           .map((s) => s.textContent ?? '')
           .join('\n');
 
-        const html = `<div style="width:800px;margin:0 auto;">${el.innerHTML}</div>`;
+        // Measure the hidden export copy (same DOM the paginated preview uses)
+        const contentHeight = el.offsetHeight;
+        const blocks = measureBlocks(el);
+        const pages = paginateCvSmart(contentHeight, blocks);
 
         const res = await fetch('/api/pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ html, css: inlineStyles, name }),
+          body: JSON.stringify({
+            html: el.innerHTML,
+            css: inlineStyles,
+            name,
+            pages,          // exact slice positions from paginateCvSmart
+            contentWidth: PAGE_WIDTH_PX,
+          }),
         });
 
         if (!res.ok) {
@@ -478,10 +491,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
   return (
     <div className="flex flex-col lg:flex-row h-full w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none">
-      
+
       {/* COLUMN 2 (AI CHAT - LEFT) */}
       <div className="w-full lg:w-[380px] xl:w-[420px] 2xl:w-[460px] flex flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden">
-        
+
         {/* Top Header of Chat Column */}
         <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
           <div className="flex items-center gap-2 min-w-0">
@@ -524,11 +537,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
-                className={`rounded-2xl text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${
-                  m.role === 'user'
+                className={`rounded-2xl text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${m.role === 'user'
                     ? 'bg-slate-100 text-slate-900 border border-slate-200/80 px-4 py-3 max-w-[85%] font-medium'
                     : 'bg-white text-slate-800 p-4.5 max-w-[98%] border border-slate-200/60 shadow-2xs space-y-2'
-                }`}
+                  }`}
               >
                 {m.content}
               </div>
@@ -583,10 +595,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
       {/* COLUMN 3 (RESUME CANVAS - RIGHT) */}
       <div className="flex-1 flex flex-col bg-slate-100/90 h-full overflow-hidden relative">
-        
+
         {/* MacOS Window Single Unified Toolbar Header */}
         <div className="shrink-0 bg-white border-b border-slate-200 px-2 py-2 flex items-center justify-between gap-1.5 text-xs shadow-2xs overflow-hidden">
-          
+
           {/* Left Controls Group */}
           <div className="flex items-center gap-1">
             {/* MacOS Traffic Light Dots */}
@@ -712,11 +724,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                     document.execCommand(cmd);
                     refreshFmt();
                   }}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
-                    fmt[cmd as keyof typeof fmt]
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${fmt[cmd as keyof typeof fmt]
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-slate-600 hover:bg-slate-100'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
                 </button>
@@ -734,11 +745,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 <button
                   key={t}
                   onClick={() => external({ ...cv, cvType: t })}
-                  className={`h-6 px-2.5 rounded-md text-[10px] font-bold capitalize transition-colors flex items-center justify-center leading-none text-center cursor-pointer ${
-                    (cv.cvType ?? 'professional') === t
+                  className={`h-6 px-2.5 rounded-md text-[10px] font-bold capitalize transition-colors flex items-center justify-center leading-none text-center cursor-pointer ${(cv.cvType ?? 'professional') === t
                       ? 'bg-blue-600 text-white'
                       : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                    }`}
                 >
                   {t}
                 </button>
@@ -805,37 +815,25 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
         {/* Live Resume Canvas Area */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex justify-center items-start">
-          {/* Accent border lives on this wrapper, not exportRef itself —
-              exportRef is captured pixel-for-pixel for PDF/PNG export, and
-              this stripe is an editor-only cue, not part of the resume. */}
-          <div className="w-full max-w-[820px] my-2 rounded-sm" style={{ borderTop: `4px solid ${accent}` }}>
-            <div ref={exportRef} className="relative w-full bg-white shadow-xl rounded-b-sm min-h-[1122px]">
-              
-              {/* Visual Page Break Indicators (Editor Only, won't be captured by PDF generator due to z-index or we can hide it in print) */}
-              <div className="absolute inset-0 pointer-events-none z-10 flex flex-col overflow-hidden opacity-50 mix-blend-multiply print:hidden" data-html2canvas-ignore>
-                <div className="w-full shrink-0 border-b-2 border-dashed border-blue-400/50 flex items-end justify-end pr-2 pb-1 text-[10px] text-blue-400 font-medium" style={{ aspectRatio: '210/297' }}>Page 1 Break</div>
-                <div className="w-full shrink-0 border-b-2 border-dashed border-blue-400/50 flex items-end justify-end pr-2 pb-1 text-[10px] text-blue-400 font-medium" style={{ aspectRatio: '210/297' }}>Page 2 Break</div>
-                <div className="w-full shrink-0 border-b-2 border-dashed border-blue-400/50 flex items-end justify-end pr-2 pb-1 text-[10px] text-blue-400 font-medium" style={{ aspectRatio: '210/297' }}>Page 3 Break</div>
-                <div className="w-full shrink-0 border-b-2 border-dashed border-blue-400/50 flex items-end justify-end pr-2 pb-1 text-[10px] text-blue-400 font-medium" style={{ aspectRatio: '210/297' }}>Page 4 Break</div>
-              </div>
-
-              <CvPreview key={revision} data={cv} onChange={recordChange} />
-            </div>
-          </div>
+          <PaginatedCvPreview
+            data={cv}
+            exportRef={exportRef}
+            accentColor={accent}
+            onChange={recordChange}
+          />
         </div>
 
         {/* Floating Controls (Bottom Right) */}
         <div className="fixed bottom-6 right-8 z-30 flex flex-col items-end gap-3">
-          
+
           {/* Target Job Action */}
           <div className="relative">
             <button
               onClick={() => setTargetJobModalOpen(!targetJobModalOpen)}
-              className={`h-10 px-4 rounded-full text-xs font-bold transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer border-2 ${
-                targetJob.trim()
+              className={`h-10 px-4 rounded-full text-xs font-bold transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer border-2 ${targetJob.trim()
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-500 hover:bg-emerald-100'
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-              }`}
+                }`}
             >
               <div className={`w-2 h-2 rounded-full ${targetJob.trim() ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
               <span>Target Job Match</span>
