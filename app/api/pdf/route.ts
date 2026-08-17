@@ -30,7 +30,10 @@ export async function POST(req: NextRequest) {
 
     if (isLambda) {
       const chromium = (await import('@sparticuz/chromium')).default;
-      executablePath = await chromium.executablePath();
+      // Download the precompiled Chromium pack at runtime on Vercel to bypass the 50MB limit
+      executablePath = await chromium.executablePath(
+        'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'
+      );
       chromiumArgs = chromium.args;
     } else {
       // macOS default Chrome path (works without any extra downloads)
