@@ -217,14 +217,14 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
           Starter Prompts
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="flex sm:grid sm:grid-cols-2 md:grid-cols-4 gap-3 overflow-x-auto pb-4 snap-x hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0">
           {starterPrompts.map((item, idx) => (
             <motion.div
               key={idx}
               whileHover={{ y: -3, scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => onUsePrompt(item.prompt)}
-              className="p-3.5 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer flex items-center justify-between h-20 group"
+              className="p-3.5 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer flex items-center justify-between h-20 group shrink-0 w-[260px] sm:w-auto snap-start"
             >
               <span className="text-xs font-medium text-slate-700 group-hover:text-slate-900 leading-snug pr-2">
                 {item.title}

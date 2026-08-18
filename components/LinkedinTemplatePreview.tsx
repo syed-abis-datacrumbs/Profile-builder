@@ -85,16 +85,16 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
 
       <div className="relative w-full max-w-[820px] flex flex-col min-h-0 h-full max-h-[92vh]">
         {/* ── Top Navigation Bar ── */}
-        <div className="shrink-0 bg-white rounded-2xl shadow-xl px-5 py-3.5 flex items-center justify-between gap-4 mb-3">
+        <div className="shrink-0 bg-white rounded-2xl shadow-xl px-4 sm:px-5 py-3 sm:py-3.5 flex flex-wrap items-center justify-between gap-2 sm:gap-4 mb-3 relative z-10">
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 font-semibold text-sm transition-colors"
+            className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 font-semibold text-sm transition-colors whitespace-nowrap"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to templates</span>
+            <span className="hidden sm:inline">Back to templates</span>
           </button>
           
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             <span className="text-sm text-slate-500 hidden md:inline-block truncate">
               Template: <span className="font-bold text-slate-900">{template.name}</span>
             </span>

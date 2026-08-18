@@ -504,10 +504,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
 
   return (
-    <div className="flex flex-col lg:flex-row h-full w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none">
+    <div className="flex flex-col-reverse lg:flex-row h-full w-full bg-slate-100 overflow-y-auto lg:overflow-hidden font-sans border-0 rounded-none">
 
       {/* COLUMN 2 (AI CHAT - LEFT) */}
-      <div className="w-full lg:w-[380px] xl:w-[420px] 2xl:w-[460px] flex flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden">
+      <div className="w-full lg:w-[380px] xl:w-[420px] 2xl:w-[460px] flex flex-col bg-white border-r border-slate-200 shrink-0 h-[65vh] lg:h-full overflow-hidden pb-[120px] lg:pb-0">
 
         {/* Top Header of Chat Column */}
         <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
@@ -522,7 +522,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             <span className="font-bold text-sm text-slate-800 truncate">
               Creating a Professional...
             </span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 hidden lg:block" />
           </div>
         </div>
 
@@ -531,7 +531,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           {messages.length === 0 && !loading && (
             <div className="pt-2 space-y-2">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Try asking</p>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-row lg:flex-col gap-3 lg:gap-2 overflow-x-auto lg:overflow-visible pb-3 lg:pb-0 -mx-5 px-5 lg:mx-0 lg:px-0 snap-x lg:snap-none hide-scrollbar">
                 {[
                   'Update my contact details (phone, email, LinkedIn, GitHub)',
                   'Add another work experience or project',
@@ -540,7 +540,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                   <button
                     key={suggestion}
                     onClick={() => send(suggestion)}
-                    className="text-left px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                    className="shrink-0 snap-start w-[240px] lg:w-full text-left px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm hover:border-slate-300 hover:bg-slate-50 transition-colors whitespace-normal"
                   >
                     {suggestion}
                   </button>
@@ -608,7 +608,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       </div>
 
       {/* COLUMN 3 (RESUME CANVAS - RIGHT) */}
-      <div className="flex-1 flex flex-col bg-slate-100/90 h-full overflow-hidden relative">
+      <div className="w-full h-[55vh] lg:flex-1 shrink-0 lg:h-full flex flex-col bg-slate-100/90 overflow-hidden relative">
 
         {/* MacOS Window Single Unified Toolbar Header */}
         <div className="shrink-0 bg-white border-b border-slate-200 px-2 py-2 flex items-center justify-between gap-1.5 text-xs shadow-2xs overflow-visible z-30">
@@ -616,7 +616,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           {/* Left Controls Group */}
           <div className="flex items-center gap-1">
             {/* MacOS Traffic Light Dots */}
-            <div className="flex items-center gap-1.5 pr-1">
+            <div className="hidden sm:flex items-center gap-1.5 pr-1">
               <div className="w-3 h-3 rounded-full bg-red-500" />
               <div className="w-3 h-3 rounded-full bg-amber-400" />
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
@@ -697,10 +697,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               )}
             </div>
 
-            <div className="h-4 w-px bg-slate-200" />
+            <div className="hidden sm:block h-4 w-px bg-slate-200" />
 
             {/* Undo / Redo */}
-            <div className="flex items-center gap-0.5">
+            <div className="hidden sm:flex items-center gap-0.5">
               <button
                 title="Undo"
                 onMouseDown={(e) => { e.preventDefault(); handleUndo(); }}
@@ -838,7 +838,9 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         </div>
 
         {/* Floating Controls (Bottom Right) */}
-        <div className="fixed bottom-6 right-8 z-30 flex flex-col items-end gap-3">
+        <div className="fixed bottom-[90px] lg:bottom-6 right-4 lg:right-8 z-30 flex flex-col items-end gap-3 pointer-events-none">
+          <div className="pointer-events-auto flex flex-col items-end gap-3">
+
 
           {/* Target Job Action */}
           <div className="relative">
@@ -939,6 +941,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             )}
           </div>
         </div>
+      </div>
 
       </div>
 
