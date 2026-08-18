@@ -81,22 +81,72 @@ export async function POST(request: Request) {
       });
     }
 
-    // ── Server-side guard: ambiguous "remove N <section>" ──────────────────
-    // Detect bare-number removal requests (e.g. "remove 2 projects") BEFORE
-    // calling the model so the CV is guaranteed to be returned unchanged.
-    // "last/first/all/specific-name" variants are unambiguous and pass through.
+    // ── Server-side removal handler ─────────────────────────────────────────
+    // Handles ALL removal requests deterministically in code so the model
+    // can never lie about having removed something.
+    //
+    // Word-number → integer map (covers typical resume quantities)
     const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content ?? '';
-    const AMBIGUOUS_REMOVAL = /\b(remove|delete)\s+(\d+)\s+(project|certification|cert|education|experience|workshop)s?\b/i;
-    const UNAMBIGUOUS_MARKERS = /\b(last|first|all|latest|oldest|top|bottom)\b/i;
-    if (AMBIGUOUS_REMOVAL.test(lastUserMessage) && !UNAMBIGUOUS_MARKERS.test(lastUserMessage)) {
-      const match = lastUserMessage.match(AMBIGUOUS_REMOVAL)!;
-      const n = match[2];
-      const section = match[3].toLowerCase();
-      const ordinal = n === '1' ? '1st' : n === '2' ? '2nd' : n === '3' ? '3rd' : `${n}th`;
-      return Response.json({
-        reply: `Just to clarify — do you mean remove the **${ordinal} ${section}** specifically, or remove **${n} ${section}s** from the list? If you want specific ones removed, let me know which ones (by name or position).`,
-        cv,
-      });
+    const WORD_NUMS: Record<string, number> = {
+      one: 1, two: 2, three: 3, four: 4, five: 5,
+      six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+    };
+
+    // Regex captures: position? (last/first/all) + count (digit or word) + section
+    const REMOVAL_RE = /\b(remove|delete)\b(?:\s+(?:the\s+)?)?(all|(last|first)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)|(\d+|one|two|three|four|five|six|seven|eight|nine|ten))?\s+(?:the\s+)?(project|certification|cert|education|experience|workshop)s?\b/i;
+    const remMatch = lastUserMessage.match(REMOVAL_RE);
+
+    if (remMatch) {
+      const allFlag    = remMatch[2]?.toLowerCase() === 'all';
+      const position   = remMatch[3]?.toLowerCase();  // 'last' | 'first' | undefined
+      const rawCount   = remMatch[4] ?? remMatch[5];  // digit string or word
+      const sectionRaw = remMatch[6]?.toLowerCase();
+
+      // Map section keyword → CV key
+      const SECTION_KEY: Record<string, keyof CvData> = {
+        project: 'projects', certification: 'certifications', cert: 'certifications',
+        education: 'education', experience: 'workExperience', workshop: 'workshops',
+      };
+      const cvKey = sectionRaw ? SECTION_KEY[sectionRaw] : undefined;
+
+      const parseCount = (s: string | undefined): number | undefined => {
+        if (!s) return undefined;
+        const n = parseInt(s, 10);
+        if (!isNaN(n)) return n;
+        return WORD_NUMS[s.toLowerCase()];
+      };
+      const count = parseCount(rawCount);
+
+      // ── Ambiguous: bare number with no position word → ask for clarification
+      if (cvKey && count !== undefined && !position && !allFlag) {
+        const ordinal = count === 1 ? '1st' : count === 2 ? '2nd' : count === 3 ? '3rd' : `${count}th`;
+        return Response.json({
+          reply: `Just to clarify — do you mean remove the **${ordinal} ${sectionRaw}** specifically, or remove **${count} ${sectionRaw}s** from the list? If you want specific ones removed, let me know which ones (by name or position).`,
+          cv,
+        });
+      }
+
+      // ── Unambiguous: perform the removal server-side ─────────────────────
+      if (cvKey && (allFlag || position)) {
+        const arr = (cv[cvKey] as unknown[]) ?? [];
+        let updated: unknown[];
+        if (allFlag) {
+          updated = [];
+        } else if (position === 'last') {
+          const n = Math.min(count ?? 1, arr.length);
+          updated = arr.slice(0, arr.length - n);
+        } else { // first
+          const n = Math.min(count ?? 1, arr.length);
+          updated = arr.slice(n);
+        }
+        const countWord = allFlag ? 'all' : `${count ?? 1}`;
+        const posWord   = allFlag ? '' : ` ${position}`;
+        const updatedCv: CvData = { ...cv, [cvKey]: updated };
+        return Response.json({
+          reply: `Done — removed${posWord} ${countWord} ${sectionRaw}${(count ?? 1) !== 1 ? 's' : ''} from your resume.`,
+          cv: updatedCv,
+        });
+      }
     }
     // ───────────────────────────────────────────────────────────────────────
 
