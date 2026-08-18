@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Copy, Check, Ticket } from 'lucide-react';
+import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Copy, Check, Ticket, Edit2 } from 'lucide-react';
 
 type Coupon = {
   id: string;
@@ -26,6 +26,7 @@ export default function CouponsPage() {
   const [form, setForm] = useState({ code: '', label: '', maxUses: '1', expiresAt: '' });
   const [formError, setFormError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -37,12 +38,36 @@ export default function CouponsPage() {
 
   useEffect(load, []);
 
-  const handleCreate = async () => {
+  const openCreateForm = () => {
+    setForm({ code: '', label: '', maxUses: '1', expiresAt: '' });
+    setEditingId(null);
+    setFormError('');
+    setShowForm(true);
+  };
+
+  const openEditForm = (c: Coupon) => {
+    setForm({
+      code: c.code,
+      label: c.label || '',
+      maxUses: String(c.maxUses),
+      expiresAt: c.expiresAt ? new Date(c.expiresAt).toISOString().split('T')[0] : '',
+    });
+    setEditingId(c.id);
+    setFormError('');
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
     setFormError('');
     if (!form.code.trim()) { setFormError('Code is required'); return; }
     setCreating(true);
-    const res = await fetch('/api/admin/coupons', {
-      method: 'POST',
+
+    const isEdit = !!editingId;
+    const url = isEdit ? `/api/admin/coupons/${editingId}` : '/api/admin/coupons';
+    const method = isEdit ? 'PATCH' : 'POST';
+
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         code: form.code.trim().toUpperCase(),
@@ -55,6 +80,7 @@ export default function CouponsPage() {
     if (!res.ok) { setFormError(data.error || 'Failed'); setCreating(false); return; }
     setForm({ code: '', label: '', maxUses: '1', expiresAt: '' });
     setShowForm(false);
+    setEditingId(null);
     setCreating(false);
     load();
   };
@@ -93,7 +119,7 @@ export default function CouponsPage() {
           <p className="text-slate-400 text-sm mt-1">{coupons.length} coupons total</p>
         </div>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={openCreateForm}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -106,7 +132,7 @@ export default function CouponsPage() {
         <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6 mb-6">
           <h2 className="text-white font-bold text-sm mb-4 flex items-center gap-2">
             <Ticket className="w-4 h-4 text-blue-400" />
-            Create New Coupon
+            {editingId ? 'Edit Coupon' : 'Create New Coupon'}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -150,15 +176,15 @@ export default function CouponsPage() {
           {formError && <p className="text-red-400 text-xs mt-3 font-medium">{formError}</p>}
           <div className="flex gap-3 mt-5">
             <button
-              onClick={handleCreate}
+              onClick={handleSave}
               disabled={creating}
               className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-bold rounded-lg flex items-center gap-2"
             >
               {creating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Create Coupon
+              {editingId ? 'Save Changes' : 'Create Coupon'}
             </button>
             <button
-              onClick={() => { setShowForm(false); setFormError(''); }}
+              onClick={() => { setShowForm(false); setFormError(''); setEditingId(null); }}
               className="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-semibold rounded-lg"
             >
               Cancel
@@ -231,6 +257,13 @@ export default function CouponsPage() {
                           : c.isActive
                           ? <ToggleRight className="w-5 h-5 text-emerald-400" />
                           : <ToggleLeft className="w-5 h-5" />}
+                      </button>
+                      <button
+                        onClick={() => openEditForm(c)}
+                        className="text-slate-500 hover:text-blue-400 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => deleteCoupon(c.id)}

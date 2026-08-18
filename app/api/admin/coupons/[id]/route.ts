@@ -9,9 +9,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json();
 
+  const dataToUpdate: any = {};
+  if (body.isActive !== undefined) dataToUpdate.isActive = body.isActive;
+  if (body.code !== undefined) dataToUpdate.code = body.code;
+  if (body.label !== undefined) dataToUpdate.label = body.label;
+  if (body.maxUses !== undefined) dataToUpdate.maxUses = body.maxUses;
+  if (body.expiresAt !== undefined) dataToUpdate.expiresAt = body.expiresAt;
+
   const coupon = await db.profileBuilderCoupon.update({
     where: { id },
-    data: { isActive: body.isActive },
+    data: dataToUpdate,
   });
   return NextResponse.json(coupon);
 }
