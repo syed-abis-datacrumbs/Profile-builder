@@ -81,6 +81,25 @@ export async function POST(request: Request) {
       });
     }
 
+    // ── Server-side guard: ambiguous "remove N <section>" ──────────────────
+    // Detect bare-number removal requests (e.g. "remove 2 projects") BEFORE
+    // calling the model so the CV is guaranteed to be returned unchanged.
+    // "last/first/all/specific-name" variants are unambiguous and pass through.
+    const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content ?? '';
+    const AMBIGUOUS_REMOVAL = /\b(remove|delete)\s+(\d+)\s+(project|certification|cert|education|experience|workshop)s?\b/i;
+    const UNAMBIGUOUS_MARKERS = /\b(last|first|all|latest|oldest|top|bottom)\b/i;
+    if (AMBIGUOUS_REMOVAL.test(lastUserMessage) && !UNAMBIGUOUS_MARKERS.test(lastUserMessage)) {
+      const match = lastUserMessage.match(AMBIGUOUS_REMOVAL)!;
+      const n = match[2];
+      const section = match[3].toLowerCase();
+      const ordinal = n === '1' ? '1st' : n === '2' ? '2nd' : n === '3' ? '3rd' : `${n}th`;
+      return Response.json({
+        reply: `Just to clarify — do you mean remove the **${ordinal} ${section}** specifically, or remove **${n} ${section}s** from the list? If you want specific ones removed, let me know which ones (by name or position).`,
+        cv,
+      });
+    }
+    // ───────────────────────────────────────────────────────────────────────
+
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
