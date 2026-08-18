@@ -158,8 +158,10 @@ export default function Home() {
           else if (activeTab === 'github') setGithubMode('landing');
           else if (activeTab === 'linkedin') setLinkedinMode('landing');
         }}
-        userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis Hussain Syed" : "Abis Hussain Syed"}
-        planName={isLoggedIn ? "Pro Plan" : "Free Plan"}
+        userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis Hussain Syed" : "Sign in to save"}
+        planName={isLoggedIn ? "Pro Plan" : "Create a free account"}
+        isLoggedIn={isLoggedIn}
+        onOpenAuth={() => setIsAuthOpen(true)}
         onOpenUpgrade={() => setIsUpgradeOpen(true)}
         onOpenAskExpert={() => setIsAskExpertOpen(true)}
         onOpenRemoveWatermark={() => setIsPaymentModalOpen(true)}

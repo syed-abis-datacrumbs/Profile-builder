@@ -15,7 +15,8 @@ import {
   LogOut,
   Menu,
   X,
-  Sparkles
+  Sparkles,
+  User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GithubIcon, LinkedinIcon } from './icons';
@@ -27,6 +28,8 @@ interface ImagineSidebarProps {
   onNewChat: () => void;
   userName?: string;
   planName?: string;
+  isLoggedIn?: boolean;
+  onOpenAuth?: () => void;
   onOpenUpgrade?: () => void;
   onOpenAskExpert?: () => void;
   onOpenRemoveWatermark?: () => void;
@@ -50,6 +53,8 @@ interface SidebarBodyProps {
   onNewChat: () => void;
   userName: string;
   planName: string;
+  isLoggedIn?: boolean;
+  onOpenAuth?: () => void;
   onOpenUpgrade?: () => void;
   onOpenAskExpert?: () => void;
   onOpenRemoveWatermark?: () => void;
@@ -67,6 +72,8 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
   onNewChat,
   userName,
   planName,
+  isLoggedIn,
+  onOpenAuth,
   onOpenUpgrade,
   onOpenAskExpert,
   onOpenRemoveWatermark,
@@ -294,19 +301,25 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
 
           {/* User Profile Bar (Trigger) */}
           <div
-            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            onClick={() => {
+              if (isLoggedIn === false && onOpenAuth) {
+                onOpenAuth();
+              } else {
+                setIsSettingsOpen(!isSettingsOpen);
+              }
+            }}
             className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 cursor-pointer hover:bg-slate-100/80 transition-colors"
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                {initials}
+              <div className="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                {isLoggedIn === false ? <User className="w-4 h-4 text-white" /> : initials}
               </div>
               <div className="truncate">
                 <div className="font-bold text-xs text-slate-900 truncate">
-                  {userName}
+                  {isLoggedIn === false ? "Sign in to save" : userName}
                 </div>
                 <div className="text-[10px] text-slate-400 font-medium">
-                  {planName}
+                  {isLoggedIn === false ? "Create a free account" : planName}
                 </div>
               </div>
             </div>
@@ -331,6 +344,8 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   onNewChat,
   userName = "Abis Hussain Syed",
   planName = "Free Plan",
+  isLoggedIn = true,
+  onOpenAuth,
   onOpenUpgrade,
   onOpenAskExpert,
   onOpenRemoveWatermark,
@@ -353,6 +368,8 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
     onNewChat,
     userName,
     planName,
+    isLoggedIn,
+    onOpenAuth,
     onOpenUpgrade,
     onOpenAskExpert,
     onOpenRemoveWatermark,
