@@ -8,4 +8,5 @@ export const BUILDER_ACCESS_EMAILS = new Set([
   "cursor_3@datacrumbs.org",
   "shaharyar@datacrumbs.org",
   "cursor@datacrumbs.org",
+  "admin@datacrumbs.org",
 ]);
