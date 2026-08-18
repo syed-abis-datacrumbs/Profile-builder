@@ -109,3 +109,19 @@ model ProfileBuilderCouponRedemption {
   @@map("profile_builder_coupon_redemptions")
 }
 
+
+/// Represents one turn of an AI conversation in the Resume Builder.
+/// A frontend-generated sessionId groups multiple turns together.
+model ProfileBuilderChatLog {
+  id          String   @id @default(cuid())
+  sessionId   String
+  userId      String?
+  userMessage String
+  aiReply     String
+  isAutoFit   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([userId])
+  @@map("profile_builder_chat_logs")
+}

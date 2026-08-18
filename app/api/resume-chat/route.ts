@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import type { CvData } from '../../../lib/cvTypes';
+import { db } from '@/lib/db';
+import { currentUser } from '@clerk/nextjs/server';
 
 export const runtime = 'nodejs';
 
@@ -59,9 +61,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { messages?: ChatMessage[]; cv?: CvData; targetJob?: string };
+    const body = (await request.json()) as { messages?: ChatMessage[]; cv?: CvData; targetJob?: string; sessionId?: string; isAutoFit?: boolean };
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const cv = (body.cv ?? {}) as CvData;
+    const sessionId = body.sessionId || 'unknown';
+    const isAutoFit = body.isAutoFit || false;
+    const userMessage = messages[messages.length - 1]?.content || '';
     // Resume type is owned by the app's Professional/Student toggle, never
     // by the model — locked here from the pre-call draft and restated as
     // explicit context every turn, so a chat turn can't silently flip (or
@@ -212,11 +217,27 @@ export async function POST(request: Request) {
       additional: nextCv.additional ?? cv.additional ?? defaultAdditional,
     };
 
+    const reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.';
+
+    // Log the turn
+    const user = await currentUser();
+    if (sessionId !== 'unknown') {
+      await db.profileBuilderChatLog.create({
+        data: {
+          sessionId,
+          userId: user?.id,
+          userMessage,
+          aiReply: reply,
+          isAutoFit,
+        },
+      });
+    }
+
     return Response.json({
-      reply: typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.',
+      reply,
       cv: safeCv,
     });
-  } catch {
+  } catch (err) {
     return Response.json({ error: 'The AI request failed. Check your API key / connection and try again.' });
   }
 }

@@ -319,6 +319,13 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const [downloading, setDownloading] = useState<null | 'pdf' | 'png'>(null);
   const [dlMenu, setDlMenu] = useState(false);
 
+  const sessionIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!sessionIdRef.current) {
+      sessionIdRef.current = crypto.randomUUID();
+    }
+  }, []);
+
   // Whether this account has paid to remove the watermark — null until the
   // first status check resolves. Same one-time-payment model as LMS's CV
   // Builder ("everyone can build/export for free; paying removes a
@@ -465,7 +472,13 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       const res = await fetch('/api/resume-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages, cv, targetJob }),
+        body: JSON.stringify({ 
+          messages: nextMessages, 
+          cv, 
+          targetJob,
+          sessionId: sessionIdRef.current,
+          isAutoFit: overrideText !== undefined 
+        }),
       });
       const data = await res.json();
       if (data.error) {

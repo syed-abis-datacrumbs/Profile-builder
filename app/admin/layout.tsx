@@ -1,7 +1,7 @@
 import { isAdmin } from '@/lib/adminAuth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Ticket, CreditCard, Users, LogOut, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Ticket, CreditCard, Users, LogOut, ShieldCheck, MessageSquare } from 'lucide-react';
 import { currentUser } from '@clerk/nextjs/server';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const navItems = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/admin/chats', label: 'AI Chats', icon: MessageSquare },
     { href: '/admin/coupons', label: 'Coupons', icon: Ticket },
     { href: '/admin/payments', label: 'Payments', icon: CreditCard },
     { href: '/admin/unlocked', label: 'Unlocked Users', icon: Users },
