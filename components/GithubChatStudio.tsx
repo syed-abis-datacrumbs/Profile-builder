@@ -76,6 +76,13 @@ export const GithubChatStudio: React.FC<{
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showBannerPicker, setShowBannerPicker] = useState(false);
   const [customBannerInput, setCustomBannerInput] = useState('');
+  
+  const sessionIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!sessionIdRef.current) {
+      sessionIdRef.current = crypto.randomUUID();
+    }
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -105,7 +112,12 @@ export const GithubChatStudio: React.FC<{
       const res = await fetch('/api/github-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next, github }),
+        body: JSON.stringify({ 
+          messages: next, 
+          github,
+          sessionId: sessionIdRef.current,
+          builderType: 'github' 
+        }),
       });
       const data = await res.json();
       if (data.error) setMessages((m) => [...m, { role: 'assistant', content: `⚠️ ${data.error}` }]);

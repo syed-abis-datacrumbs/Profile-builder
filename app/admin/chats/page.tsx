@@ -14,9 +14,9 @@ export default async function CvAiChatsPage() {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Resume AI Chats</h1>
+        <h1 className="text-2xl font-bold text-white">AI Chats</h1>
         <p className="text-sm text-slate-400 mt-1">
-          Every &quot;Build with AI&quot; conversation students have had in the Resume Builder.
+          Conversations students have had across the Resume, LinkedIn, and GitHub AI builders.
         </p>
       </div>
       <CvAiChatsClient />

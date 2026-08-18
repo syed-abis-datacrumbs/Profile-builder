@@ -11,9 +11,10 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const search = searchParams.get('search') || '';
+  const type = searchParams.get('type') || 'resume';
   const page = parseInt(searchParams.get('page') || '1', 10);
 
-  const where: any = {};
+  const where: any = { builderType: type };
   
   if (search) {
     const client = await clerkClient();

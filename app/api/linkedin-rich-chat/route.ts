@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import type { LinkedinRichProfile } from '../../../lib/linkedinRichProfile';
+import { db } from '@/lib/db';
+import { currentUser } from '@clerk/nextjs/server';
 import { COVER_ART } from '../../../lib/linkedinRichProfile';
 import { overageCeiling } from '../../../lib/linkedinCoverArt';
 
@@ -153,9 +155,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { messages?: ChatMessage[]; profile?: LinkedinRichProfile };
+    const body = (await request.json()) as { messages?: ChatMessage[]; linkedin?: Partial<LinkedinRichProfile>; userRole?: string; sessionId?: string; builderType?: string };
     const messages = Array.isArray(body.messages) ? body.messages : [];
-    const fullProfile = body.profile ?? ({} as LinkedinRichProfile);
+    const fullProfile = (body.linkedin ?? {}) as LinkedinRichProfile;
+    const sessionId = body.sessionId || 'unknown';
+    const builderType = body.builderType || 'linkedin';
+    const userMessage = messages[messages.length - 1]?.content || '';
     const contentProfile = toContentProfile(fullProfile);
 
     const art = COVER_ART[fullProfile.coverTemplateId];
@@ -236,11 +241,27 @@ The ONLY fields to leave untouched are literal contact details you have no real 
       coverFieldValues: mergeCoverFieldValues(fullProfile.coverTemplateId, fullProfile.coverFieldValues ?? {}, proposedCoverFieldValues),
     };
 
+    const reply = typeof parsedObj.reply === 'string' ? parsedObj.reply : 'Done — updated your profile.';
+
+    const user = await currentUser();
+    if (sessionId !== 'unknown') {
+      await db.profileBuilderChatLog.create({
+        data: {
+          sessionId,
+          builderType,
+          userId: user?.id,
+          userMessage,
+          aiReply: reply,
+          isAutoFit: false,
+        },
+      });
+    }
+
     return Response.json({
-      reply: typeof parsedObj.reply === 'string' ? parsedObj.reply : 'Done — updated your profile.',
+      reply,
       profile: mergedProfile,
     });
-  } catch {
+  } catch (err) {
     return Response.json({ error: 'The AI request failed. Check your API key / connection and try again.' });
   }
 }

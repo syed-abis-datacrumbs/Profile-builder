@@ -36,6 +36,7 @@ export function CvAiChatsClient() {
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<'resume' | 'linkedin' | 'github'>('resume');
   const [loading, setLoading] = useState(true);
 
   // The open transcript (fetched on demand, cached per session).
@@ -43,10 +44,10 @@ export function CvAiChatsClient() {
   const [turns, setTurns] = useState<CvAiChatTurn[] | null>(null);
   const [turnsLoading, setTurnsLoading] = useState(false);
 
-  const fetchSessions = async (query: string, pg: number) => {
+  const fetchSessions = async (query: string, pg: number, type: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/chats?search=${encodeURIComponent(query)}&page=${pg}`);
+      const res = await fetch(`/api/admin/chats?search=${encodeURIComponent(query)}&page=${pg}&type=${type}`);
       const data = await res.json();
       setSessions(data.sessions || []);
       setTotal(data.total || 0);
@@ -60,9 +61,9 @@ export function CvAiChatsClient() {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => fetchSessions(search, 1), 300);
+    const timer = setTimeout(() => fetchSessions(search, 1, activeTab), 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, activeTab]);
 
   const openTranscript = async (session: CvAiChatSession) => {
     setOpenSession(session);
@@ -84,6 +85,23 @@ export function CvAiChatsClient() {
 
   return (
     <div>
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-6 p-1 bg-slate-900 border border-slate-800 rounded-xl w-fit">
+        {(['resume', 'linkedin', 'github'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => { setActiveTab(tab); setPage(1); }}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${
+              activeTab === tab
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2 mb-6">
         <div className="relative w-[280px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -163,14 +181,14 @@ export function CvAiChatsClient() {
           </span>
           <div className="flex gap-2">
             <button
-              onClick={() => fetchSessions(search, page - 1)}
+              onClick={() => fetchSessions(search, page - 1, activeTab)}
               disabled={page <= 1 || loading}
               className="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 transition-colors"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
-              onClick={() => fetchSessions(search, page + 1)}
+              onClick={() => fetchSessions(search, page + 1, activeTab)}
               disabled={page >= totalPages || loading}
               className="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 transition-colors"
             >

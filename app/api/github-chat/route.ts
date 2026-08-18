@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import type { GithubProfileData } from '../../../types';
+import { db } from '@/lib/db';
+import { currentUser } from '@clerk/nextjs/server';
 
 export const runtime = 'nodejs';
 
@@ -57,9 +59,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { messages?: ChatMessage[]; github?: GithubProfileData };
+    const body = (await request.json()) as { messages?: ChatMessage[]; github?: GithubProfileData; sessionId?: string; builderType?: string };
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const github = body.github ?? {};
+    const sessionId = body.sessionId || 'unknown';
+    const builderType = body.builderType || 'github';
+    const userMessage = messages[messages.length - 1]?.content || '';
 
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
@@ -75,11 +80,27 @@ export async function POST(request: Request) {
 
     const raw = completion.choices[0]?.message?.content ?? '{}';
     const parsed = JSON.parse(raw);
+    const reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your README.';
+
+    const user = await currentUser();
+    if (sessionId !== 'unknown') {
+      await db.profileBuilderChatLog.create({
+        data: {
+          sessionId,
+          builderType,
+          userId: user?.id,
+          userMessage,
+          aiReply: reply,
+          isAutoFit: false,
+        },
+      });
+    }
+
     return Response.json({
-      reply: typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your README.',
+      reply,
       github: parsed.github ?? github,
     });
-  } catch {
+  } catch (err) {
     return Response.json({ error: 'The AI request failed. Check your API key / connection and try again.' });
   }
 }

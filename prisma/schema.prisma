@@ -115,6 +115,7 @@ model ProfileBuilderCouponRedemption {
 model ProfileBuilderChatLog {
   id          String   @id @default(cuid())
   sessionId   String
+  builderType String   @default("resume") // "resume", "github", "linkedin"
   userId      String?
   userMessage String
   aiReply     String

@@ -135,6 +135,11 @@ export const LinkedinChatStudio: React.FC<{
   const [mobilePane, setMobilePane] = useState<'chat' | 'profile'>('chat');
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sessionIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!sessionIdRef.current) sessionIdRef.current = crypto.randomUUID();
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -152,7 +157,12 @@ export const LinkedinChatStudio: React.FC<{
       const res = await fetch('/api/linkedin-rich-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next, profile }),
+        body: JSON.stringify({ 
+          messages: next, 
+          profile,
+          sessionId: sessionIdRef.current,
+          builderType: 'linkedin'
+        }),
       });
       const data = await res.json();
       if (data.error) setMessages((m) => [...m, { role: 'assistant', content: `⚠️ ${data.error}` }]);
