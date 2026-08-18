@@ -26,6 +26,7 @@ import { ATSScoreModal } from '../components/ATSScoreModal';
 import { ImportModal } from '../components/ImportModal';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { AskExpertModal } from '../components/AskExpertModal';
+import { PaymentModal } from '../components/PaymentModal';
 import { GithubChatStudio } from '../components/GithubChatStudio';
 import { LinkedinChatStudio } from '../components/LinkedinChatStudio';
 import { LinkedinRichProfile, buildInitialRichProfile } from '../lib/linkedinRichProfile';
@@ -89,6 +90,7 @@ export default function Home() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isAskExpertOpen, setIsAskExpertOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // User Auth State — real Clerk session, same account as the LMS
   // (lms.datacrumbs.org shares this Clerk app), so this is one source of
@@ -160,6 +162,7 @@ export default function Home() {
         planName={isLoggedIn ? "Pro Plan" : "Free Plan"}
         onOpenUpgrade={() => setIsUpgradeOpen(true)}
         onOpenAskExpert={() => setIsAskExpertOpen(true)}
+        onOpenRemoveWatermark={() => setIsPaymentModalOpen(true)}
         isMobileOpen={isMobileNavOpen}
         onCloseMobile={() => setIsMobileNavOpen(false)}
       />
@@ -697,6 +700,17 @@ export default function Home() {
         isOpen={isAskExpertOpen}
         onClose={() => setIsAskExpertOpen(false)}
       />
+
+      {isPaymentModalOpen && (
+        <PaymentModal
+          reason="Remove the watermark from your Resume, LinkedIn, and GitHub downloads"
+          onApproved={() => {
+            setIsPaymentModalOpen(false);
+            window.location.reload(); // Refresh to apply unlocked state globally
+          }}
+          onClose={() => setIsPaymentModalOpen(false)}
+        />
+      )}
 
     </div>
   );

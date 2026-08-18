@@ -14,7 +14,8 @@ import {
   HelpCircle,
   LogOut,
   Menu,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GithubIcon, LinkedinIcon } from './icons';
@@ -28,6 +29,7 @@ interface ImagineSidebarProps {
   planName?: string;
   onOpenUpgrade?: () => void;
   onOpenAskExpert?: () => void;
+  onOpenRemoveWatermark?: () => void;
   /** Mobile drawer visibility — owned by the page so the top bar can toggle it. */
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
@@ -50,6 +52,7 @@ interface SidebarBodyProps {
   planName: string;
   onOpenUpgrade?: () => void;
   onOpenAskExpert?: () => void;
+  onOpenRemoveWatermark?: () => void;
   /** The desktop rail and the mobile drawer are both mounted at once, so the
       active-pill layout animation needs a distinct id per instance — sharing
       one would make framer-motion try to tween between the two sidebars. */
@@ -66,6 +69,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
   planName,
   onOpenUpgrade,
   onOpenAskExpert,
+  onOpenRemoveWatermark,
   layoutIdSuffix
 }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -232,8 +236,21 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                 </button>
               </div>
 
-              {/* Menu List: Theme, Help Center, Log out */}
+              {/* Menu List: Remove Watermark, Theme, Help Center, Log out */}
               <div className="pt-2 border-t border-slate-200 space-y-0.5 text-xs font-semibold text-slate-700">
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(false);
+                    if (onOpenRemoveWatermark) onOpenRemoveWatermark();
+                  }}
+                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-blue-50 text-blue-700 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>Remove Watermark</span>
+                  </div>
+                </button>
+
                 <button
                   onClick={() => {
                     setIsSettingsOpen(false);
@@ -316,6 +333,7 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   planName = "Free Plan",
   onOpenUpgrade,
   onOpenAskExpert,
+  onOpenRemoveWatermark,
   isMobileOpen = false,
   onCloseMobile
 }) => {
@@ -337,6 +355,7 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
     planName,
     onOpenUpgrade,
     onOpenAskExpert,
+    onOpenRemoveWatermark,
   };
 
   return (
