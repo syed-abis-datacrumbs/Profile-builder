@@ -121,7 +121,7 @@ export async function POST(request: Request) {
       if (cvKey && count !== undefined && !position && !allFlag) {
         const ordinal = count === 1 ? '1st' : count === 2 ? '2nd' : count === 3 ? '3rd' : `${count}th`;
         return Response.json({
-          reply: `Just to clarify — do you mean remove the **${ordinal} ${sectionRaw}** specifically, or remove **${count} ${sectionRaw}s** from the list? If you want specific ones removed, let me know which ones (by name or position).`,
+          reply: `Just to clarify — do you mean remove the ${ordinal} ${sectionRaw} specifically, or remove ${count} ${sectionRaw}s from the list? If you want specific ones removed, let me know which ones (by name or position).`,
           cv,
         });
       }
