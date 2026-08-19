@@ -704,7 +704,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       onMouseDown={(e) => e.preventDefault()}
                       onTouchStart={(e) => e.preventDefault()}
                       onClick={() => setShowPassword((prev) => !prev)}
-                      className="w-10 h-10 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 transition-colors p-1 bg-transparent border-0 outline-none hover:bg-transparent shadow-none focus:outline-none cursor-pointer"
+                      className="w-10 absolute right-1 top-0 bottom-0 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors p-1 bg-transparent border-0 outline-none hover:bg-transparent shadow-none focus:outline-none cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -776,7 +776,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       onMouseDown={(e) => e.preventDefault()}
                       onTouchStart={(e) => e.preventDefault()}
                       onClick={() => setShowPassword((prev) => !prev)}
-                      className="w-10 h-10 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 transition-colors p-1 bg-transparent border-0 outline-none hover:bg-transparent shadow-none focus:outline-none cursor-pointer"
+                      className="w-10 absolute right-1 top-0 bottom-0 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors p-1 bg-transparent border-0 outline-none hover:bg-transparent shadow-none focus:outline-none cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>

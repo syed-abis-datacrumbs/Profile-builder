@@ -28,7 +28,7 @@ export const ImagineHeader: React.FC<ImagineHeaderProps> = ({
   };
 
   return (
-    <header className="w-full flex items-center justify-end p-4 gap-3 bg-transparent relative z-40">
+    <header className="w-full hidden md:flex items-center justify-end p-4 gap-3 bg-transparent relative z-40">
       
       {/* Bell Notification */}
       {/* <button className="w-8 h-8 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors shadow-2xs">

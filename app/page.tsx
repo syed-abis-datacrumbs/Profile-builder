@@ -93,11 +93,9 @@ export default function Home() {
   const [isAskExpertOpen, setIsAskExpertOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  // User Auth State — real Clerk session, same account as the LMS
-  // (lms.datacrumbs.org shares this Clerk app), so this is one source of
-  // truth rather than locally-tracked login state.
   const { user } = useUser();
   const userEmail = user?.primaryEmailAddress?.emailAddress || undefined;
+  const firstName = user?.firstName || user?.fullName?.split(' ')[0] || userEmail?.split('@')[0] || '';
   const isLoggedIn = !!user;
   const isAuthorized = isLoggedIn && BUILDER_ACCESS_EMAILS.has(userEmail || '');
   const [assistantPrompt, setAssistantPrompt] = useState('');
@@ -212,7 +210,10 @@ export default function Home() {
 
         {/* Mobile menu bar — rendered in every mode, including full-bleed
             Studio, since it is the only nav a phone gets. */}
-        <MobileNavBar onOpenMenu={() => setIsMobileNavOpen(true)} />
+        <MobileNavBar
+          onOpenMenu={() => setIsMobileNavOpen(true)}
+          onOpenAuth={() => setIsAuthOpen(true)}
+        />
 
         {/* Top Header - hidden in full-bleed Studio mode */}
         {!(
@@ -288,7 +289,7 @@ export default function Home() {
                       ) : (
                         <>
                           <ResumeLandingView
-                            userName={isLoggedIn ? userEmail?.split('@')[0] : ""}
+                            userName={firstName}
                             onSelectField={loadResumeField}
                             onSelectTemplate={(sample) => {
                               setResumePreviewSample(sample);
@@ -364,7 +365,7 @@ export default function Home() {
                         </div>
                       ) : (
                         <GithubLandingView
-                          userName={user?.firstName || undefined}
+                          userName={firstName || undefined}
                           onOpenRolePicker={() => setShowGithubTemplatePicker(true)}
                           onSelectPreset={(preset, theme, avatarUrl) => openGithubStudio(preset, theme, avatarUrl)}
                           attachedTemplate={attachedGithubTemplate}
@@ -432,7 +433,7 @@ export default function Home() {
                         />
                       ) : (
                         <LinkedinLandingView
-                          userName={user?.firstName || undefined}
+                          userName={firstName || undefined}
                           attachedTemplate={attachedLinkedinTemplate}
                           onClearAttachedTemplate={() => setAttachedLinkedinTemplate(null)}
                           onSelectTemplate={(tid) => {
@@ -471,7 +472,7 @@ export default function Home() {
                       transition={{ duration: 0.2 }}
                     >
                       <JobHuntingLandingView
-                        userName={isLoggedIn ? userEmail?.split('@')[0] : ""}
+                        userName={firstName}
                         onUsePrompt={(promptText) => {
                           setAssistantPrompt(promptText);
                           setActiveTab('assistant');
@@ -494,7 +495,7 @@ export default function Home() {
                       transition={{ duration: 0.2 }}
                     >
                       <FreelancingLandingView
-                        userName={isLoggedIn ? userEmail?.split('@')[0] : ""}
+                        userName={firstName}
                         onUsePrompt={(promptText) => {
                           setAssistantPrompt(promptText);
                           setActiveTab('assistant');
@@ -517,7 +518,7 @@ export default function Home() {
                       transition={{ duration: 0.2 }}
                     >
                       <InterviewPrepView
-                        userName={isLoggedIn ? userEmail?.split('@')[0] : ""}
+                        userName={firstName}
                         onUsePrompt={(promptText) => {
                           setAssistantPrompt(promptText);
                           setActiveTab('assistant');
