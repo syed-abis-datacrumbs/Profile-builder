@@ -52,7 +52,11 @@ export const ImagineHeader: React.FC<ImagineHeaderProps> = ({
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 hover:border-slate-300 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
         >
           <UserCheck className="w-3.5 h-3.5 text-blue-600" />
-          <span>{isLoggedIn ? userEmail?.split('@')[0] || 'Account' : 'Sign In'}</span>
+          <span>
+            {isLoggedIn
+              ? user?.firstName || user?.fullName?.split(' ')[0] || userEmail?.split('@')[0] || 'Account'
+              : 'Sign In'}
+          </span>
         </button>
 
         {isLoggedIn && isMenuOpen && (

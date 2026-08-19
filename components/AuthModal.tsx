@@ -118,6 +118,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const [mode, setMode] = useState<Mode>('signIn');
   const [step, setStep] = useState<Step>('form');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -195,6 +196,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setMode(nextMode);
     setStep('form');
     setCode('');
+    setFullName('');
     setError(null);
   };
 
@@ -260,7 +262,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (!signUpLoaded || !signUp) return;
     setLoading(true);
     try {
-      const result = await signUp.create({ emailAddress: email, password });
+      const nameParts = fullName.trim().split(/\s+/);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const result = await signUp.create({
+        emailAddress: email,
+        password,
+        firstName,
+        lastName
+      });
 
       if (result.status === 'complete') {
         await finishWithSession(result.createdSessionId);
@@ -719,6 +730,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             ) : (
               <form onSubmit={handleFormSubmit} className="space-y-3.5">
                 
+                {/* Full Name Field (Sign Up mode only) */}
+                {mode === 'signUp' && (
+                  <div className="space-y-1 text-left">
+                    <label className="text-xs font-bold text-slate-900 block">Full Name</label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="John Wick"
+                      required
+                      className="w-full px-4 py-3 rounded-2xl bg-slate-100/90 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-slate-900/15 border-0 text-slate-900 text-xs font-medium placeholder-slate-400 transition-all outline-none"
+                    />
+                  </div>
+                )}
+
                 {/* Email Field with Label Above */}
                 <div className="space-y-1 text-left">
                   <label className="text-xs font-bold text-slate-900 block">Email</label>

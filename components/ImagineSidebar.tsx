@@ -50,6 +50,7 @@ interface SidebarBodyProps {
   onSelectTab: (tab: ActiveTab) => void;
   onNewChat: () => void;
   userName: string;
+  initials: string;
   planName: string;
   isLoggedIn?: boolean;
   onOpenAuth?: () => void;
@@ -70,6 +71,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
   onSelectTab,
   onNewChat,
   userName,
+  initials,
   planName,
   isLoggedIn,
   onOpenAuth,
@@ -81,15 +83,6 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
 }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { signOut } = useClerk();
-
-  // Real initials from the signed-in (or fallback placeholder) name, instead
-  // of the previously-hardcoded "AH" — e.g. "Abis Hussain" -> "AH".
-  const initials = userName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'U';
 
   return (
     <>
@@ -366,7 +359,16 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   const { user } = useUser();
   const isLoggedIn = !!user;
   const userEmail = user?.primaryEmailAddress?.emailAddress || undefined;
-  const userName = isLoggedIn ? userEmail?.split('@')[0] || "Abis Hussain Syed" : "Sign in to save";
+  
+  // Prioritize first name: user.firstName -> first word of user.fullName -> email prefix -> default
+  const firstName = user?.firstName || user?.fullName?.split(' ')[0] || userEmail?.split('@')[0] || "User";
+  const userName = isLoggedIn ? firstName : "Sign in to save";
+  
+  // Compute initials from first & last name, falling back to email first character
+  const initials = isLoggedIn
+    ? ((user?.firstName?.[0] || '') + (user?.lastName?.[0] || '')).toUpperCase() || userEmail?.[0]?.toUpperCase() || 'U'
+    : 'U';
+
   const planName = unlocked ? "Pro Active" : (isLoggedIn ? "Free Plan" : "Create a free account");
   // The drawer sits over the page, so the page behind it must not scroll —
   // otherwise a swipe on the backdrop scrolls the builder underneath.
@@ -383,6 +385,7 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
     activeTab,
     onNewChat,
     userName,
+    initials,
     planName,
     isLoggedIn,
     onOpenAuth,
