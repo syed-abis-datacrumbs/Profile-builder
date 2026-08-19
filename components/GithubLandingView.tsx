@@ -151,7 +151,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     tagline: 'Real-time models, OpenCV & TensorRT',
     badge: 'Specialized',
     theme: 'dark',
-    bannerUrl: 'https://t3.ftcdn.net/jpg/20/51/12/90/360_F_2051129030_uod7m0OoRgOBN03AcYRzK9ESwAAAnXdt.jpg',
+    bannerUrl: 'https://github.blog/wp-content/uploads/2023/10/Security-DarkMode-4.png?fit=800%2C200',
     bgClass: 'bg-gradient-to-br from-blue-950/60 via-slate-950 to-slate-900',
     borderClass: 'border-blue-500/30 shadow-blue-500/10',
     accentText: 'text-blue-400',

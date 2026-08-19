@@ -50,9 +50,9 @@ const BANNER_PRESETS: { label: string; url: string; thumb: string }[] = [
     thumb: 'https://media.licdn.com/dms/image/v2/D4D22AQFdDNT0wF7QeA/feedshare-shrink_800/B4DZnTiPJ.HsAg-/0/1760190592128?e=2147483647&v=beta&t=TIR7gw8DvhVlNvj430XoNRE2szOwVuPZACPAR7O6mww',
   },
   {
-    label: 'Abstract Tech',
-    url: 'https://t3.ftcdn.net/jpg/20/51/12/90/360_F_2051129030_uod7m0OoRgOBN03AcYRzK9ESwAAAnXdt.jpg',
-    thumb: 'https://t3.ftcdn.net/jpg/20/51/12/90/360_F_2051129030_uod7m0OoRgOBN03AcYRzK9ESwAAAnXdt.jpg',
+    label: 'GitHub Security Alt',
+    url: 'https://github.blog/wp-content/uploads/2023/10/Security-DarkMode-4.png?fit=800%2C200',
+    thumb: 'https://github.blog/wp-content/uploads/2023/10/Security-DarkMode-4.png?fit=800%2C200',
   },
   {
     label: 'Minimal Graphic',
