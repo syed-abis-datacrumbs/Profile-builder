@@ -44,7 +44,11 @@ Rules:
   2. You MUST explicitly update its "start" and "end" fields in the returned JSON.
   3. For relative duration requests (e.g., "working from 6 months now" or "6 months experience"), set end: "Present" (if current role) and set start to 6 months prior (e.g., start: "Sep 2025", end: "Present").
   4. For explicit date ranges (e.g., "started bscs in jan 2022 and ended in feb 2026"), set start: "Jan 2022" and end: "Feb 2026" on that education item.
-  5. NEVER return the CV JSON with dates unchanged when the user explicitly requested date updates.
+- CRITICAL — Skills & Interests (additional section):
+  1. The "additional" object MUST ALWAYS contain non-empty "skills" and "interests" strings.
+  2. "skills" MUST be a comma-separated list of relevant technical skills, programming languages, frameworks, and tools inferred from the user's projects, education, and work experience (e.g., "JavaScript, Node.js, React, Python, C++, HTML/CSS, Git, REST APIs, Arduino, dlib").
+  3. "interests" MUST be a short comma-separated list of professional/tech interests inferred from their projects and field (e.g., "Web Development, Artificial Intelligence, Open Source, System Architecture, Mobile App Development").
+  4. If the user asks to "add skills", "fill skills", "add content to skills/interests", or if "skills" or "interests" are empty/blank, YOU MUST IMMEDIATELY POPULATE BOTH FIELDS with relevant, concrete technical content inferred from their resume items! NEVER return empty strings or blank placeholders for "skills" or "interests".
 - Output valid JSON only.`;
 
 interface ChatMessage {
