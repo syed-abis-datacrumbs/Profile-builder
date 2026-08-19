@@ -315,7 +315,7 @@ export function applyRolePresetToGithub(
     ...(preset.extraBadges?.map((b) => b.label) ?? []),
   ];
   const projectsMd = preset.projects
-    .map((p) => `**${p.name}** — ${p.desc}`)
+    .map((p) => `• [${p.name}](https://github.com/${data.username || 'your-github-username'}/${p.slug}): ${p.desc}`)
     .join('\n\n');
   return {
     ...data,

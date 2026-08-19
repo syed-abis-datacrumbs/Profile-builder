@@ -33,11 +33,12 @@ CRITICAL CONTENT QUALITY RULES:
 - NEVER output generic placeholder text like "Add your projects here", "Insert description here", or "Fill in details".
 - ALWAYS generate comprehensive, highly detailed, and lengthy content (2-3 full paragraphs or extensive bullet points) to ensure the profile looks rich and professional. Do NOT generate short, one-sentence sections.
 - When asked to add projects or content, ALWAYS generate 2 to 4 complete, realistic, production-grade project descriptions with concrete names, metrics, architectures, and tech stacks.
-- CRITICAL FORMATTING RULE: DO NOT use markdown headers (like #, ##, ###) or bold/italic syntax (like ** or *) inside ANY text fields (title, about, customSections.content). The visual builder renders raw text, so markdown syntax will look like a glitch. 
+- CRITICAL FORMATTING RULE: DO NOT use markdown headers (like #, ##, ###) or bold/italic syntax (like ** or *) inside ANY text fields.
+- HOWEVER, YOU MUST USE markdown link syntax for project titles or references (e.g. [Project Name](https://github.com/username/repo)). The visual builder supports clickable links.
 - Format lists or projects cleanly with plain text bullets (e.g. "• ") and use spacing instead of bolding:
-  • Vulnerability Assessment Tool: Developed a comprehensive vulnerability assessment tool...
-- If the user asks to add projects or custom sections, append or update the entry in \`customSections\` with full, rich plain-text content.
-- ALWAYS generate "💡 Expertise" and "🚀 Featured Projects" custom sections by default when creating a profile from scratch or responding to a general "build me a profile" prompt. Do not leave the customSections array empty!
+  • [Vulnerability Assessment Tool](https://github.com/yourname/vuln-tool): Developed a comprehensive vulnerability assessment tool...
+- If the user asks to add projects or custom sections, append or update the entry in 'customSections' with full, rich plain-text content.
+- ALWAYS generate "💡 Expertise" and "🚀 Featured Projects" custom sections by default when creating a profile from scratch.
 
 General Rules:
 - Return the WHOLE github object every time; preserve every field the user did not ask to change.

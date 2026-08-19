@@ -14,6 +14,29 @@ const BADGE_COLORS: Record<string, string> = {
 };
 export const badgeColor = (name: string) => BADGE_COLORS[name.toLowerCase()] ?? '6366f1';
 
+function renderMarkdownLinks(text: string) {
+  if (!text) return text;
+  const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    parts.push(
+      <a key={match.index} href={match[2]} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
+        {match[1]}
+      </a>
+    );
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+  return parts.length > 0 ? parts : text;
+}
+
 export function Edit({
   value,
   onCommit,
@@ -29,18 +52,35 @@ export function Edit({
   block?: boolean;
   readOnly?: boolean;
 }) {
+  const [isFocused, setIsFocused] = useState(false);
   const Tag = (block ? 'div' : 'span') as 'div';
+  
   if (readOnly) {
-    return <Tag className={`${className || ''} whitespace-pre-wrap`}>{value || <span className="text-slate-500">{placeholder}</span>}</Tag>;
+    return <Tag className={`${className || ''} whitespace-pre-wrap`}>{value ? renderMarkdownLinks(value) : <span className="text-slate-500">{placeholder}</span>}</Tag>;
   }
+
+  if (!isFocused) {
+    return (
+      <Tag
+        className={`${className || ''} outline-none rounded hover:bg-white/5 focus:bg-white/10 cursor-text whitespace-pre-wrap empty:before:content-[attr(data-ph)] empty:before:text-slate-500`}
+        onClick={() => setIsFocused(true)}
+        data-ph={placeholder}
+      >
+        {value ? renderMarkdownLinks(value) : null}
+      </Tag>
+    );
+  }
+
   return (
     <Tag
       key={value}
       contentEditable
       suppressContentEditableWarning
+      autoFocus
       data-ph={placeholder}
       className={`${className || ''} outline-none rounded hover:bg-white/5 focus:bg-white/10 cursor-text whitespace-pre-wrap empty:before:content-[attr(data-ph)] empty:before:text-slate-500`}
       onBlur={(e) => {
+        setIsFocused(false);
         const v = e.currentTarget.textContent ?? '';
         if (v !== value && onCommit) onCommit(v);
       }}
