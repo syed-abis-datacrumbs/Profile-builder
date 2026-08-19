@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useClerk } from '@clerk/nextjs';
+import { useClerk, useUser } from '@clerk/nextjs';
 import {
   ChevronRight,
   Settings,
@@ -26,9 +26,6 @@ interface ImagineSidebarProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   onNewChat: () => void;
-  userName?: string;
-  planName?: string;
-  isLoggedIn?: boolean;
   onOpenAuth?: () => void;
   onOpenUpgrade?: () => void;
   onOpenAskExpert?: () => void;
@@ -296,16 +293,18 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
 
-                <button
-                  onClick={() => {
-                    setIsSettingsOpen(false);
-                    signOut();
-                  }}
-                  className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors text-left"
-                >
-                  <LogOut className="w-4 h-4 shrink-0" />
-                  <span>Log out</span>
-                </button>
+                {isLoggedIn && (
+                  <button
+                    onClick={() => {
+                      setIsSettingsOpen(false);
+                      signOut();
+                    }}
+                    className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors text-left"
+                  >
+                    <LogOut className="w-4 h-4 shrink-0" />
+                    <span>Log out</span>
+                  </button>
+                )}
               </div>
 
             </div>
@@ -314,7 +313,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
           {/* User Profile Bar (Trigger) */}
           <div
             onClick={() => {
-              if (isLoggedIn === false && onOpenAuth) {
+              if (!isLoggedIn && onOpenAuth) {
                 onOpenAuth();
               } else {
                 setIsSettingsOpen(!isSettingsOpen);
@@ -324,23 +323,25 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
-                {isLoggedIn === false ? <User className="w-4 h-4 text-white" /> : initials}
+                {!isLoggedIn ? <User className="w-4 h-4 text-white" /> : initials}
               </div>
               <div className="truncate">
                 <div className="font-bold text-xs text-slate-900 truncate">
-                  {isLoggedIn === false ? "Sign in to save" : userName}
+                  {!isLoggedIn ? "Sign in to save" : userName}
                 </div>
                 <div className="text-[10px] text-slate-400 font-medium">
-                  {isLoggedIn === false ? "Create a free account" : planName}
+                  {!isLoggedIn ? "Create a free account" : planName}
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              className="text-slate-400 hover:text-slate-700 p-1 transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
+            {isLoggedIn && (
+              <button
+                type="button"
+                className="text-slate-400 hover:text-slate-700 p-1 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
         </div>
@@ -354,9 +355,6 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   activeTab,
   setActiveTab,
   onNewChat,
-  userName = "Abis Hussain Syed",
-  planName = "Free Plan",
-  isLoggedIn = true,
   onOpenAuth,
   onOpenUpgrade,
   onOpenAskExpert,
@@ -365,6 +363,11 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   isMobileOpen = false,
   onCloseMobile
 }) => {
+  const { user } = useUser();
+  const isLoggedIn = !!user;
+  const userEmail = user?.primaryEmailAddress?.emailAddress || undefined;
+  const userName = isLoggedIn ? userEmail?.split('@')[0] || "Abis Hussain Syed" : "Sign in to save";
+  const planName = unlocked ? "Pro Active" : (isLoggedIn ? "Free Plan" : "Create a free account");
   // The drawer sits over the page, so the page behind it must not scroll —
   // otherwise a swipe on the backdrop scrolls the builder underneath.
   useEffect(() => {

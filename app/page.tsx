@@ -41,7 +41,7 @@ import { matchResumeSampleToPrompt } from '../lib/resumeHelpers';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { ResumeChatStudio } from '../components/ResumeChatStudio';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Sparkles, FileText, Download, Award, Terminal } from 'lucide-react';
+import { ArrowLeft, Sparkles, FileText, Download, Award, Terminal, ArrowUp } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '../components/icons';
 
 export default function Home() {
@@ -75,6 +75,7 @@ export default function Home() {
   // Mobile nav drawer — the sidebar rail is desktop-only, so on a phone this
   // is the only way to move between builders.
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   // Profile Data State
   const [resumeData, setResumeData] = useState<ResumeData>(defaultResumeData);
@@ -107,6 +108,25 @@ export default function Home() {
       .then((r) => r.json())
       .then((d: { unlocked: boolean }) => setUnlocked(d.unlocked))
       .catch(() => setUnlocked(false));
+  }, []);
+
+  // Listen to scrolling on mainContentRef to show/hide Scroll to Top button
+  useEffect(() => {
+    const container = mainContentRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      if (container.scrollTop > 400) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   // Calculate ATS Score
@@ -175,10 +195,7 @@ export default function Home() {
           else if (activeTab === 'github') setGithubMode('landing');
           else if (activeTab === 'linkedin') setLinkedinMode('landing');
         }}
-        userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis Hussain Syed" : "Sign in to save"}
-        planName={unlocked ? "Pro Active" : (isLoggedIn ? "Free Plan" : "Create a free account")}
         unlocked={unlocked}
-        isLoggedIn={isLoggedIn}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenUpgrade={() => setIsUpgradeOpen(true)}
         onOpenAskExpert={() => setIsAskExpertOpen(true)}
@@ -208,8 +225,6 @@ export default function Home() {
           <ImagineHeader
             onOpenUpgrade={() => setIsUpgradeOpen(true)}
             onOpenAuth={() => setIsAuthOpen(true)}
-            isLoggedIn={isLoggedIn}
-            userEmail={userEmail}
           />
         )}
 
@@ -753,6 +768,29 @@ export default function Home() {
           onClose={() => setIsPaymentModalOpen(false)}
         />
       )}
+
+      {/* Scroll to Top Button */}
+      <AnimatePresence>
+        {showScrollTop && !(
+          (activeTab === 'resume' && resumeMode === 'studio') ||
+          (activeTab === 'linkedin' && linkedinMode === 'studio') ||
+          (activeTab === 'github' && githubMode === 'studio')
+        ) && (
+          <motion.button
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => {
+              mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="fixed bottom-6 right-6 p-3.5 rounded-full bg-[#2a2a2e] hover:bg-black text-white shadow-xl hover:shadow-2xl transition-all z-40 focus:outline-none flex items-center justify-center cursor-pointer border border-slate-700/20"
+            title="Scroll to Top"
+          >
+            <ArrowUp className="w-5 h-5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
     </div>
   );

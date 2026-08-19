@@ -27,7 +27,7 @@ interface AuthModalProps {
 }
 
 type Mode = 'signIn' | 'signUp';
-type Step = 'form' | 'verify';
+type Step = 'form' | 'verify' | 'forgotRequest' | 'forgotVerify';
 
 const companyLogos = [
   {
@@ -88,7 +88,7 @@ const companyLogos = [
     name: 'Spotify',
     icon: (
       <svg className="h-4 w-4 shrink-0 text-[#1DB954] fill-current" viewBox="0 0 24 24">
-        <path d="M12 0C5.376 0 0 5.376 0 12s5.376 12 12 12 12-5.376 12-12S18.624 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.18-.1.2-.241-1.02-.361-.18-.6-.36-1.02.18-1.24 4.14-1.38 11.28-1.08 15.6 1.14.6.18.84.78.66 1.38-.18.6-.78.84-1.38.66z"/>
+        <path d="M12 0C5.376 0 0 5.376 0 12s5.376 12 12 12 12-5.376 12-12S18.624 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141 C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.18-.1.2-.241-1.02-.361-.18-.6-.36-1.02.18-1.24 4.14-1.38 11.28-1.08 15.6 1.14.6.18.84.78.66 1.38-.18.6-.78.84-1.38 .66z"/>
       </svg>
     )
   },
@@ -236,7 +236,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         if (errCode === 'form_identifier_not_found') {
           setError('No account with that email yet — switch to Sign up below.');
         } else {
-          setError(err?.errors?.[0]?.message || 'Could not sign in. Please try again.');
+          setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Could not sign in. Please try again.');
         }
       } finally {
         setLoading(false);
@@ -262,7 +262,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setMode('signIn');
         setError('You already have an account with that email — sign in instead.');
       } else {
-        setError(err?.errors?.[0]?.message || 'Could not create your account. Please try again.');
+        setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Could not create your account. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -298,7 +298,63 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         }
       }
     } catch (err: any) {
-      setError(err?.errors?.[0]?.message || 'Invalid code. Please try again.');
+      setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Invalid code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signInLoaded || !signIn) return;
+    setError(null);
+    setLoading(true);
+
+    try {
+      const signInAttempt = await signIn.create({
+        strategy: 'reset_password_email_code',
+        identifier: email,
+      });
+      
+      const firstFactor = signInAttempt.supportedFirstFactors?.find(
+        (factor: any) => factor.strategy === 'reset_password_email_code'
+      ) as any;
+
+      if (firstFactor) {
+        await signIn.prepareFirstFactor({
+          strategy: 'reset_password_email_code',
+          emailAddressId: firstFactor.emailAddressId,
+        });
+        setStep('forgotVerify');
+      } else {
+        setError('Password reset is not supported for this account.');
+      }
+    } catch (err: any) {
+      setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Failed to send reset code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotVerifySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signInLoaded || !signIn) return;
+    setError(null);
+    setLoading(true);
+
+    try {
+      const result = await signIn.attemptFirstFactor({
+        strategy: 'reset_password_email_code',
+        code,
+        password,
+      });
+      if (result.status === 'complete') {
+        await finishWithSession(result.createdSessionId);
+      } else {
+        setError('Failed to complete reset. Please try again.');
+      }
+    } catch (err: any) {
+      setError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Verification failed.');
     } finally {
       setLoading(false);
     }
@@ -500,11 +556,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </motion.div>
 
               <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                {step === 'verify' ? 'Check your email' : mode === 'signIn' ? 'Welcome Back!' : 'Create Account!'}
+                {step === 'verify'
+                  ? 'Check your email'
+                  : step === 'forgotRequest'
+                  ? 'Reset Password'
+                  : step === 'forgotVerify'
+                  ? 'Set New Password'
+                  : mode === 'signIn'
+                  ? 'Welcome Back!'
+                  : 'Create Account!'}
               </h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
                 {step === 'verify'
                   ? `Enter the 6-digit verification code sent to ${email}.`
+                  : step === 'forgotRequest'
+                  ? 'Enter your email to receive a password reset code.'
+                  : step === 'forgotVerify'
+                  ? `Enter the code sent to ${email} and your new password.`
                   : mode === 'signIn'
                   ? 'Please enter your login details.'
                   : 'Please enter your details to sign up.'}
@@ -553,6 +621,87 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   ← Back to form
                 </button>
               </form>
+            ) : step === 'forgotRequest' ? (
+              <form onSubmit={handleForgotRequestSubmit} className="space-y-4">
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-bold text-slate-900 block">Email Address</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="johnwick123@gmail.com"
+                    required
+                    className="w-full px-4 py-3 rounded-2xl bg-slate-100/90 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-slate-900/15 border-0 text-slate-900 text-xs font-medium placeholder-slate-400 transition-all outline-none"
+                  />
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.015 }}
+                  whileTap={{ scale: 0.985 }}
+                  type="submit"
+                  disabled={loading || !email.trim()}
+                  className="w-full py-3.5 rounded-2xl bg-[#2a2a2e] hover:bg-black text-white font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-50 mt-1"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto text-white" /> : 'Send Reset Code'}
+                </motion.button>
+                <button
+                  type="button"
+                  onClick={() => resetToForm('signIn')}
+                  className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors font-semibold mt-2"
+                >
+                  ← Back to Login
+                </button>
+              </form>
+            ) : step === 'forgotVerify' ? (
+              <form onSubmit={handleForgotVerifySubmit} className="space-y-4">
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-bold text-slate-900 block">Verification Code</label>
+                  <input
+                    type="text"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="6-digit code"
+                    required
+                    className="w-full px-4 py-3 rounded-2xl bg-slate-100/90 text-slate-900 placeholder-slate-400 text-xs font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-slate-900/15 transition-all text-center tracking-widest font-mono"
+                  />
+                </div>
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-bold text-slate-900 block">New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      required
+                      minLength={8}
+                      className="w-full pl-4 pr-10 py-3 rounded-2xl bg-slate-100/90 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-slate-900/15 border-0 text-slate-900 text-xs font-medium placeholder-slate-400 transition-all outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 transition-colors p-1 bg-transparent border-0 outline-none hover:bg-transparent shadow-none focus:outline-none flex items-center justify-center"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.015 }}
+                  whileTap={{ scale: 0.985 }}
+                  type="submit"
+                  disabled={loading || !code.trim() || password.length < 8}
+                  className="w-full py-3.5 rounded-2xl bg-[#2a2a2e] hover:bg-black text-white font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-50 mt-1"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto text-white" /> : 'Reset Password'}
+                </motion.button>
+                <button
+                  type="button"
+                  onClick={() => resetToForm('signIn')}
+                  className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors font-semibold mt-2"
+                >
+                  ← Back to Login
+                </button>
+              </form>
             ) : (
               <form onSubmit={handleFormSubmit} className="space-y-3.5">
                 
@@ -585,7 +734,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 transition-colors p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 transition-colors p-1 bg-transparent border-0 outline-none hover:bg-transparent shadow-none focus:outline-none flex items-center justify-center"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -594,8 +743,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <div className="text-right pt-0.5">
                       <button
                         type="button"
-                        onClick={() => alert('Password reset instructions sent to your email!')}
-                        className="text-xs font-bold text-slate-900 hover:underline transition-all"
+                        onClick={() => setStep('forgotRequest')}
+                        className="text-xs font-bold text-slate-900 hover:underline transition-all cursor-pointer"
                       >
                         Forgot Password?
                       </button>
@@ -620,44 +769,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   )}
                 </motion.button>
 
-                {/* OR Divider */}
-                <div className="relative flex items-center justify-center my-1 pt-1">
-                  <div className="w-full border-t border-slate-200" />
-                  <span className="absolute px-3 bg-white text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-                    OR
-                  </span>
-                </div>
-
-                {/* Side-by-Side Social SSO Buttons */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    type="button"
-                    onClick={() => handleOAuth('oauth_google')}
-                    className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-bold text-xs shadow-2xs transition-all cursor-pointer"
-                  >
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                    </svg>
-                    <span>With Google</span>
-                  </motion.button>
-
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    type="button"
-                    onClick={() => handleOAuth('oauth_google')}
-                    className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-bold text-xs shadow-2xs transition-all cursor-pointer"
-                  >
-                    <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span>With LMS SSO</span>
-                  </motion.button>
-                </div>
-
                 {/* Footer Switcher */}
                 <div className="text-xs text-center text-slate-500 font-medium pt-2">
                   {mode === 'signIn' ? (
@@ -666,7 +777,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       <button
                         type="button"
                         onClick={() => resetToForm('signUp')}
-                        className="font-extrabold text-slate-900 underline hover:text-black transition-colors"
+                        className="font-extrabold text-slate-900 hover:text-black hover:underline transition-colors cursor-pointer"
                       >
                         Register now
                       </button>
@@ -677,7 +788,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       <button
                         type="button"
                         onClick={() => resetToForm('signIn')}
-                        className="font-extrabold text-slate-900 underline hover:text-black transition-colors"
+                        className="font-extrabold text-slate-900 hover:text-black hover:underline transition-colors cursor-pointer"
                       >
                         Sign in now
                       </button>
