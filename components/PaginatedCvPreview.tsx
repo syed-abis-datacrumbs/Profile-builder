@@ -43,9 +43,9 @@ export function PaginatedCvPreview({
   ]);
   const [scale, setScale] = useState(1);
 
-  const renderContent = () => {
+  const renderContent = (isEditable = true) => {
     if (children) return <>{children}</>;
-    return <CvPreview data={data!} onChange={onChange} />;
+    return <CvPreview data={data!} onChange={isEditable ? onChange : undefined} />;
   };
 
   useLayoutEffect(() => {
@@ -107,7 +107,7 @@ export function PaginatedCvPreview({
           pointerEvents: 'none',
         }}
       >
-        {renderContent()}
+        {renderContent(false)}
       </div>
 
       {/* Hidden EXPORT copy — captured by Puppeteer PDF export */}
@@ -121,7 +121,7 @@ export function PaginatedCvPreview({
           pointerEvents: 'none',
         }}
       >
-        {renderContent()}
+        {renderContent(false)}
       </div>
 
       {/* Visible paginated preview — one A4 box per page */}
@@ -162,7 +162,7 @@ export function PaginatedCvPreview({
                   }}
                 >
                   <div style={{ transform: `translateY(${-page.sliceStart}px)` }}>
-                    {renderContent()}
+                    {renderContent(true)}
                   </div>
                 </div>
               </div>
