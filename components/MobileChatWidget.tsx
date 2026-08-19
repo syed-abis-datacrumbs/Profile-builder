@@ -46,28 +46,43 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
   return (
     <>
       {/* Floating Trigger Button (Visible only on Mobile screens below lg) */}
-      <div className="fixed bottom-6 right-4 z-40 lg:hidden flex flex-col items-end gap-3">
-        <button
-          onClick={onToggle}
-          className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-200 cursor-pointer border-2 ${
-            isOpen
-              ? 'bg-slate-900 text-white border-slate-700 scale-105'
-              : 'bg-[#2a2a2e] text-white border-slate-700/60 hover:bg-black hover:scale-105'
-          }`}
-          aria-label={isOpen ? 'Close AI Chat' : 'Open AI Chat'}
-        >
-          {isOpen ? (
-            <X className="w-6 h-6 text-white" />
-          ) : (
-            <div className="relative flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="AI Chat" className="w-7 h-7 object-contain drop-shadow-sm" />
-              {messages.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-slate-900" />
-              )}
-            </div>
+      <div className="fixed bottom-6 right-4 z-40 lg:hidden flex items-center gap-2">
+        {!isOpen && (
+          <div
+            onClick={onToggle}
+            className="bg-white text-slate-900 text-xs font-bold px-3.5 py-2 rounded-full shadow-xl border border-slate-200/90 flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 transition-all shrink-0"
+          >
+            <span>Build with AI</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+          </div>
+        )}
+
+        <div className="relative shrink-0">
+          <button
+            onClick={onToggle}
+            className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-200 cursor-pointer border-2 ${
+              isOpen
+                ? 'bg-slate-900 text-white border-slate-700 scale-105'
+                : 'bg-[#2a2a2e] text-white border-slate-700/60 hover:bg-black hover:scale-105'
+            }`}
+            aria-label={isOpen ? 'Close AI Chat' : 'Open AI Chat'}
+          >
+            {isOpen ? (
+              <X className="w-6 h-6 text-white" />
+            ) : (
+              <div className="relative flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.png" alt="AI Chat" className="w-7 h-7 object-contain drop-shadow-sm" />
+              </div>
+            )}
+          </button>
+
+          {!isOpen && (
+            <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-red-500 text-white text-[9px] font-black rounded-full border-2 border-white flex items-center justify-center shadow-xs">
+              1
+            </span>
           )}
-        </button>
+        </div>
       </div>
 
       {/* Floating Widget Popup (Visible on Mobile when isOpen === true) */}

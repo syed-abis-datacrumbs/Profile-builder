@@ -319,7 +319,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     }
   };
 
-  // Register ATS score badge & Target Job button into the top mobile navbar
+  const handleCheckAtsRef = useRef(handleCheckAts);
+  handleCheckAtsRef.current = handleCheckAts;
+
+  // Safely register ATS score badge & Target Job button into top mobile navbar
   useEffect(() => {
     if (!setMobileHeaderRight) return;
     setMobileHeaderRight(
@@ -327,7 +330,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         {/* ATS Score Badge */}
         <div className="relative shrink-0">
           <button
-            onClick={handleCheckAts}
+            onClick={() => handleCheckAtsRef.current()}
             disabled={atsLoading}
             className="h-7 px-2 rounded-lg bg-emerald-50 border border-emerald-200/80 hover:bg-emerald-100/80 text-slate-900 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-70 shadow-2xs"
             title="Check ATS Score"
@@ -369,8 +372,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         {/* Target Job Match Button */}
         <div className="relative shrink-0">
           <button
-            onClick={() => setTargetJobModalOpen((prev) => !prev)}
-            className={`h-7 px-2.5 rounded-full text-[11px] font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer border ${
+            onClick={() => setTargetJobModalOpen(true)}
+            className={`h-7 px-2.5 rounded-full text-[11px] font-bold transition-all shadow-2xs flex items-center justify-center gap-1 cursor-pointer border ${
               targetJob.trim()
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-400 hover:bg-emerald-100'
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
@@ -383,7 +386,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       </div>
     );
     return () => setMobileHeaderRight(null);
-  }, [setMobileHeaderRight, atsScore, atsLoading, atsPopoverOpen, atsBreakdown, atsError, targetJob, handleCheckAts]);
+  }, [setMobileHeaderRight, atsScore, atsLoading, atsPopoverOpen, atsError, targetJob]);
 
   const exportRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState<null | 'pdf' | 'png'>(null);
@@ -813,6 +816,63 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
           {/* Right Controls Group */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
+
+            {/* ATS Score Badge in Toolbar (Desktop only) */}
+            <div className="relative shrink-0 hidden md:block">
+              <button
+                onClick={handleCheckAts}
+                disabled={atsLoading}
+                className="h-7 px-1.5 sm:px-2 rounded-lg bg-emerald-50 border border-emerald-200/80 hover:bg-emerald-100/80 text-slate-900 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-70 shadow-2xs"
+                title="Check ATS Score"
+              >
+                {atsLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                ) : (
+                  <>
+                    <span className="font-black text-slate-900 text-xs">{atsScore ?? '–'}</span>
+                    <span className="text-[9px] font-extrabold text-emerald-600 uppercase tracking-tight">ATS</span>
+                  </>
+                )}
+              </button>
+
+              {atsPopoverOpen && !atsLoading && (atsScore !== null || atsError) && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setAtsPopoverOpen(false)} />
+                  <div className="absolute top-9 right-0 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-3.5 text-xs text-left">
+                    {atsError ? (
+                      <p className="text-red-600 font-medium">{atsError}</p>
+                    ) : (
+                      <>
+                        <div className="font-bold text-slate-900 mb-2">ATS Score: {atsScore}</div>
+                        <ul className="space-y-1.5 text-slate-600">
+                          {atsBreakdown.map((b, i) => (
+                            <li key={i} className="flex gap-1.5">
+                              <span className="shrink-0">•</span>
+                              <span>{b}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Target Job Match Button (Desktop only) */}
+            <div className="relative shrink-0 hidden md:block">
+              <button
+                onClick={() => setTargetJobModalOpen(!targetJobModalOpen)}
+                className={`h-7 px-2 sm:px-2.5 rounded-full text-[11px] font-bold transition-all shadow-2xs flex items-center justify-center gap-1 cursor-pointer border ${
+                  targetJob.trim()
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-400 hover:bg-emerald-100'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${targetJob.trim() ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                <span>Target Job Match</span>
+              </button>
+            </div>
 
             {/* Professional / Student Pill */}
             <div className="h-7 flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5 border border-slate-200 shrink-0">

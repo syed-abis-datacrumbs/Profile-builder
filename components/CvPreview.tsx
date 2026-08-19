@@ -66,6 +66,7 @@ function RichText({
   block,
   bullet,
   onEmptyBackspace,
+  editable = true,
 }: {
   html: string;
   onCommit: (v: string) => void;
@@ -78,11 +79,12 @@ function RichText({
    *  is empty, so an already-cleared field doesn't just sit there forever
    *  showing its placeholder hint with no way to make it disappear. */
   onEmptyBackspace?: () => void;
+  editable?: boolean;
 }) {
   const Tag = (block ? 'div' : 'span') as 'div';
   return (
     <Tag
-      contentEditable
+      contentEditable={editable}
       suppressContentEditableWarning
       data-ph={placeholder}
       dangerouslySetInnerHTML={{ __html: html || '' }}
