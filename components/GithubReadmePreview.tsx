@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Loader2, Image as ImageIcon, X, Download, Pencil } from 'lucide-react';
 import { GithubProfileData } from '../types';
 
 const BADGE_COLORS: Record<string, string> = {
@@ -56,7 +56,9 @@ export const GithubReadmePreview: React.FC<{
   onSet?: (patch: Partial<GithubProfileData>) => void;
   onSetSection?: (index: number, patch: Partial<GithubProfileData['customSections'][number]>) => void;
   onShowBannerPicker?: () => void;
-}> = ({ github, editable = false, onSet, onSetSection, onShowBannerPicker }) => {
+  onDownloadImage?: (url: string) => void;
+  onUploadAvatarClick?: () => void;
+}> = ({ github, editable = false, onSet, onSetSection, onShowBannerPicker, onDownloadImage, onUploadAvatarClick }) => {
   return (
     <div className="w-full max-w-[820px] bg-slate-950 text-slate-200 rounded-xl border border-slate-800 overflow-hidden font-sans mx-auto shadow-2xl">
       {/* ── Banner + Avatar (LinkedIn-style) ── */}
@@ -71,24 +73,31 @@ export const GithubReadmePreview: React.FC<{
               className="w-full object-cover"
               style={{ height: 200 }}
             />
-            {/* Quick-change overlay on hover */}
+            {/* Banner Controls */}
             {editable && (
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              <>
+                {/* Edit Pencil Badge (Top Right) */}
                 <button
                   onClick={onShowBannerPicker}
-                  className="px-3 py-1.5 rounded-lg bg-white/20 backdrop-blur text-white text-xs font-bold hover:bg-white/30 transition-colors"
+                  className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur rounded-full border border-white/30 shadow-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors z-10"
+                  title="Change Cover Photo"
                 >
-                  <ImageIcon className="w-3.5 h-3.5 inline mr-1" />
-                  Change
+                  <Pencil className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={() => onSet?.({ bannerUrl: undefined })}
-                  className="px-3 py-1.5 rounded-lg bg-red-500/30 backdrop-blur text-white text-xs font-bold hover:bg-red-500/50 transition-colors"
-                >
-                  <X className="w-3.5 h-3.5 inline mr-1" />
-                  Remove
-                </button>
-              </div>
+
+                {/* Download Overlay on Hover */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-default pointer-events-none">
+                  {onDownloadImage && (
+                    <button
+                      onClick={() => github.bannerUrl && onDownloadImage(github.bannerUrl)}
+                      className="px-3 py-1.5 rounded-lg bg-white/20 backdrop-blur text-white text-xs font-bold hover:bg-white/30 transition-colors drop-shadow-md pointer-events-auto"
+                    >
+                      <Download className="w-3.5 h-3.5 inline mr-1" />
+                      Download
+                    </button>
+                  )}
+                </div>
+              </>
             )}
           </div>
         ) : (
@@ -123,11 +132,30 @@ export const GithubReadmePreview: React.FC<{
                 </div>
               )}
             </div>
-            {/* Camera overlay on hover */}
+            {/* Camera overlay on hover (Download only) */}
             {editable && (
-              <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center cursor-default">
-                <span className="text-white text-[10px] font-semibold">Preview</span>
+              <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center cursor-default pointer-events-none">
+                {onDownloadImage && (
+                  <button
+                    onClick={() => github.avatarUrl && onDownloadImage(github.avatarUrl)}
+                    className="text-white hover:text-slate-200 transition-colors drop-shadow-md pointer-events-auto"
+                    title="Download Profile Photo"
+                  >
+                    <Download className="w-5 h-5" />
+                  </button>
+                )}
               </div>
+            )}
+            
+            {/* LinkedIn-style Edit Badge */}
+            {editable && onUploadAvatarClick && (
+              <button
+                onClick={onUploadAvatarClick}
+                className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors z-10"
+                title="Change Profile Photo"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
             )}
           </div>
         </div>

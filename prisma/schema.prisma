@@ -24,6 +24,30 @@ model ResumeSave {
   @@map("profile_builder_resumes")
 }
 
+// Saved GitHub profiles for the GitHub Studio
+model GithubSave {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("profile_builder_github_saves")
+}
+
+// Saved LinkedIn profiles for the LinkedIn Studio
+model LinkedinSave {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("profile_builder_linkedin_saves")
+}
+
 // One-time-payment unlock: watermark-free Resume PDF/PNG exports and GitHub
 // README downloads, both gated by this single shared flag — same "pay once,
 // permanently unlocked" model as LMS's CV Builder (User.cvDownloadUnlocked),

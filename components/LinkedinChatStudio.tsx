@@ -267,6 +267,85 @@ export const LinkedinChatStudio: React.FC<{
     setCropSourceUrl(URL.createObjectURL(file));
   };
 
+  interface SavedProfileMeta { id: string; name: string; createdAt: string }
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [savedProfiles, setSavedProfiles] = useState<SavedProfileMeta[] | null>(null);
+  const [saveNameInput, setSaveNameInput] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadingSavedId, setLoadingSavedId] = useState<string | null>(null);
+  const [deletingSavedId, setDeletingSavedId] = useState<string | null>(null);
+
+  const fetchSavedProfiles = async () => {
+    try {
+      const res = await fetch('/api/linkedin-saves');
+      const json = await res.json();
+      setSavedProfiles(res.ok ? json.versions ?? [] : []);
+    } catch {
+      setSavedProfiles([]);
+    }
+  };
+
+  const toggleProfileMenu = () => {
+    if (!isLoggedIn) { onRequireAuth(); return; }
+    setProfileMenuOpen((open) => {
+      const next = !open;
+      if (next && savedProfiles === null) fetchSavedProfiles();
+      return next;
+    });
+  };
+
+  const handleSaveProfile = async () => {
+    const name = saveNameInput.trim() || 'Untitled profile';
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch('/api/linkedin-saves', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, data: profile }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setSaveError(json.error || 'Failed to save.');
+        return;
+      }
+      setSaveNameInput('');
+      fetchSavedProfiles();
+    } catch {
+      setSaveError('Failed to save — check your connection.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLoadSavedProfile = async (id: string) => {
+    setLoadingSavedId(id);
+    try {
+      const res = await fetch(`/api/linkedin-saves/${id}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.data) {
+        set(json.data);
+      }
+      setProfileMenuOpen(false);
+    } catch {
+    } finally {
+      setLoadingSavedId(null);
+    }
+  };
+
+  const handleDeleteSavedProfile = async (id: string) => {
+    setDeletingSavedId(id);
+    try {
+      const res = await fetch(`/api/linkedin-saves/${id}`, { method: 'DELETE' });
+      if (res.ok) fetchSavedProfiles();
+    } catch {
+    } finally {
+      setDeletingSavedId(null);
+    }
+  };
+
   const art = COVER_ART[profile.coverTemplateId];
   const primarySchool = profile.education[0]?.school ?? profile.school;
 
@@ -286,10 +365,80 @@ export const LinkedinChatStudio: React.FC<{
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <span className="font-bold text-sm text-slate-800 truncate">
-              Creating LinkedIn Profile...
-            </span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 hidden lg:block" />
+            {/* Tab Title (Save Menu) */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={toggleProfileMenu}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-sm font-bold text-slate-800 border border-slate-200/80"
+              >
+                <div className="w-4 h-4 rounded-sm bg-[#0A66C2] flex items-center justify-center">
+                  <span className="text-white text-[10px] font-bold leading-none">in</span>
+                </div>
+                <span>Profiles</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {profileMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
+                  <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col">
+                    <div className="p-3 border-b border-slate-100 bg-slate-50/50">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={saveNameInput}
+                          onChange={(e) => setSaveNameInput(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveProfile(); }}
+                          placeholder="My LinkedIn Profile"
+                          className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                        />
+                        <button
+                          onClick={handleSaveProfile}
+                          disabled={saving}
+                          className="px-3.5 py-1.5 rounded-lg bg-[#0A66C2] text-white text-sm font-bold hover:bg-[#004182] disabled:opacity-50 transition-colors"
+                        >
+                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+                        </button>
+                      </div>
+                      {saveError && <div className="mt-2 text-xs text-red-500 font-medium">{saveError}</div>}
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto p-2 space-y-1">
+                      {savedProfiles === null ? (
+                        <div className="p-4 flex justify-center"><Loader2 className="w-5 h-5 text-slate-400 animate-spin" /></div>
+                      ) : savedProfiles.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-slate-500">No saved profiles yet.</div>
+                      ) : (
+                        savedProfiles.map((s) => (
+                          <div key={s.id} className="group relative rounded-lg border border-transparent hover:bg-slate-50 hover:border-slate-200 transition-colors">
+                            <button
+                              onClick={() => handleLoadSavedProfile(s.id)}
+                              disabled={loadingSavedId !== null || deletingSavedId !== null}
+                              className="w-full text-left px-3 py-2.5 flex flex-col"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-slate-800 text-sm truncate">{s.name}</span>
+                                {loadingSavedId === s.id && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
+                              </div>
+                              <span className="text-xs text-slate-400">{new Date(s.createdAt).toLocaleDateString()}</span>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteSavedProfile(s.id); }}
+                              disabled={deletingSavedId !== null}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+                              title="Delete this save"
+                            >
+                              {deletingSavedId === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">

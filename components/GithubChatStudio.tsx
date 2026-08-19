@@ -13,6 +13,7 @@ interface Msg {
 
 import { GithubReadmePreview } from './GithubReadmePreview';
 import { PaymentModal } from './PaymentModal';
+import { PfpCropModal } from './PfpCropModal';
 
 /** Curated banner options — a mix of a Cloudinary-hosted photo banner (same as
  *  the LMS) and capsule-render dynamic gradient headers. */
@@ -77,7 +78,10 @@ export const GithubChatStudio: React.FC<{
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showBannerPicker, setShowBannerPicker] = useState(false);
   const [customBannerInput, setCustomBannerInput] = useState('');
-  
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
+
   const sessionIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!sessionIdRef.current) {
@@ -114,11 +118,11 @@ export const GithubChatStudio: React.FC<{
       const res = await fetch('/api/github-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          messages: next, 
+        body: JSON.stringify({
+          messages: next,
           github,
           sessionId: sessionIdRef.current,
-          builderType: 'github' 
+          builderType: 'github'
         }),
       });
       const data = await res.json();
@@ -169,11 +173,116 @@ export const GithubChatStudio: React.FC<{
   const setSection = (i: number, patch: Partial<GithubProfileData['customSections'][number]>) =>
     set({ customSections: github.customSections.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
 
+  interface SavedProfileMeta { id: string; name: string; createdAt: string }
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [savedProfiles, setSavedProfiles] = useState<SavedProfileMeta[] | null>(null);
+  const [saveNameInput, setSaveNameInput] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadingSavedId, setLoadingSavedId] = useState<string | null>(null);
+  const [deletingSavedId, setDeletingSavedId] = useState<string | null>(null);
+
+  const fetchSavedProfiles = async () => {
+    try {
+      const res = await fetch('/api/github-saves');
+      const json = await res.json();
+      setSavedProfiles(res.ok ? json.versions ?? [] : []);
+    } catch {
+      setSavedProfiles([]);
+    }
+  };
+
+  const toggleProfileMenu = () => {
+    if (!isLoggedIn) { onRequireAuth(); return; }
+    setProfileMenuOpen((open) => {
+      const next = !open;
+      if (next && savedProfiles === null) fetchSavedProfiles();
+      return next;
+    });
+  };
+
+  const handleSaveProfile = async () => {
+    const name = saveNameInput.trim() || 'Untitled profile';
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch('/api/github-saves', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, data: github }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setSaveError(json.error || 'Failed to save.');
+        return;
+      }
+      setSaveNameInput('');
+      fetchSavedProfiles();
+    } catch {
+      setSaveError('Failed to save — check your connection.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLoadSavedProfile = async (id: string) => {
+    setLoadingSavedId(id);
+    try {
+      const res = await fetch(`/api/github-saves/${id}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.data) {
+        onChange(json.data as GithubProfileData);
+      }
+      setProfileMenuOpen(false);
+    } catch {
+    } finally {
+      setLoadingSavedId(null);
+    }
+  };
+
+  const handleDeleteSavedProfile = async (id: string) => {
+    setDeletingSavedId(id);
+    try {
+      const res = await fetch(`/api/github-saves/${id}`, { method: 'DELETE' });
+      if (res.ok) fetchSavedProfiles();
+    } catch {
+    } finally {
+      setDeletingSavedId(null);
+    }
+  };
+
+  const handleHeadshotFile = (file: File | null) => {
+    if (!file) return;
+    setCropSourceUrl(URL.createObjectURL(file));
+  };
+
+  const handleDownloadImage = async (url: string) => {
+    if (unlocked === false) {
+      setShowPaymentModal(true);
+      return;
+    }
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = url.includes('banner') || url.includes('capsule-render') ? 'cover-photo.png' : 'profile-photo.jpg';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <div className="flex flex-col lg:flex-row h-full w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none">
       {/* COLUMN 2 (AI CHAT - LEFT) */}
       <div className={`${mobileTab === 'chat' ? 'flex' : 'hidden'} lg:flex w-full lg:w-[500px] xl:w-[560px] 2xl:w-[600px] flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden`}>
-        
+
         {/* Top Header of Chat Column */}
         <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
           <div className="flex items-center gap-2 min-w-0">
@@ -214,11 +323,10 @@ export const GithubChatStudio: React.FC<{
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
-                className={`rounded-2xl text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${
-                  m.role === 'user'
+                className={`rounded-2xl text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${m.role === 'user'
                     ? 'bg-slate-100 text-slate-900 border border-slate-200/80 px-4 py-3 max-w-[85%] font-medium'
                     : 'bg-white text-slate-800 p-4.5 max-w-[98%] border border-slate-200/60 shadow-2xs space-y-2'
-                }`}
+                  }`}
               >
                 {m.content}
               </div>
@@ -264,7 +372,7 @@ export const GithubChatStudio: React.FC<{
 
       {/* COLUMN 3 (README PREVIEW - RIGHT) */}
       <div className={`${mobileTab === 'preview' ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-slate-100/90 h-full overflow-hidden relative`}>
-        
+
         {/* MacOS Window Top Header Bar */}
         <div className="shrink-0 bg-white border-b border-slate-200/80 px-4 py-2.5 flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-2">
@@ -281,12 +389,78 @@ export const GithubChatStudio: React.FC<{
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
             </div>
 
-            {/* Tab Title */}
-            <button className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-xs font-bold text-slate-800 border border-slate-200/80">
-              <GithubIcon className="w-3.5 h-3.5 text-slate-800" />
-              <span>README.md</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
-            </button>
+            {/* Tab Title (Save Menu) */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={toggleProfileMenu}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-sm font-bold text-slate-800 border border-slate-200/80"
+              >
+                <GithubIcon className="w-4 h-4 text-slate-800" />
+                <span>Profiles</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {profileMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
+                  <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col">
+                    <div className="p-3 border-b border-slate-100 bg-slate-50/50">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={saveNameInput}
+                          onChange={(e) => setSaveNameInput(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveProfile(); }}
+                          placeholder="My GitHub Profile"
+                          className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                        />
+                        <button
+                          onClick={handleSaveProfile}
+                          disabled={saving}
+                          className="px-3.5 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                        >
+                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+                        </button>
+                      </div>
+                      {saveError && <div className="mt-2 text-xs text-red-500 font-medium">{saveError}</div>}
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto p-2 space-y-1">
+                      {savedProfiles === null ? (
+                        <div className="p-4 flex justify-center"><Loader2 className="w-5 h-5 text-slate-400 animate-spin" /></div>
+                      ) : savedProfiles.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-slate-500">No saved profiles yet.</div>
+                      ) : (
+                        savedProfiles.map((s) => (
+                          <div key={s.id} className="group relative rounded-lg border border-transparent hover:bg-slate-50 hover:border-slate-200 transition-colors">
+                            <button
+                              onClick={() => handleLoadSavedProfile(s.id)}
+                              disabled={loadingSavedId !== null || deletingSavedId !== null}
+                              className="w-full text-left px-3 py-2.5 flex flex-col"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-slate-800 text-sm truncate">{s.name}</span>
+                                {loadingSavedId === s.id && <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin" />}
+                              </div>
+                              <span className="text-xs text-slate-400">{new Date(s.createdAt).toLocaleDateString()}</span>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteSavedProfile(s.id); }}
+                              disabled={deletingSavedId !== null}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+                              title="Delete this save"
+                            >
+                              {deletingSavedId === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -295,8 +469,8 @@ export const GithubChatStudio: React.FC<{
               <button
                 onClick={() => setShowBannerPicker((v) => !v)}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${showBannerPicker
-                    ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
               >
                 <Image className="w-3.5 h-3.5" />
@@ -393,15 +567,39 @@ export const GithubChatStudio: React.FC<{
           />
         )}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex justify-center items-start">
-          <GithubReadmePreview 
-            github={github} 
-            editable={true} 
-            onSet={set} 
-            onSetSection={setSection} 
-            onShowBannerPicker={() => setShowBannerPicker(true)} 
+          <GithubReadmePreview
+            github={github}
+            editable={true}
+            onSet={set}
+            onSetSection={setSection}
+            onShowBannerPicker={() => setShowBannerPicker(true)}
+            onDownloadImage={handleDownloadImage}
+            onUploadAvatarClick={() => fileInputRef.current?.click()}
           />
         </div>
       </div>
+
+      {/* Hidden file input for Avatar Upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => handleHeadshotFile(e.target.files?.[0] ?? null)}
+      />
+
+      {cropSourceUrl && (
+        <PfpCropModal
+          key={cropSourceUrl}
+          imageUrl={cropSourceUrl}
+          onCancel={() => setCropSourceUrl(null)}
+          onChangePhoto={(file) => setCropSourceUrl(URL.createObjectURL(file))}
+          onConfirm={(dataUrl) => {
+            set({ avatarUrl: dataUrl });
+            setCropSourceUrl(null);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -148,16 +148,14 @@ export default function Home() {
       setIsAuthOpen(true);
       return;
     }
-    setGithubData((prev) => {
-      const g = applyRolePresetToGithub(prev, preset);
-      return {
-        ...g,
-        theme: theme || prev.theme,
-        avatarUrl: avatarUrl || prev.avatarUrl,
-        // LMS presets mark headings with **bold**; the README preview renders
-        // plain text, so drop the markers instead of showing raw "**".
-        customSections: g.customSections.map((s) => ({ ...s, content: s.content.replace(/\*\*/g, '') })),
-      };
+    // Always start from defaultGithubData so picking a template gives a clean
+    // fresh result — not contaminated by any previously-loaded saved profile.
+    const g = applyRolePresetToGithub(defaultGithubData, preset);
+    setGithubData({
+      ...g,
+      theme: theme || defaultGithubData.theme,
+      avatarUrl: avatarUrl || defaultGithubData.avatarUrl,
+      customSections: g.customSections.map((s) => ({ ...s, content: s.content.replace(/\*\*/g, '') })),
     });
     setGithubInitialPrompt('');
     setGithubMode('studio');
