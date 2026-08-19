@@ -707,10 +707,10 @@ export default function Home() {
         onClose={() => setIsUpgradeOpen(false)}
       />
 
-      <AskExpertModal
+      {/* <AskExpertModal
         isOpen={isAskExpertOpen}
         onClose={() => setIsAskExpertOpen(false)}
-      />
+      /> */}
 
       {isPaymentModalOpen && (
         <PaymentModal

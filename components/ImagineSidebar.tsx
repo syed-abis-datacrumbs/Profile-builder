@@ -161,7 +161,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
       <div className="space-y-3 pt-3 border-t border-slate-200">
 
         {/* Ask Expert Card */}
-        <div className="p-3.5 rounded-2xl bg-gradient-to-b from-blue-50/50 to-indigo-50/50 border border-blue-100 space-y-2">
+        {/* <div className="p-3.5 rounded-2xl bg-gradient-to-b from-blue-50/50 to-indigo-50/50 border border-blue-100 space-y-2">
           <div>
             <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
               <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
@@ -177,10 +177,10 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
           >
             Ask Expert
           </button>
-        </div>
+        </div> */}
 
         {/* Progress Bar */}
-        <div className="px-1 space-y-1">
+        {/* <div className="px-1 space-y-1">
           <div className="flex justify-between items-center text-[11px] font-medium text-slate-500">
             <span>Get started</span>
             <span>8% done</span>
@@ -188,7 +188,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
           <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
             <div className="w-[8%] h-full bg-blue-600 rounded-full" />
           </div>
-        </div>
+        </div> */}
 
         {/* User Profile Bar & Popover */}
         <div className="relative w-full">
