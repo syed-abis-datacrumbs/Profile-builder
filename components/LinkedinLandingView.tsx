@@ -133,18 +133,20 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
           />
 
           {/* Bottom Bar inside Prompt Box */}
-          <div className="flex items-center justify-between gap-2 flex-wrap border-t border-slate-100 pt-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-2 border-t border-slate-100 pt-3">
 
             {/* Left Controls */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap w-full sm:w-auto">
               {attachedTemplate ? (
-                <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold shadow-2xs">
-                  <LinkedinIcon className="w-3.5 h-3.5" />
-                  <span>{linkedinCovers.find(c => c.id === attachedTemplate)?.name || attachedTemplate}</span>
+                <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold shadow-2xs max-w-full">
+                  <LinkedinIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate max-w-[150px] sm:max-w-none">
+                    {linkedinCovers.find(c => c.id === attachedTemplate)?.name || attachedTemplate}
+                  </span>
                   <button
                     type="button"
                     onClick={onClearAttachedTemplate}
-                    className="w-4 h-4 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+                    className="w-4 h-4 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors shrink-0"
                     title="Remove attached template"
                   >
                     <X className="w-2.5 h-2.5 text-white" />
@@ -160,10 +162,10 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
             </div>
 
             {/* Right Controls */}
-            <div className="flex items-center gap-2 ml-auto shrink-0">
+            <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
               <button
                 type="button"
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 flex items-center gap-1 border border-slate-200/80 transition-colors"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 flex items-center gap-1 border border-slate-200/80 transition-colors shrink-0"
               >
                 <span>{selectedModel}</span>
                 <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -173,7 +175,7 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.95 }}
                 type="submit"
-                className="w-8 h-8 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-all shadow-sm"
+                className="w-8 h-8 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-all shadow-sm shrink-0"
               >
                 <Send className="w-4 h-4" />
               </motion.button>
