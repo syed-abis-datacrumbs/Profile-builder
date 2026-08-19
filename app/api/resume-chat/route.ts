@@ -39,7 +39,12 @@ Rules:
 - CRITICAL — Unambiguous quantity removals (remove first/last N): Phrases like "remove the last 2 projects", "remove the first 3 certifications", "delete the last project" are CLEAR and unambiguous. Act on them immediately without asking. To remove the LAST N items from an array, take the array, count its length, and slice off the last N entries — the output array length must equal original length minus N. To remove the FIRST N items, drop the first N entries. Always verify your output array length is correct before responding.
 - CRITICAL — Ambiguous removal requests: The ONLY ambiguous case is when the user writes a bare number with no positional word, e.g. "remove 2 projects" or "delete 3 certifications" — this is ambiguous because "2" could mean the 2nd item (ordinal) OR two items (quantity). In this case ONLY, you MUST ask for clarification before making any deletion. Return the cv completely unchanged and in your "reply" ask: "Do you mean remove the 2nd project specifically, or remove two projects from the list? If you want to remove specific ones, which ones?" Do NOT ask for clarification when the user says "last 2", "first 2", "last one", "all", or names a specific entry — those are clear.
 - CRITICAL — Courses vs Education: A "course", "certification", or "certificate" is NEVER an education entry. It must ALWAYS be added to the "certifications" array as { "name": "<course/certificate name>", "organization": "<provider name>" }. The "education" array is strictly for formal academic degrees (e.g. Bachelor's, Master's, Matric, Intermediate). If the user says "I did a course in X from Y" or "add certificate X from Y", put it in "certifications", not "education". If you have already (incorrectly) placed a course inside "education", remove it from "education" and add it to "certifications" instead.
-- CRITICAL — Content expansion requests: When the user asks to "increase content", "add more content", "expand", "fill the gap", "make it longer", "add more detail", or similar — you MUST produce text that is MEASURABLY AND VISIBLY LONGER than what was there before. This means: for work experience bullets, add at least 2–3 new bullet lines; for project descriptions, add another sentence or two with more technical detail; for skills, add more items; for any section that is thin, add concrete substance. Returning the same text with trivial rewording is NOT acceptable and is a critical failure. The user can see the resume live — if nothing changes visually, they will notice. Make real, obvious additions.
+- CRITICAL — Date & Period Updates: When the user requests date or timeline adjustments (e.g., "working for 6 months", "started BSCS in Jan 2022 and ended in Feb 2026", "change dates of X to Y", "update experience dates"):
+  1. You MUST locate the matching item in "workExperience", "education", or "projects".
+  2. You MUST explicitly update its "start" and "end" fields in the returned JSON.
+  3. For relative duration requests (e.g., "working from 6 months now" or "6 months experience"), set end: "Present" (if current role) and set start to 6 months prior (e.g., start: "Sep 2025", end: "Present").
+  4. For explicit date ranges (e.g., "started bscs in jan 2022 and ended in feb 2026"), set start: "Jan 2022" and end: "Feb 2026" on that education item.
+  5. NEVER return the CV JSON with dates unchanged when the user explicitly requested date updates.
 - Output valid JSON only.`;
 
 interface ChatMessage {
@@ -94,9 +99,11 @@ export async function POST(request: Request) {
     // drift on) the type mid-conversation the way trusting the model's own
     // "cvType" output allowed.
     const cvType: 'professional' | 'student' = cv.cvType === 'student' ? 'student' : 'professional';
+    const currentDateStr = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
     const systemMessages: { role: 'system', content: string }[] = [
       { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: `CURRENT REAL-WORLD DATE: ${currentDateStr}. When calculating relative durations (e.g. "working for 6 months", "been working 6 months"), calculate the start date by subtracting the specified duration from ${currentDateStr}.` },
       { role: 'system', content: typeContextLine(cvType) },
       { role: 'system', content: `The student's CURRENT resume as JSON:\n${JSON.stringify(cv)}` }
     ];
