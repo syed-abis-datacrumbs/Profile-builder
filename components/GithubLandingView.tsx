@@ -25,7 +25,7 @@ interface GithubLandingViewProps {
   /** Opens the "which field?" role picker modal. */
   onOpenRolePicker: () => void;
   /** Selects a specific preset and theme directly to launch editor. */
-  onSelectPreset?: (preset: GithubRolePreset, theme?: GithubProfileData['theme']) => void;
+  onSelectPreset?: (preset: GithubRolePreset, theme?: GithubProfileData['theme'], avatarUrl?: string) => void;
   attachedTemplate: GithubTemplateCard | null;
   onClearAttachedTemplate: () => void;
   onSelectTemplate?: (template: GithubTemplateCard) => void;
@@ -48,6 +48,7 @@ export interface GithubTemplateCard {
   features: string[];
   headline: string;
   subhead: string;
+  avatarUrl?: string;
 }
 
 export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
@@ -65,7 +66,8 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     badges: ['Python', 'PyTorch', 'SQL'],
     features: ['📊 GitHub Stats', '🔥 Streak Counter'],
     headline: "Hi, I'm Your Name 👋",
-    subhead: 'Data Scientist · Turning data into decisions'
+    subhead: 'Data Scientist · Turning data into decisions',
+    avatarUrl: 'https://images.unsplash.com/photo-1642364861013-2c33f2dcfbcf?q=80&w=1204&auto=format&fit=crop'
   },
   {
     id: 'cyberpunk-ai',
@@ -81,7 +83,8 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     badges: ['PyTorch', 'TensorFlow', 'FastAPI', 'CUDA'],
     features: ['⚡ Neon Badges', '🤖 LLM Benchmarks', '🔥 Cyber Streak'],
     headline: '> root@cyber-dev:~$ bio',
-    subhead: 'AI/ML Engineer · Quantized models & Triton serving'
+    subhead: 'AI/ML Engineer · Quantized models & Triton serving',
+    avatarUrl: 'https://images.unsplash.com/photo-1642364861013-2c33f2dcfbcf?q=80&w=1204&auto=format&fit=crop'
   },
   {
     id: 'fullstack-showcase',
@@ -97,7 +100,8 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     badges: ['TypeScript', 'Next.js', 'React', 'PostgreSQL'],
     features: ['🛠️ Tech Badges', '🚀 Featured Projects', '📈 Top Languages'],
     headline: 'Full-Stack Software Engineer 🚀',
-    subhead: 'Building scalable web products & distributed services'
+    subhead: 'Building scalable web products & distributed services',
+    avatarUrl: 'https://images.unsplash.com/photo-1642364861013-2c33f2dcfbcf?q=80&w=1204&auto=format&fit=crop'
   },
   {
     id: 'cloud-devops',
@@ -113,7 +117,8 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     badges: ['Terraform', 'Kubernetes', 'AWS', 'Docker'],
     features: ['☁️ Cloud Badges', '⚙️ CI/CD Status', '📊 Infra Metrics'],
     headline: 'DevOps & Cloud Systems Lead ☁️',
-    subhead: 'Automating multi-cloud platforms & K8s clusters'
+    subhead: 'Automating multi-cloud platforms & K8s clusters',
+    avatarUrl: 'https://images.unsplash.com/photo-1714328564923-d4826427c991?q=80&w=687&auto=format&fit=crop'
   },
   {
     id: 'opensource-maintainer',
@@ -129,7 +134,8 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     badges: ['Go', 'Node.js', 'Redis', 'Kafka'],
     features: ['💖 Sponsor Button', '📦 Package Stats', '📊 Contributor Graph'],
     headline: 'Open-Source Maintainer 💖',
-    subhead: 'Building high-throughput backend services & tools'
+    subhead: 'Building high-throughput backend services & tools',
+    avatarUrl: 'https://images.unsplash.com/photo-1714328564923-d4826427c991?q=80&w=687&auto=format&fit=crop'
   },
   {
     id: 'vision-edge-ai',
@@ -145,7 +151,8 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     badges: ['C++', 'PyTorch', 'OpenCV', 'TensorRT'],
     features: ['👁️ Vision Demos', '⚡ Edge FPS Benchmarks', '📊 Live Stats'],
     headline: 'Computer Vision Engineer 👁️',
-    subhead: 'Edge model optimization & 3D camera geometry'
+    subhead: 'Edge model optimization & 3D camera geometry',
+    avatarUrl: 'https://images.unsplash.com/photo-1714328564923-d4826427c991?q=80&w=687&auto=format&fit=crop'
   },
   {
     id: 'mobile-app-dev',
@@ -161,7 +168,8 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     badges: ['Swift', 'Kotlin', 'Flutter', 'React Native'],
     features: ['📱 App Store Badges', '📲 TestFlight Links', '🔥 Streak Counter'],
     headline: 'Mobile Product Developer 📱',
-    subhead: 'Native Swift/Kotlin & Flutter apps for store releases'
+    subhead: 'Native Swift/Kotlin & Flutter apps for store releases',
+    avatarUrl: 'https://images.unsplash.com/photo-1737574821698-862e77f044c1?q=80&w=627&auto=format&fit=crop'
   },
   {
     id: 'executive-lead',
@@ -177,7 +185,8 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     badges: ['TypeScript', 'Python', 'Kubernetes', 'PostgreSQL'],
     features: ['🏛️ System Architecture', '📈 Impact Metrics', '🌐 Connect Badges'],
     headline: 'Staff Software Engineer & Lead 🏛️',
-    subhead: 'Architecting resilient cloud systems & leading dev teams'
+    subhead: 'Architecting resilient cloud systems & leading dev teams',
+    avatarUrl: 'https://images.unsplash.com/photo-1737574821698-862e77f044c1?q=80&w=627&auto=format&fit=crop'
   }
 ];
 
@@ -257,7 +266,7 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
     if (onSelectTemplate) return onSelectTemplate(template);
     const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === template.presetId);
     if (preset && onSelectPreset) {
-      onSelectPreset(preset, template.theme);
+      onSelectPreset(preset, template.theme, template.avatarUrl);
     } else {
       onOpenRolePicker();
     }

@@ -24,6 +24,9 @@ export const GithubTemplatePreview: React.FC<GithubTemplatePreviewProps> = ({
   // Generate the mockup data just for this preview overlay
   let mockupData = applyRolePresetToGithub(defaultGithubData, preset);
   mockupData.theme = template.theme;
+  if (template.avatarUrl) {
+    mockupData.avatarUrl = template.avatarUrl;
+  }
   // Apply visual theme aspects
   mockupData.customSections = mockupData.customSections.map((s) => ({ ...s, content: s.content.replace(/\*\*/g, '') }));
 

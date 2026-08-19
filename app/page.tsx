@@ -123,7 +123,7 @@ export default function Home() {
   // Loads a role's ready-made README (from the picker popup or a role chip)
   // onto the GitHub data, then jumps into the editor.
   // Loads a preset's content into the GitHub data and opens the chat Studio.
-  const openGithubStudio = (preset: GithubRolePreset, theme?: GithubProfileData['theme']) => {
+  const openGithubStudio = (preset: GithubRolePreset, theme?: GithubProfileData['theme'], avatarUrl?: string) => {
     if (!isLoggedIn) {
       setIsAuthOpen(true);
       return;
@@ -133,6 +133,7 @@ export default function Home() {
       return {
         ...g,
         theme: theme || prev.theme,
+        avatarUrl: avatarUrl || prev.avatarUrl,
         // LMS presets mark headings with **bold**; the README preview renders
         // plain text, so drop the markers instead of showing raw "**".
         customSections: g.customSections.map((s) => ({ ...s, content: s.content.replace(/\*\*/g, '') })),
@@ -352,7 +353,7 @@ export default function Home() {
                         <GithubLandingView
                           userName={user?.firstName || undefined}
                           onOpenRolePicker={() => setShowGithubTemplatePicker(true)}
-                          onSelectPreset={(preset, theme) => openGithubStudio(preset, theme)}
+                          onSelectPreset={(preset, theme, avatarUrl) => openGithubStudio(preset, theme, avatarUrl)}
                           attachedTemplate={attachedGithubTemplate}
                           onClearAttachedTemplate={() => setAttachedGithubTemplate(null)}
                           onSelectTemplate={(t) => {
@@ -362,7 +363,7 @@ export default function Home() {
                           onUsePrompt={(promptText) => {
                             const t = attachedGithubTemplate || GITHUB_TEMPLATES[0];
                             const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
-                            openGithubStudio(preset, t.theme);
+                            openGithubStudio(preset, t.theme, t.avatarUrl);
                             setGithubInitialPrompt(promptText);
                             setAttachedGithubTemplate(null);
                           }}
@@ -619,7 +620,7 @@ export default function Home() {
                 onClick={() => {
                   setShowGithubTemplatePicker(false);
                   const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
-                  openGithubStudio(preset, t.theme);
+                  openGithubStudio(preset, t.theme, t.avatarUrl);
                   setGithubInitialPrompt(pendingPrompt);
                 }}
                 className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group flex flex-col justify-between"
