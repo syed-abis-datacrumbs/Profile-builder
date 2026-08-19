@@ -382,7 +382,8 @@ export default function Home() {
                             if (attachedGithubTemplate) {
                               const t = attachedGithubTemplate;
                               const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
-                              openGithubStudio(preset, t.theme, t.avatarUrl);
+                              const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
+                              openGithubStudio(preset, t.theme, t.avatarUrl || randomAvatar);
                             } else {
                               // NO template selected: Start with a completely blank profile
                               // so the AI generates everything from scratch based on the prompt.
@@ -653,7 +654,8 @@ export default function Home() {
                 onClick={() => {
                   setShowGithubTemplatePicker(false);
                   const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
-                  openGithubStudio(preset, t.theme, t.avatarUrl);
+                  const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
+                  openGithubStudio(preset, t.theme, t.avatarUrl || randomAvatar);
                   setGithubInitialPrompt(pendingPrompt);
                 }}
                 className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group flex flex-col justify-between"

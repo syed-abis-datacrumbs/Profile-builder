@@ -67,6 +67,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['📊 GitHub Stats', '🔥 Streak Counter'],
     headline: "Hi, I'm Your Name 👋",
     subhead: 'Data Scientist · Turning data into decisions',
+    avatarUrl: '/images/github-profile/git-profile-1.png',
   },
   {
     id: 'cyberpunk-ai',
@@ -83,6 +84,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['⚡ Neon Badges', '🤖 LLM Benchmarks', '🔥 Cyber Streak'],
     headline: '> root@cyber-dev:~$ bio',
     subhead: 'AI/ML Engineer · Quantized models & Triton serving',
+    avatarUrl: '/images/github-profile/git-profile-2.png',
   },
   {
     id: 'fullstack-showcase',
@@ -99,6 +101,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['🛠️ Tech Badges', '🚀 Featured Projects', '📈 Top Languages'],
     headline: 'Full-Stack Software Engineer 🚀',
     subhead: 'Building scalable web products & distributed services',
+    avatarUrl: '/images/github-profile/git-profile-3.png',
   },
   {
     id: 'cloud-devops',
@@ -115,6 +118,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['☁️ Cloud Badges', '⚙️ CI/CD Status', '📊 Infra Metrics'],
     headline: 'DevOps & Cloud Systems Lead ☁️',
     subhead: 'Automating multi-cloud platforms & K8s clusters',
+    avatarUrl: '/images/github-profile/git-profile-1.png',
   },
   {
     id: 'opensource-maintainer',
@@ -131,6 +135,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['💖 Sponsor Button', '📦 Package Stats', '📊 Contributor Graph'],
     headline: 'Backend Engineer ⚡',
     subhead: 'Building high-throughput backend services & tools',
+    avatarUrl: '/images/github-profile/git-profile-2.png',
   },
   {
     id: 'vision-edge-ai',
@@ -147,6 +152,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['👁️ Vision Demos', '⚡ Edge FPS Benchmarks', '📊 Live Stats'],
     headline: 'Computer Vision Engineer 👁️',
     subhead: 'Edge model optimization & 3D camera geometry',
+    avatarUrl: '/images/github-profile/git-profile-3.png',
   },
   {
     id: 'mobile-app-dev',
@@ -163,6 +169,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['📱 App Store Badges', '📲 TestFlight Links', '🔥 Streak Counter'],
     headline: 'Mobile Product Developer 📱',
     subhead: 'Native Swift/Kotlin & Flutter apps for store releases',
+    avatarUrl: '/images/github-profile/git-profile-1.png',
   },
   {
     id: 'executive-lead',
@@ -179,7 +186,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['🏛️ System Architecture', '📈 Impact Metrics', '🌐 Connect Badges'],
     headline: 'Staff Software Engineer & Lead 🏛️',
     subhead: 'Architecting resilient cloud systems & leading dev teams',
-    avatarUrl: 'https://images.unsplash.com/photo-1737574821698-862e77f044c1?q=80&w=627&auto=format&fit=crop'
+    avatarUrl: '/images/github-profile/git-profile-2.png'
   }
 ];
 
