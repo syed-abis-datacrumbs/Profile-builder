@@ -73,6 +73,7 @@ export const ImagineHeader: React.FC<ImagineHeaderProps> = ({
                 onClick={async () => {
                   setIsMenuOpen(false);
                   await signOut();
+                  window.location.href = '/';
                 }}
                 className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors text-left text-xs font-semibold cursor-pointer"
               >

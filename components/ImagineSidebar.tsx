@@ -287,11 +287,12 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
 
                 {isLoggedIn && (
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setIsSettingsOpen(false);
-                      signOut();
+                      await signOut();
+                      window.location.href = '/';
                     }}
-                    className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors text-left cursor-pointer"
                   >
                     <LogOut className="w-4 h-4 shrink-0" />
                     <span>Log out</span>
@@ -513,6 +514,7 @@ export const MobileNavBar: React.FC<{
                 onClick={async () => {
                   setIsMenuOpen(false);
                   await signOut();
+                  window.location.href = '/';
                 }}
                 className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors text-left text-xs font-semibold cursor-pointer"
               >

@@ -34,18 +34,25 @@ export async function POST(request: Request) {
 
   const name = (body?.name || '').trim() || 'Untitled resume';
 
-  const existing = await db.resumeSave.findFirst({
-    where: { userId, name: { equals: name, mode: 'insensitive' } },
-    select: { id: true },
-  });
+  const saveId = body?.id as string | undefined;
+  const overwrite = !!body?.overwrite;
+
+  const existing = saveId
+    ? await db.resumeSave.findFirst({ where: { id: saveId, userId }, select: { id: true } })
+    : await db.resumeSave.findFirst({
+        where: { userId, name: { equals: name, mode: 'insensitive' } },
+        select: { id: true },
+      });
+
   if (existing) {
-    return NextResponse.json(
-      { error: `A resume named "${name}" is already saved. Rename it and try again.` },
-      { status: 409 }
-    );
+    const updated = await db.resumeSave.update({
+      where: { id: existing.id },
+      data: { name, data: data as any },
+    });
+    return NextResponse.json({ id: updated.id, name: updated.name, isUpdate: true });
   }
 
-  await db.resumeSave.create({ data: { userId, name, data: data as any } });
+  const created = await db.resumeSave.create({ data: { userId, name, data: data as any } });
 
   const excess = await db.resumeSave.findMany({
     where: { userId },
@@ -57,5 +64,5 @@ export async function POST(request: Request) {
     await db.resumeSave.deleteMany({ where: { id: { in: excess.map((e) => e.id) } } });
   }
 
-  return NextResponse.json({ name });
+  return NextResponse.json({ id: created.id, name: created.name });
 }

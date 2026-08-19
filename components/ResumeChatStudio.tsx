@@ -15,6 +15,9 @@ import {
   Undo,
   Redo,
   Trash2,
+  Edit2,
+  Check,
+  Plus,
   X
 } from 'lucide-react';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
@@ -192,11 +195,15 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   interface SavedResumeMeta { id: string; name: string; createdAt: string }
   const [resumeMenuOpen, setResumeMenuOpen] = useState(false);
   const [savedResumes, setSavedResumes] = useState<SavedResumeMeta[] | null>(null); // null = not fetched yet
+  const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
+  const [activeSavedName, setActiveSavedName] = useState<string | null>(null);
   const [saveNameInput, setSaveNameInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [loadingSavedId, setLoadingSavedId] = useState<string | null>(null);
   const [deletingSavedId, setDeletingSavedId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameInput, setRenameInput] = useState<string>('');
 
   const fetchSavedResumes = async () => {
     try {
@@ -217,22 +224,27 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     });
   };
 
-  const handleSaveResume = async () => {
-    const name = saveNameInput.trim() || fieldLabel || 'Untitled resume';
+  const handleSaveResume = async (forceNew = false) => {
+    const targetId = forceNew ? undefined : (activeSavedId || undefined);
+    const name = saveNameInput.trim() || activeSavedName || fieldLabel || 'Untitled resume';
     setSaving(true);
     setSaveError(null);
     try {
       const res = await fetch('/api/resumes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, data: cv }),
+        body: JSON.stringify({ id: targetId, name, data: cv }),
       });
       const json = await res.json();
       if (!res.ok) {
         setSaveError(json.error || 'Failed to save.');
         return;
       }
-      setSaveNameInput('');
+      if (json.id) {
+        setActiveSavedId(json.id);
+        setActiveSavedName(json.name || name);
+        setSaveNameInput(json.name || name);
+      }
       fetchSavedResumes();
     } catch {
       setSaveError('Failed to save — check your connection.');
@@ -241,23 +253,43 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     }
   };
 
-  const handleLoadSavedResume = async (id: string) => {
-    setLoadingSavedId(id);
+  const handleLoadSavedResume = async (r: SavedResumeMeta) => {
+    setLoadingSavedId(r.id);
     try {
-      const res = await fetch(`/api/resumes/${id}`);
+      const res = await fetch(`/api/resumes/${r.id}`);
       if (!res.ok) return;
       const json = await res.json();
       if (json.data) {
-        // A resume saved before the Projects/Workshops field merge would
-        // still have the old { title, technologies, description } shape —
-        // cvMarkdownToHtml migrates that into the new single `content`
-        // field (it's a no-op on already-migrated data), so an old save
-        // doesn't break or silently lose its projects/workshops on load.
         external(cvMarkdownToHtml(json.data as CvData));
+        setActiveSavedId(r.id);
+        setActiveSavedName(r.name);
+        setSaveNameInput(r.name);
         setResumeMenuOpen(false);
       }
     } finally {
       setLoadingSavedId(null);
+    }
+  };
+
+  const handleRenameSavedResume = async (id: string, newName: string) => {
+    if (!newName.trim()) { setRenamingId(null); return; }
+    try {
+      const res = await fetch(`/api/resumes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+      if (res.ok) {
+        setSavedResumes((prev) =>
+          (prev ?? []).map((item) => (item.id === id ? { ...item, name: newName.trim() } : item))
+        );
+        if (activeSavedId === id) {
+          setActiveSavedName(newName.trim());
+          setSaveNameInput(newName.trim());
+        }
+      }
+    } finally {
+      setRenamingId(null);
     }
   };
 
@@ -266,6 +298,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     try {
       await fetch(`/api/resumes/${id}`, { method: 'DELETE' });
       setSavedResumes((prev) => (prev ?? []).filter((r) => r.id !== id));
+      if (activeSavedId === id) {
+        setActiveSavedId(null);
+        setActiveSavedName(null);
+      }
     } finally {
       setDeletingSavedId(null);
     }
@@ -703,60 +739,168 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               {resumeMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setResumeMenuOpen(false)} />
-                  <div className="absolute top-10 left-0 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden text-xs">
-                    <div className="p-3 border-b border-slate-100 space-y-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="text"
-                          value={saveNameInput}
-                          onChange={(e) => setSaveNameInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveResume(); }}
-                          placeholder={fieldLabel || 'Name this resume…'}
-                          className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-800 focus:outline-none focus:border-slate-400"
-                        />
-                        <button
-                          onClick={handleSaveResume}
-                          disabled={saving}
-                          className="h-7 px-3 rounded-lg bg-slate-900 text-white font-bold hover:bg-slate-800 transition-colors disabled:opacity-50 shrink-0 flex items-center justify-center leading-none"
-                        >
-                          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save'}
-                        </button>
+                  <div className="fixed top-12 left-3 sm:left-auto w-[285px] max-w-[90vw] bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden text-xs">
+                    {/* Top Action Header */}
+                    <div className="p-3 bg-slate-50/90 border-b border-slate-100 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-[10px] text-slate-500 uppercase tracking-wider">
+                          Saved Resumes
+                        </span>
+                        {activeSavedId && (
+                          <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60">
+                            Editing Active
+                          </span>
+                        )}
                       </div>
-                      {saveError && <p className="text-red-600 font-medium">{saveError}</p>}
-                    </div>
 
-                    <div className="max-h-64 overflow-y-auto">
+                      {/* Full-width Name Input */}
+                      <input
+                        type="text"
+                        value={saveNameInput}
+                        onChange={(e) => setSaveNameInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveResume(!activeSavedId);
+                        }}
+                        placeholder={fieldLabel || 'Resume title (e.g. Software Engineer)…'}
+                        className="w-full h-8 px-2.5 rounded-lg border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-blue-500 bg-white shadow-2xs"
+                      />
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        {activeSavedId ? (
+                          <>
+                            <button
+                              onClick={() => handleSaveResume(false)}
+                              disabled={saving}
+                              className="flex-1 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                            >
+                              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Update Active'}
+                            </button>
+                            <button
+                              onClick={() => handleSaveResume(true)}
+                              disabled={saving}
+                              className="h-7 px-2.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                              title="Save as a new separate resume copy"
+                            >
+                              <Plus className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Save New</span>
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => handleSaveResume(true)}
+                            disabled={saving}
+                            className="w-full h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                          >
+                            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save New Resume'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {saveError && <div className="px-2.5 py-1 bg-rose-50 text-rose-600 font-medium text-[10px] border-b border-rose-100">{saveError}</div>}
+
+                    <div className="max-h-64 overflow-y-auto divide-y divide-slate-50">
                       {savedResumes === null ? (
                         <div className="px-3.5 py-4 text-slate-400 flex items-center gap-2">
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           <span>Loading saved resumes…</span>
                         </div>
                       ) : savedResumes.length === 0 ? (
-                        <div className="px-3.5 py-4 text-slate-400">No saved resumes yet.</div>
+                        <div className="px-3.5 py-4 text-slate-400 text-center">No saved resumes yet.</div>
                       ) : (
-                        savedResumes.map((r) => (
-                          <div key={r.id} className="flex items-center justify-between px-3.5 py-2.5 hover:bg-slate-50 border-b border-slate-50 last:border-0 group">
-                            <button
-                              onClick={() => handleLoadSavedResume(r.id)}
-                              disabled={loadingSavedId === r.id}
-                              className="flex-1 min-w-0 text-left"
+                        savedResumes.map((r) => {
+                          const isSelected = activeSavedId === r.id;
+                          const isRenaming = renamingId === r.id;
+
+                          return (
+                            <div
+                              key={r.id}
+                              className={`flex items-center justify-between px-3 py-2 transition-colors group ${
+                                isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50'
+                              }`}
                             >
-                              <div className="font-semibold text-slate-800 truncate">{r.name}</div>
-                              <div className="text-slate-400 text-[10px]">{new Date(r.createdAt).toLocaleDateString()}</div>
-                            </button>
-                            <div className="flex items-center gap-1 shrink-0 pl-2">
-                              {loadingSavedId === r.id && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />}
-                              <button
-                                onClick={() => handleDeleteSavedResume(r.id)}
-                                disabled={deletingSavedId === r.id}
-                                className="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                                title="Delete"
-                              >
-                                {deletingSavedId === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                              </button>
+                              {isRenaming ? (
+                                <div className="flex items-center gap-1 flex-1 min-w-0 pr-1">
+                                  <input
+                                    type="text"
+                                    value={renameInput}
+                                    onChange={(e) => setRenameInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleRenameSavedResume(r.id, renameInput);
+                                      if (e.key === 'Escape') setRenamingId(null);
+                                    }}
+                                    autoFocus
+                                    className="flex-1 px-1.5 py-0.5 border border-blue-400 rounded text-xs text-slate-900 focus:outline-none"
+                                  />
+                                  <button
+                                    onClick={() => handleRenameSavedResume(r.id, renameInput)}
+                                    className="p-1 rounded text-emerald-600 hover:bg-emerald-50 cursor-pointer"
+                                    title="Save name"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setRenamingId(null)}
+                                    className="p-1 rounded text-slate-400 hover:bg-slate-100 cursor-pointer"
+                                    title="Cancel"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleLoadSavedResume(r)}
+                                    disabled={loadingSavedId === r.id}
+                                    className="flex-1 min-w-0 text-left cursor-pointer"
+                                  >
+                                    <div className="font-semibold text-slate-800 truncate flex items-center gap-1.5">
+                                      <span className="truncate">{r.name}</span>
+                                      {isSelected && (
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
+                                      )}
+                                    </div>
+                                    <div className="text-slate-400 text-[10px]">
+                                      {new Date(r.createdAt).toLocaleDateString()}
+                                    </div>
+                                  </button>
+
+                                  <div className="flex items-center gap-0.5 shrink-0 pl-1">
+                                    {loadingSavedId === r.id && (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                                    )}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setRenamingId(r.id);
+                                        setRenameInput(r.name);
+                                      }}
+                                      className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                      title="Rename"
+                                    >
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteSavedResume(r.id);
+                                      }}
+                                      disabled={deletingSavedId === r.id}
+                                      className="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                      title="Delete"
+                                    >
+                                      {deletingSavedId === r.id ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                      )}
+                                    </button>
+                                  </div>
+                                </>
+                              )}
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>

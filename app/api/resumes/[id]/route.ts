@@ -16,6 +16,30 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   return NextResponse.json({ data: row.data });
 }
 
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const userId = await getCurrentUserId();
+  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  const { id } = await params;
+  const body = await request.json().catch(() => null);
+  const data = body?.data;
+  const name = body?.name ? (body.name as string).trim() : undefined;
+
+  const existing = await db.resumeSave.findFirst({ where: { id, userId } });
+  if (!existing) return NextResponse.json({ error: 'Saved resume not found' }, { status: 404 });
+
+  const updateData: any = {};
+  if (data !== undefined) updateData.data = data;
+  if (name !== undefined) updateData.name = name;
+
+  const updated = await db.resumeSave.update({
+    where: { id },
+    data: updateData,
+  });
+
+  return NextResponse.json({ success: true, id: updated.id, name: updated.name });
+}
+
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
