@@ -305,7 +305,7 @@ export const GithubChatStudio: React.FC<{
             <span className="font-bold text-sm text-slate-800 truncate">
               Creating GitHub README...
             </span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 hidden lg:block" />
+            {/* <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 hidden lg:block" /> */}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">

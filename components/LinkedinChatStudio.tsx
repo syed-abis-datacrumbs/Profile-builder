@@ -536,7 +536,7 @@ export const LinkedinChatStudio: React.FC<{
             <button className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-xs font-bold text-slate-800 border border-slate-200/80">
               <span className="w-3.5 h-3.5 rounded bg-[#0A66C2] text-white flex items-center justify-center text-[9px] font-bold">in</span>
               <span>LinkedIn Profile</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              {/* <ChevronDown className="w-3 h-3 text-slate-400" /> */}
             </button>
           </div>
 

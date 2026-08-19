@@ -588,7 +588,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             <span className="font-bold text-sm text-slate-800 truncate">
               Creating a Professional...
             </span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 hidden lg:block" />
+            {/* <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 hidden lg:block" /> */}
           </div>
         </div>
 
