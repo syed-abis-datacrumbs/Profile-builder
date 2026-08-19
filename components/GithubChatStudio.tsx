@@ -14,6 +14,7 @@ interface Msg {
 import { GithubReadmePreview } from './GithubReadmePreview';
 import { PaymentModal } from './PaymentModal';
 import { PfpCropModal } from './PfpCropModal';
+import { MobileChatWidget } from './MobileChatWidget';
 
 /** Curated banner options — a mix of a Cloudinary-hosted photo banner (same as
  *  the LMS) and capsule-render dynamic gradient headers. */
@@ -74,8 +75,8 @@ export const GithubChatStudio: React.FC<{
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<'chat' | 'preview'>('chat');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [showBannerPicker, setShowBannerPicker] = useState(false);
   const [customBannerInput, setCustomBannerInput] = useState('');
 
@@ -279,19 +280,27 @@ export const GithubChatStudio: React.FC<{
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-full w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none">
-      {/* COLUMN 2 (AI CHAT - LEFT) */}
-      <div className={`${mobileTab === 'chat' ? 'flex' : 'hidden'} lg:flex w-full lg:w-[500px] xl:w-[560px] 2xl:w-[600px] flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden`}>
+    <div className="flex flex-col lg:flex-row h-full w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none relative">
+
+      {/* COLUMN 2 (AI CHAT - LEFT) — Desktop only */}
+      <div className={`hidden lg:flex w-full lg:w-[500px] xl:w-[560px] 2xl:w-[600px] flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden`}>
 
         {/* Top Header of Chat Column */}
         <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={onBack}
-              className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+              className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors hidden lg:block"
               title="Back"
             >
               <ArrowLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setIsMobileChatOpen(false)}
+              className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors lg:hidden"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
             </button>
             <span className="font-bold text-sm text-slate-800 truncate">
               Creating GitHub README...
@@ -300,21 +309,6 @@ export const GithubChatStudio: React.FC<{
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setMobileTab('preview')}
-              className="lg:hidden px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              View README
-            </button>
-            {/* <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-200 text-xs font-bold hidden sm:inline-block">
-              Interface
-            </span>
-            <button
-              onClick={() => setMessages([{ role: 'assistant', content: 'Started a new chat session. How can I help with your GitHub README?' }])}
-              className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-            >
-              New chat
-            </button> */}
           </div>
         </div>
 
@@ -370,17 +364,17 @@ export const GithubChatStudio: React.FC<{
         </div>
       </div>
 
-      {/* COLUMN 3 (README PREVIEW - RIGHT) */}
-      <div className={`${mobileTab === 'preview' ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-slate-100/90 h-full overflow-hidden relative`}>
-
-        {/* MacOS Window Top Header Bar */}
-        <div className="shrink-0 bg-white border-b border-slate-200/80 px-4 py-2.5 flex items-center justify-between shadow-2xs">
-          <div className="flex items-center gap-2">
+      {/* COLUMN 1 (PREVIEW - RIGHT) */}
+      <div className={`flex-1 flex flex-col bg-slate-100 min-w-0 h-full overflow-hidden`}>
+        {/* Top Header of Preview Column */}
+        <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
+          <div className="flex items-center min-w-0">
             <button
-              onClick={() => setMobileTab('chat')}
-              className="lg:hidden px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors mr-1"
+              onClick={onBack}
+              className="lg:hidden p-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors mr-2"
+              title="Back"
             >
-              ← Chat
+              <ArrowLeft className="w-4 h-4" />
             </button>
             {/* MacOS Traffic Light Dots */}
             <div className="flex items-center gap-1.5 pr-2">
@@ -562,7 +556,28 @@ export const GithubChatStudio: React.FC<{
             onUploadAvatarClick={() => fileInputRef.current?.click()}
           />
         </div>
+
       </div>
+
+      {/* Mobile Floating Chat Widget */}
+      <MobileChatWidget
+        isOpen={isMobileChatOpen}
+        onToggle={() => setIsMobileChatOpen((prev) => !prev)}
+        messages={messages}
+        input={input}
+        setInput={setInput}
+        loading={loading}
+        onSend={send}
+        title="Creating GitHub README..."
+        suggestions={[
+          'Add more tech stack badges',
+          'Make my bio sound more professional',
+          'Add a GitHub streak card',
+        ]}
+        onBack={onBack}
+        unlocked={unlocked === true}
+        aiMessagesUsed={aiMessagesUsed}
+      />
 
       {/* Hidden file input for Avatar Upload */}
       <input
