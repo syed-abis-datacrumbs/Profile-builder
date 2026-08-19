@@ -398,7 +398,7 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
           <div>
             <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
               <span>Try a GitHub README Template</span>
-              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+              <span className="sm:hidden text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
                 {GITHUB_TEMPLATES.length} Designs
               </span>
             </h3>
@@ -407,19 +407,15 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onOpenRolePicker}
-              className="text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl border border-slate-200/80 transition-colors flex items-center gap-1.5"
-            >
-              <Code className="w-3.5 h-3.5" />
-              <span>Browse All Roles</span>
-            </button>
+          <div className="hidden sm:flex items-center gap-3">
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+              {GITHUB_TEMPLATES.length} Designs
+            </span>
           </div>
         </div>
 
         {/* Category Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {[
             { id: 'all', label: 'All Templates' },
             { id: 'data-ai', label: 'Data Science & AI' },
