@@ -54,6 +54,14 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
   onRequireAuth,
   badgeAction,
 }) => {
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+  React.useEffect(() => {
+    if (!input && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  }, [input]);
+
   React.useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -211,6 +219,7 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
                 {badgeAction && <div className="self-start">{badgeAction}</div>}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
                   <textarea
+                    ref={textareaRef}
                     rows={1}
                     value={input}
                     onChange={(e) => {

@@ -204,6 +204,13 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const [deletingSavedId, setDeletingSavedId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameInput, setRenameInput] = useState<string>('');
+  const chatTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (!input && chatTextareaRef.current) {
+      chatTextareaRef.current.style.height = 'auto';
+    }
+  }, [input]);
 
   const fetchSavedResumes = async () => {
     try {
@@ -695,6 +702,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           )}
           <div className="bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
             <textarea
+              ref={chatTextareaRef}
               rows={1}
               value={input}
               onChange={(e) => {
