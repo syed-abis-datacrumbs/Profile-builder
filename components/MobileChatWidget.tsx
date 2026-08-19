@@ -27,6 +27,17 @@ interface MobileChatWidgetProps {
   badgeAction?: React.ReactNode;
 }
 
+function renderMessageText(text: string) {
+  if (!text.includes('**')) return text;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={idx} className="font-bold">{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
 export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
   isOpen,
   onToggle,
@@ -43,6 +54,20 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
   onRequireAuth,
   badgeAction,
 }) => {
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [isOpen]);
+
   return (
     <>
       {/* Floating Trigger Button (Visible only on Mobile screens below lg) */}
@@ -166,7 +191,7 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
                           : 'bg-white text-slate-800 p-3.5 max-w-[92%] border border-slate-200/80 shadow-2xs space-y-1.5'
                       }`}
                     >
-                      {m.content}
+                      {renderMessageText(m.content)}
                     </div>
                   </div>
                 ))}
@@ -184,11 +209,15 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
               {/* Bottom Action / Input Area */}
               <div className="shrink-0 p-3 bg-white border-t border-slate-200/80 flex flex-col gap-2">
                 {badgeAction && <div className="self-start">{badgeAction}</div>}
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 flex items-end gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
                   <textarea
-                    rows={2}
+                    rows={1}
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      e.target.style.height = 'auto';
+                      e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -201,12 +230,12 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
                         : 'Ask anything...'
                     }
                     disabled={aiMessagesUsed >= 5 && !unlocked}
-                    className="flex-1 min-w-0 bg-transparent text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal disabled:opacity-50"
+                    className="flex-1 min-w-0 bg-transparent text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal disabled:opacity-50 max-h-24 leading-snug py-0.5"
                   />
                   <button
                     onClick={() => onSend()}
                     disabled={!input.trim() || loading || (aiMessagesUsed >= 5 && !unlocked)}
-                    className="w-8 h-8 rounded-full bg-slate-900 text-white hover:bg-black flex items-center justify-center transition-colors disabled:opacity-30 shrink-0 shadow-xs"
+                    className="w-8 h-8 rounded-full bg-slate-900 text-white hover:bg-black flex items-center justify-center transition-colors disabled:opacity-30 shrink-0 shadow-xs cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
                   </button>

@@ -571,11 +571,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div className="text-center pt-1">
               <motion.div
                 whileHover={{ scale: 1.05, rotate: 5 }}
-                className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-md mx-auto mb-2 shrink-0 border border-slate-800"
+                className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center shadow-md mx-auto mb-2 shrink-0 border border-slate-800 p-2.5"
               >
-                <div className="w-6 h-6 rounded-xl border-2 border-white flex items-center justify-center p-0.5">
-                  <Sparkles className="w-3.5 h-3.5 fill-white text-white" />
-                </div>
+                <img src="/logo.png" alt="Momentum Logo" className="w-full h-full object-contain" />
               </motion.div>
 
               <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
