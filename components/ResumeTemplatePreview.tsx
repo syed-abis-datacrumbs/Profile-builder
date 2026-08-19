@@ -91,7 +91,7 @@ export const ResumeTemplatePreview: React.FC<ResumeTemplatePreviewProps> = ({ sa
             only if the resume is taller than the panel at that width. */}
         <div
           ref={panelRef}
-          className="flex-1 min-h-0 bg-white rounded-t-2xl shadow-2xl overflow-y-auto"
+          className="flex-1 min-h-0 bg-white rounded-t-2xl shadow-2xl overflow-y-auto hide-scrollbar"
           style={{ borderTop: `4px solid ${accent}` }}
         >
           <div style={{ height: naturalHeight * scale, visibility: scale ? 'visible' : 'hidden' }}>

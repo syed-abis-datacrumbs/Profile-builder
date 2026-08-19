@@ -109,7 +109,7 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
         </div>
 
         {/* ── LinkedIn Panel ── */}
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-12 w-full max-w-[820px] mx-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-12 w-full max-w-[820px] mx-auto hide-scrollbar">
           {/* ── CARD 1: Profile Header ── */}
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             {/* Cover banner */}

@@ -144,6 +144,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   }, [isOpen]);
 
+  // Lock body scroll when modal is open to prevent double scrollbars
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   // Typewriter effect for left card
   const typewriterPhrases = [
     'AI Resume Architect',
@@ -380,7 +392,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.93, y: 20 }}
           transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-          className="relative w-full max-w-4xl bg-white rounded-[32px] p-3 sm:p-4 shadow-2xl overflow-hidden flex flex-col md:flex-row gap-4 sm:gap-6 border border-slate-200/80 z-10 max-h-[92vh] overflow-y-auto"
+          className="relative w-full max-w-4xl bg-white rounded-[32px] p-3 sm:p-4 shadow-2xl overflow-hidden flex flex-col md:flex-row gap-4 sm:gap-6 border border-slate-200/80 z-10 max-h-[92vh] overflow-y-auto hide-scrollbar"
         >
 
           {/* Close Button */}
@@ -674,12 +686,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       placeholder="Enter new password"
                       required
                       minLength={8}
-                      className="w-full pl-4 pr-10 py-3 rounded-2xl bg-slate-100/90 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-slate-900/15 border-0 text-slate-900 text-xs font-medium placeholder-slate-400 transition-all outline-none"
+                      className="w-full pl-4 pr-11 py-3 rounded-2xl bg-slate-100/90 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-slate-900/15 border-0 text-slate-900 text-xs font-medium placeholder-slate-400 transition-all outline-none"
                     />
                     <button
                       type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onTouchStart={(e) => e.preventDefault()}
                       onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 transition-colors p-1 bg-transparent border-0 outline-none hover:bg-transparent shadow-none focus:outline-none flex items-center justify-center"
+                      className="w-10 h-10 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 transition-colors p-1 bg-transparent border-0 outline-none hover:bg-transparent shadow-none focus:outline-none cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -729,12 +743,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       placeholder="••••••••••••••••"
                       required
                       minLength={8}
-                      className="w-full pl-4 pr-10 py-3 rounded-2xl bg-slate-100/90 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-slate-900/15 border-0 text-slate-900 text-xs font-medium placeholder-slate-400 transition-all outline-none"
+                      className="w-full pl-4 pr-11 py-3 rounded-2xl bg-slate-100/90 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-slate-900/15 border-0 text-slate-900 text-xs font-medium placeholder-slate-400 transition-all outline-none"
                     />
                     <button
                       type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onTouchStart={(e) => e.preventDefault()}
                       onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 transition-colors p-1 bg-transparent border-0 outline-none hover:bg-transparent shadow-none focus:outline-none flex items-center justify-center"
+                      className="w-10 h-10 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 transition-colors p-1 bg-transparent border-0 outline-none hover:bg-transparent shadow-none focus:outline-none cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>

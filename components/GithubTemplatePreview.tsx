@@ -63,7 +63,7 @@ export const GithubTemplatePreview: React.FC<GithubTemplatePreviewProps> = ({
         </div>
 
         {/* README panel */}
-        <div className="flex-1 min-h-0 overflow-y-auto w-full pt-4">
+        <div className="flex-1 min-h-0 overflow-y-auto w-full pt-4 hide-scrollbar">
           <GithubReadmePreview github={mockupData} editable={false} />
         </div>
       </div>
