@@ -464,20 +464,8 @@ export const GithubChatStudio: React.FC<{
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Banner picker toggle */}
-            {/* <div className="relative">
-              <button
-                onClick={() => setShowBannerPicker((v) => !v)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${showBannerPicker
-                  ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-              >
-                <Image className="w-3.5 h-3.5" />
-                Banner
-                <ChevronDown className={`w-3 h-3 transition-transform ${showBannerPicker ? 'rotate-180' : ''}`} />
-              </button>
-
+            {/* Banner picker popup (opened via pencil button) */}
+            <div className="relative">
               {showBannerPicker && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowBannerPicker(false)} />
@@ -531,7 +519,7 @@ export const GithubChatStudio: React.FC<{
                   </div>
                 </>
               )}
-            </div> */}
+            </div>
             <button
               onClick={copyReadme}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors"
