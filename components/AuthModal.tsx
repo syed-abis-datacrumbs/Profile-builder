@@ -339,7 +339,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </motion.button>
 
           {/* LEFT COLUMN: Dark Visual Banner */}
-          <div className="w-full md:w-[48%] bg-slate-950 rounded-2xl p-6 sm:p-8 text-white flex flex-col justify-between relative overflow-hidden min-h-[440px] border border-slate-800/80">
+          <div className="hidden md:flex w-full md:w-[48%] bg-slate-950 rounded-2xl p-6 sm:p-8 text-white flex-col justify-between relative overflow-hidden min-h-[440px] border border-slate-800/80">
 
             {/* Background Ambient Glows & Grid Pattern */}
             <div className="absolute inset-0 pointer-events-none opacity-40">
