@@ -36,10 +36,25 @@ export async function POST(req: NextRequest) {
       );
       chromiumArgs = chromium.args;
     } else {
-      // macOS default Chrome path (works without any extra downloads)
-      executablePath =
-        process.env.CHROMIUM_PATH ||
-        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+      const fs = await import('fs');
+      const winPaths = [
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        `${process.env.LOCALAPPDATA ?? ''}\\Google\\Chrome\\Application\\chrome.exe`,
+        `${process.env.PROGRAMFILES ?? ''}\\Google\\Chrome\\Application\\chrome.exe`,
+        `${process.env['PROGRAMFILES(X86)'] ?? ''}\\Google\\Chrome\\Application\\chrome.exe`,
+      ];
+      const macPath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+
+      let foundPath = process.env.CHROMIUM_PATH;
+      if (!foundPath) {
+        if (process.platform === 'win32') {
+          foundPath = winPaths.find((p) => p && fs.existsSync(p)) || winPaths[0];
+        } else {
+          foundPath = macPath;
+        }
+      }
+      executablePath = foundPath;
       chromiumArgs = [
         '--no-sandbox',
         '--disable-setuid-sandbox',

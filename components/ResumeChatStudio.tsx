@@ -506,17 +506,34 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
       if (format === 'png') {
         const { toPng } = await import('html-to-image');
-        const opts = {
-          pixelRatio: 2,
-          backgroundColor: '#ffffff',
-          cacheBust: true,
-          filter: (n: HTMLElement) => n?.dataset?.pageBreak !== 'true',
-        };
-        const dataUrl = await toPng(el, opts);
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `${name}.png`;
-        a.click();
+        const origPosition = el.style.position;
+        const origLeft = el.style.left;
+        const origTop = el.style.top;
+        const origZIndex = el.style.zIndex;
+
+        el.style.position = 'fixed';
+        el.style.top = '0px';
+        el.style.left = '0px';
+        el.style.zIndex = '-9999';
+
+        try {
+          const opts = {
+            pixelRatio: 2,
+            backgroundColor: '#ffffff',
+            cacheBust: true,
+            filter: (n: HTMLElement) => n?.dataset?.pageBreak !== 'true',
+          };
+          const dataUrl = await toPng(el, opts);
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = `${name}.png`;
+          a.click();
+        } finally {
+          el.style.position = origPosition;
+          el.style.left = origLeft;
+          el.style.top = origTop;
+          el.style.zIndex = origZIndex;
+        }
       } else {
         // Server-side PDF via Puppeteer — no print popup, fully selectable text.
         // We send the JS-calculated slice positions so Puppeteer clips each page

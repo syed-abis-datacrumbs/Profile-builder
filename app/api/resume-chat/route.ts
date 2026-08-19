@@ -49,6 +49,12 @@ Rules:
   2. "skills" MUST be a comma-separated list of relevant technical skills, programming languages, frameworks, and tools inferred from the user's projects, education, and work experience (e.g., "JavaScript, Node.js, React, Python, C++, HTML/CSS, Git, REST APIs, Arduino, dlib").
   3. "interests" MUST be a short comma-separated list of professional/tech interests inferred from their projects and field (e.g., "Web Development, Artificial Intelligence, Open Source, System Architecture, Mobile App Development").
   4. If the user asks to "add skills", "fill skills", "add content to skills/interests", or if "skills" or "interests" are empty/blank, YOU MUST IMMEDIATELY POPULATE BOTH FIELDS with relevant, concrete technical content inferred from their resume items! NEVER return empty strings or blank placeholders for "skills" or "interests".
+- CRITICAL — Content expansion & space filling requests: When the user asks to "increase content", "add more content", "expand", "fill the gap", "fill space", "fill empty space", "make it longer", "add more detail", or similar:
+  1. You MUST produce text in the VERY FIRST TURN itself that is MEASURABLY AND VISIBLY LONGER than what was there before.
+  2. Add at least 2–3 new, detailed bullet lines to workExperience items.
+  3. Add extra technical sentences and impact details to project descriptions.
+  4. Expand additional.skills and additional.interests with more comprehensive relevant tools and tech.
+  5. CRITICAL: Never return the JSON with unchanged text or say "Done" without expanding the JSON content immediately in ONE GO on the first request!
 - Output valid JSON only.`;
 
 interface ChatMessage {
