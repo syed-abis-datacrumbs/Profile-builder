@@ -89,15 +89,16 @@ export const GithubChatStudio: React.FC<{
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, loading]);
 
-  // README.md is plain text, not an image — there's no raster to bake a
-  // watermark into like Resume's PDF/PNG, so the same one-time-payment
-  // unlock instead gates the download itself (Copy stays free either way).
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  const [aiMessagesUsed, setAiMessagesUsed] = useState<number>(0);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   useEffect(() => {
     fetch('/api/payment/status')
       .then((r) => r.json())
-      .then((d: { unlocked: boolean }) => setUnlocked(d.unlocked))
+      .then((d: { unlocked: boolean, aiMessagesUsed: number }) => {
+        setUnlocked(d.unlocked);
+        setAiMessagesUsed(d.aiMessagesUsed || 0);
+      })
       .catch(() => setUnlocked(false));
   }, []);
 
@@ -141,6 +142,10 @@ export const GithubChatStudio: React.FC<{
 
   const [copied, setCopied] = useState(false);
   const downloadReadme = () => {
+    if (unlocked === false) {
+      setShowPaymentModal(true);
+      return;
+    }
     const md = generateGithubMarkdown(github);
     const blob = new Blob([md], { type: 'text/markdown' });
     const a = document.createElement('a');
@@ -151,6 +156,10 @@ export const GithubChatStudio: React.FC<{
     document.body.removeChild(a);
   };
   const copyReadme = async () => {
+    if (unlocked === false) {
+      setShowPaymentModal(true);
+      return;
+    }
     await navigator.clipboard.writeText(generateGithubMarkdown(github));
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
@@ -227,7 +236,7 @@ export const GithubChatStudio: React.FC<{
 
         {/* Bottom Input Area */}
         <div className="shrink-0 p-3.5 bg-white border-t border-slate-200">
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl py-2 px-3 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-end gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all">
             <textarea
               rows={2}
               value={input}
@@ -238,12 +247,13 @@ export const GithubChatStudio: React.FC<{
                   send();
                 }
               }}
-              placeholder="Ask anything..."
-              className="flex-1 min-w-0 bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal"
+              placeholder={aiMessagesUsed >= 5 && !unlocked ? "AI Limit Reached. Upgrade to Pro." : "Ask anything..."}
+              disabled={aiMessagesUsed >= 5 && !unlocked}
+              className="flex-1 min-w-0 bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <button
               onClick={() => send()}
-              disabled={loading || !input.trim()}
+              disabled={!input.trim() || loading || (aiMessagesUsed >= 5 && !unlocked)}
               className="w-7 h-7 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-xs"
             >
               <Send className="w-3.5 h-3.5" />

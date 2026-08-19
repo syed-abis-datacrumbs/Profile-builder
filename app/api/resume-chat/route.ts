@@ -62,6 +62,26 @@ export async function POST(request: Request) {
   }
 
   try {
+    const user = await currentUser();
+    const userId = user?.id;
+    if (userId) {
+      const unlock = await db.paymentUnlock.findUnique({ where: { userId } });
+      if (!unlock) {
+        const usage = await db.profileBuilderAiUsage.findUnique({ where: { userId } });
+        const used = usage?.usedCount || 0;
+        if (used >= 5) {
+          return Response.json({
+            reply: '🔒 **AI Limit Reached.** You have used your 5 free AI messages. Upgrade to Pro to unlock unlimited AI editing and exports!',
+          });
+        }
+        await db.profileBuilderAiUsage.upsert({
+          where: { userId },
+          update: { usedCount: { increment: 1 } },
+          create: { userId, usedCount: 1 }
+        });
+      }
+    }
+
     const body = (await request.json()) as { messages?: ChatMessage[]; cv?: CvData; targetJob?: string; sessionId?: string; isAutoFit?: boolean };
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const cv = (body.cv ?? {}) as CvData;
@@ -221,7 +241,6 @@ export async function POST(request: Request) {
     const reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.';
 
     // Log the turn
-    const user = await currentUser();
     if (sessionId !== 'unknown') {
       await db.profileBuilderChatLog.create({
         data: {

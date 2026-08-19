@@ -147,6 +147,19 @@ export const LinkedinChatStudio: React.FC<{
   const [showPfpPicker, setShowPfpPicker] = useState(false);
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
+
+  const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  const [aiMessagesUsed, setAiMessagesUsed] = useState<number>(0);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  useEffect(() => {
+    fetch('/api/payment/status')
+      .then((r) => r.json())
+      .then((d: { unlocked: boolean, aiMessagesUsed: number }) => {
+        setUnlocked(d.unlocked);
+        setAiMessagesUsed(d.aiMessagesUsed || 0);
+      })
+      .catch(() => setUnlocked(false));
+  }, []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sessionIdRef = useRef<string | null>(null);
@@ -325,7 +338,7 @@ export const LinkedinChatStudio: React.FC<{
 
         {/* Bottom Input Area */}
         <div className="shrink-0 p-3.5 bg-white border-t border-slate-200">
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl py-2 px-3 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-end gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all">
             <textarea
               rows={2}
               value={input}
@@ -336,12 +349,13 @@ export const LinkedinChatStudio: React.FC<{
                   send();
                 }
               }}
-              placeholder="Ask anything..."
-              className="flex-1 min-w-0 bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal"
+              placeholder={aiMessagesUsed >= 5 && !unlocked ? "AI Limit Reached. Upgrade to Pro." : "Ask anything..."}
+              disabled={aiMessagesUsed >= 5 && !unlocked}
+              className="flex-1 min-w-0 bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <button
               onClick={() => send()}
-              disabled={loading || !input.trim()}
+              disabled={!input.trim() || loading || (aiMessagesUsed >= 5 && !unlocked)}
               className="w-7 h-7 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-xs"
             >
               <Send className="w-3.5 h-3.5" />

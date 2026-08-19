@@ -100,6 +100,14 @@ export default function Home() {
   const isLoggedIn = !!user;
   const isAuthorized = isLoggedIn && BUILDER_ACCESS_EMAILS.has(userEmail || '');
   const [assistantPrompt, setAssistantPrompt] = useState('');
+  
+  const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetch('/api/payment/status')
+      .then((r) => r.json())
+      .then((d: { unlocked: boolean }) => setUnlocked(d.unlocked))
+      .catch(() => setUnlocked(false));
+  }, []);
 
   // Calculate ATS Score
   const calculateATSScore = () => {
@@ -159,7 +167,8 @@ export default function Home() {
           else if (activeTab === 'linkedin') setLinkedinMode('landing');
         }}
         userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis Hussain Syed" : "Sign in to save"}
-        planName={isLoggedIn ? "Pro Plan" : "Create a free account"}
+        planName={unlocked ? "Pro Active" : (isLoggedIn ? "Free Plan" : "Create a free account")}
+        unlocked={unlocked}
         isLoggedIn={isLoggedIn}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenUpgrade={() => setIsUpgradeOpen(true)}

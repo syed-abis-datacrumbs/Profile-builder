@@ -333,65 +333,26 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   // blocked"). Re-checked on mount only; the PaymentModal flips this to
   // true directly on approval rather than re-fetching.
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  const [aiMessagesUsed, setAiMessagesUsed] = useState<number>(0);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     fetch('/api/payment/status')
       .then((r) => r.json())
-      .then((d: { unlocked: boolean }) => setUnlocked(d.unlocked))
+      .then((d: { unlocked: boolean, aiMessagesUsed: number }) => {
+        setUnlocked(d.unlocked);
+        setAiMessagesUsed(d.aiMessagesUsed || 0);
+      })
       .catch(() => setUnlocked(false));
   }, []);
 
-  // Temporarily injects rotated, translucent "Momentum" watermark divs into
-  // the live export DOM, positioned absolutely (so they scroll with content,
-  // tiled one per page-height band) — removed again right after export.
-  // Both the canvas-based PNG export AND the native-print PDF export
-  // ultimately capture/print whatever is actually in `el`'s DOM, so
-  // injecting into the DOM itself (rather than drawing on a canvas, which
-  // only the PNG path has) is what makes ONE mechanism cover both formats.
-  const injectWatermarks = (el: HTMLElement): HTMLElement[] => {
-    const injected: HTMLElement[] = [];
-    const contentWidth = el.scrollWidth || el.offsetWidth;
-    const contentHeight = el.scrollHeight || el.offsetHeight;
-
-    // A4 page aspect ratio is roughly 1 : 1.4142
-    const pageHeight = Math.round(contentWidth * 1.4142);
-
-    // Place one watermark perfectly centered on every page
-    for (let y = pageHeight / 2; y < contentHeight + pageHeight; y += pageHeight) {
-      const div = document.createElement('div');
-      div.setAttribute('data-watermark', 'true');
-      Object.assign(div.style, {
-        position: 'absolute',
-        left: '0',
-        top: `${y}px`,
-        width: '100%',
-        textAlign: 'center',
-        transform: 'translateY(-50%) rotate(-30deg)',
-        fontSize: `${Math.round(contentWidth * 0.1)}px`,
-        fontWeight: '700',
-        fontFamily: 'Arial, sans-serif',
-        color: 'rgba(15, 23, 42, 0.12)',
-        pointerEvents: 'none',
-        userSelect: 'none',
-        zIndex: '9999',
-      });
-      div.textContent = 'Momentum';
-      el.appendChild(div);
-      injected.push(div);
-    }
-    return injected;
-  };
-  const removeWatermarks = (injected: HTMLElement[]) => injected.forEach((n) => n.remove());
-
   const download = async (format: 'pdf' | 'png') => {
+    if (unlocked === false) {
+      setShowPaymentModal(true);
+      return;
+    }
     const el = exportRef.current;
     if (!el || downloading) return;
-    // Injected BEFORE either export path reads the DOM (toPng captures it,
-    // the PDF path copies el.innerHTML into the print iframe) so one
-    // mechanism covers both formats; always removed in `finally` below so
-    // the editor itself never shows a watermark.
-    const watermarkNodes = unlocked ? [] : injectWatermarks(el);
     try {
       setDownloading(format);
       const name = (cv.personalInfo.fullName || 'Resume').replace(/[^a-z0-9]/gi, '_');
@@ -451,8 +412,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       console.error('Resume download failed', err);
       alert(`Download failed: ${err.message || 'Please try again.'}`);
     } finally {
-      removeWatermarks(watermarkNodes);
       setDownloading(null);
+      setDlMenu(false);
     }
   };
 
@@ -593,12 +554,13 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                   send();
                 }
               }}
-              placeholder="Ask anything..."
-              className="flex-1 min-w-0 bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal"
+              placeholder={aiMessagesUsed >= 5 && !unlocked ? "AI Limit Reached. Upgrade to Pro." : "Ask anything..."}
+              disabled={aiMessagesUsed >= 5 && !unlocked}
+              className="flex-1 min-w-0 bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <button
               onClick={() => send()}
-              disabled={loading || !input.trim()}
+              disabled={!input.trim() || loading || (aiMessagesUsed >= 5 && !unlocked)}
               className="w-7 h-7 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-xs"
             >
               <Send className="w-3.5 h-3.5" />

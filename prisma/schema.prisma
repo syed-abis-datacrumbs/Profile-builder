@@ -109,6 +109,18 @@ model ProfileBuilderCouponRedemption {
   @@map("profile_builder_coupon_redemptions")
 }
 
+// Tracks the number of free AI messages a user has consumed across all
+// Profile Builder tools (Resume, GitHub, LinkedIn). 
+// One-to-one with the user's Clerk ID.
+model ProfileBuilderAiUsage {
+  userId     String   @id
+  usedCount  Int      @default(0)
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+
+  @@map("profile_builder_ai_usage")
+}
+
 
 /// Represents one turn of an AI conversation in the Resume Builder.
 /// A frontend-generated sessionId groups multiple turns together.
