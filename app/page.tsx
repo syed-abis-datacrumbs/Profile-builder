@@ -195,7 +195,7 @@ export default function Home() {
         }}
         unlocked={unlocked}
         onOpenAuth={() => setIsAuthOpen(true)}
-        onOpenUpgrade={() => setIsUpgradeOpen(true)}
+        onOpenUpgrade={() => setIsPaymentModalOpen(true)}
         onOpenAskExpert={() => setIsAskExpertOpen(true)}
         onOpenRemoveWatermark={() => setIsPaymentModalOpen(true)}
         isMobileOpen={isMobileNavOpen}
@@ -225,7 +225,7 @@ export default function Home() {
           (activeTab === 'github' && githubMode === 'studio')
         ) && (
           <ImagineHeader
-            onOpenUpgrade={() => setIsUpgradeOpen(true)}
+            onOpenUpgrade={() => setIsPaymentModalOpen(true)}
             onOpenAuth={() => setIsAuthOpen(true)}
           />
         )}
