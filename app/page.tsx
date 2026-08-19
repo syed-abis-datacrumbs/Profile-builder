@@ -384,7 +384,8 @@ export default function Home() {
                           onUsePrompt={(promptText) => {
                             if (attachedGithubTemplate) {
                               const t = attachedGithubTemplate;
-                              const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
+                              const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
+                              const preset = { ...basePreset, label: t.name };
                               const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
                               openGithubStudio(preset, t.theme, t.avatarUrl || randomAvatar, t.bannerUrl);
                             } else {
@@ -650,7 +651,8 @@ export default function Home() {
                 key={t.id}
                 onClick={() => {
                   setShowGithubTemplatePicker(false);
-                  const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
+                  const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
+                  const preset = { ...basePreset, label: t.name };
                   const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
                   openGithubStudio(preset, t.theme, t.avatarUrl || randomAvatar);
                   setGithubInitialPrompt(pendingPrompt);

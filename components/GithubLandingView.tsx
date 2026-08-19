@@ -273,9 +273,9 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
 
   const handleSelectTemplate = (template: GithubTemplateCard) => {
     if (onSelectTemplate) return onSelectTemplate(template);
-    const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === template.presetId);
-    if (preset && onSelectPreset) {
-      onSelectPreset(preset, template.theme, template.avatarUrl);
+    const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === template.presetId);
+    if (basePreset && onSelectPreset) {
+      onSelectPreset({ ...basePreset, label: template.name }, template.theme, template.avatarUrl, template.bannerUrl);
     } else {
       onOpenRolePicker();
     }
