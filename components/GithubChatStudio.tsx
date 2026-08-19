@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2 } from 'lucide-react';
 import { GithubProfileData } from '../types';
 import { GithubIcon } from './icons';
 import { generateGithubMarkdown } from '../lib/githubMarkdown';
@@ -177,11 +177,15 @@ export const GithubChatStudio: React.FC<{
   interface SavedProfileMeta { id: string; name: string; createdAt: string }
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [savedProfiles, setSavedProfiles] = useState<SavedProfileMeta[] | null>(null);
+  const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
+  const [activeSavedName, setActiveSavedName] = useState<string | null>(null);
   const [saveNameInput, setSaveNameInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [loadingSavedId, setLoadingSavedId] = useState<string | null>(null);
   const [deletingSavedId, setDeletingSavedId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameInput, setRenameInput] = useState<string>('');
 
   const fetchSavedProfiles = async () => {
     try {
@@ -202,22 +206,27 @@ export const GithubChatStudio: React.FC<{
     });
   };
 
-  const handleSaveProfile = async () => {
-    const name = saveNameInput.trim() || 'Untitled profile';
+  const handleSaveProfile = async (forceNew = false) => {
+    const targetId = forceNew ? undefined : (activeSavedId || undefined);
+    const name = saveNameInput.trim() || activeSavedName || github.username || 'Untitled profile';
     setSaving(true);
     setSaveError(null);
     try {
       const res = await fetch('/api/github-saves', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, data: github }),
+        body: JSON.stringify({ id: targetId, name, data: github }),
       });
       const json = await res.json();
       if (!res.ok) {
         setSaveError(json.error || 'Failed to save.');
         return;
       }
-      setSaveNameInput('');
+      if (json.id) {
+        setActiveSavedId(json.id);
+        setActiveSavedName(json.name || name);
+        setSaveNameInput(json.name || name);
+      }
       fetchSavedProfiles();
     } catch {
       setSaveError('Failed to save — check your connection.');
@@ -226,7 +235,7 @@ export const GithubChatStudio: React.FC<{
     }
   };
 
-  const handleLoadSavedProfile = async (id: string) => {
+  const handleLoadSavedProfile = async (id: string, name?: string) => {
     setLoadingSavedId(id);
     try {
       const res = await fetch(`/api/github-saves/${id}`);
@@ -234,6 +243,10 @@ export const GithubChatStudio: React.FC<{
       const json = await res.json();
       if (json.data) {
         onChange(json.data as GithubProfileData);
+        setActiveSavedId(id);
+        const resolvedName = name || savedProfiles?.find(s => s.id === id)?.name || '';
+        setActiveSavedName(resolvedName);
+        setSaveNameInput(resolvedName);
       }
       setProfileMenuOpen(false);
     } catch {
@@ -242,11 +255,39 @@ export const GithubChatStudio: React.FC<{
     }
   };
 
+  const handleRenameProfile = async (id: string, newName: string) => {
+    if (!newName.trim()) { setRenamingId(null); return; }
+    try {
+      const res = await fetch(`/api/github-saves/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+      if (res.ok) {
+        setSavedProfiles((prev) =>
+          (prev ?? []).map((item) => (item.id === id ? { ...item, name: newName.trim() } : item))
+        );
+        if (activeSavedId === id) {
+          setActiveSavedName(newName.trim());
+          setSaveNameInput(newName.trim());
+        }
+      }
+    } finally {
+      setRenamingId(null);
+    }
+  };
+
   const handleDeleteSavedProfile = async (id: string) => {
     setDeletingSavedId(id);
     try {
       const res = await fetch(`/api/github-saves/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchSavedProfiles();
+      if (res.ok) {
+        fetchSavedProfiles();
+        if (activeSavedId === id) {
+          setActiveSavedId(null);
+          setActiveSavedName(null);
+        }
+      }
     } catch {
     } finally {
       setDeletingSavedId(null);
@@ -399,56 +440,153 @@ export const GithubChatStudio: React.FC<{
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
                   <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col">
-                    <div className="p-3 border-b border-slate-100 bg-slate-50/50">
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={saveNameInput}
-                          onChange={(e) => setSaveNameInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveProfile(); }}
-                          placeholder="My GitHub Profile"
-                          className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
-                        />
-                        <button
-                          onClick={handleSaveProfile}
-                          disabled={saving}
-                          className="px-3.5 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 disabled:opacity-50 transition-colors"
-                        >
-                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
-                        </button>
+                    <div className="p-3 border-b border-slate-100 bg-slate-50/50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-[10px] text-slate-500 uppercase tracking-wider">
+                          Saved Profiles
+                        </span>
+                        {activeSavedId && (
+                          <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60">
+                            Editing Active
+                          </span>
+                        )}
+                      </div>
+
+                      <input
+                        type="text"
+                        value={saveNameInput}
+                        onChange={(e) => setSaveNameInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveProfile(!activeSavedId); }}
+                        placeholder={github.username || 'My GitHub Profile'}
+                        className="w-full h-8 px-2.5 rounded-lg border border-slate-200 text-slate-800 text-xs focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 bg-white shadow-2xs"
+                      />
+
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        {activeSavedId ? (
+                          <>
+                            <button
+                              onClick={() => handleSaveProfile(false)}
+                              disabled={saving}
+                              className="flex-1 h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                            >
+                              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Update Active'}
+                            </button>
+                            <button
+                              onClick={() => handleSaveProfile(true)}
+                              disabled={saving}
+                              className="h-7 px-2.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                              title="Save as a new separate profile copy"
+                            >
+                              <Plus className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>Save New</span>
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => handleSaveProfile(true)}
+                            disabled={saving}
+                            className="w-full h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                          >
+                            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save New Profile'}
+                          </button>
+                        )}
                       </div>
                       {saveError && <div className="mt-2 text-xs text-red-500 font-medium">{saveError}</div>}
                     </div>
 
-                    <div className="max-h-64 overflow-y-auto p-2 space-y-1">
+                    <div className="max-h-64 overflow-y-auto divide-y divide-slate-50">
                       {savedProfiles === null ? (
                         <div className="p-4 flex justify-center"><Loader2 className="w-5 h-5 text-slate-400 animate-spin" /></div>
                       ) : savedProfiles.length === 0 ? (
                         <div className="p-4 text-center text-sm text-slate-500">No saved profiles yet.</div>
                       ) : (
-                        savedProfiles.map((s) => (
-                          <div key={s.id} className="group relative rounded-lg border border-transparent hover:bg-slate-50 hover:border-slate-200 transition-colors">
-                            <button
-                              onClick={() => handleLoadSavedProfile(s.id)}
-                              disabled={loadingSavedId !== null || deletingSavedId !== null}
-                              className="w-full text-left px-3 py-2.5 flex flex-col"
+                        savedProfiles.map((s) => {
+                          const isSelected = activeSavedId === s.id;
+                          const isRenaming = renamingId === s.id;
+
+                          return (
+                            <div
+                              key={s.id}
+                              className={`flex items-center justify-between px-3 py-2 transition-colors group ${
+                                isSelected ? 'bg-indigo-50/60' : 'hover:bg-slate-50'
+                              }`}
                             >
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-slate-800 text-sm truncate">{s.name}</span>
-                                {loadingSavedId === s.id && <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin" />}
-                              </div>
-                              <span className="text-xs text-slate-400">{new Date(s.createdAt).toLocaleDateString()}</span>
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteSavedProfile(s.id); }}
-                              disabled={deletingSavedId !== null}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
-                              title="Delete this save"
-                            >
-                              {deletingSavedId === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
-                            </button>
-                          </div>
-                        ))
+                              {isRenaming ? (
+                                <div className="flex items-center gap-1 flex-1 min-w-0 pr-1">
+                                  <input
+                                    type="text"
+                                    value={renameInput}
+                                    onChange={(e) => setRenameInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleRenameProfile(s.id, renameInput);
+                                      if (e.key === 'Escape') setRenamingId(null);
+                                    }}
+                                    autoFocus
+                                    className="flex-1 px-1.5 py-0.5 border border-indigo-400 rounded text-xs text-slate-900 focus:outline-none"
+                                  />
+                                  <button
+                                    onClick={() => handleRenameProfile(s.id, renameInput)}
+                                    className="p-1 rounded text-emerald-600 hover:bg-emerald-50 cursor-pointer"
+                                    title="Save name"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setRenamingId(null)}
+                                    className="p-1 rounded text-slate-400 hover:bg-slate-100 cursor-pointer"
+                                    title="Cancel"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleLoadSavedProfile(s.id, s.name)}
+                                    disabled={loadingSavedId === s.id}
+                                    className="flex-1 min-w-0 text-left cursor-pointer"
+                                  >
+                                    <div className="font-semibold text-slate-800 text-sm truncate flex items-center gap-1.5">
+                                      <span className="truncate">{s.name}</span>
+                                      {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0" />}
+                                    </div>
+                                    <div className="text-slate-400 text-[10px]">
+                                      {new Date(s.createdAt).toLocaleDateString()}
+                                    </div>
+                                  </button>
+                                  
+                                  <div className="flex items-center gap-0.5 shrink-0 pl-1">
+                                    {loadingSavedId === s.id && (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                                    )}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setRenamingId(s.id);
+                                        setRenameInput(s.name);
+                                      }}
+                                      className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+                                      title="Rename"
+                                    >
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteSavedProfile(s.id);
+                                      }}
+                                      disabled={deletingSavedId === s.id}
+                                      className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50 cursor-pointer"
+                                      title="Delete this save"
+                                    >
+                                      {deletingSavedId === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
