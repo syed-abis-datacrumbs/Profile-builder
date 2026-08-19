@@ -141,7 +141,7 @@ export default function Home() {
   // Loads a role's ready-made README (from the picker popup or a role chip)
   // onto the GitHub data, then jumps into the editor.
   // Loads a preset's content into the GitHub data and opens the chat Studio.
-  const openGithubStudio = (preset: GithubRolePreset, theme?: GithubProfileData['theme'], avatarUrl?: string) => {
+  const openGithubStudio = (preset: GithubRolePreset, theme?: GithubProfileData['theme'], avatarUrl?: string, bannerUrl?: string) => {
     if (!isLoggedIn) {
       setIsAuthOpen(true);
       return;
@@ -153,6 +153,7 @@ export default function Home() {
       ...g,
       theme: theme || defaultGithubData.theme,
       avatarUrl: avatarUrl || defaultGithubData.avatarUrl,
+      bannerUrl: bannerUrl || g.bannerUrl || defaultGithubData.bannerUrl,
       customSections: g.customSections.map((s) => ({ ...s, content: s.content.replace(/\*\*/g, '') })),
     });
     setGithubInitialPrompt('');
@@ -371,7 +372,7 @@ export default function Home() {
                         <GithubLandingView
                           userName={firstName || undefined}
                           onOpenRolePicker={() => setShowGithubTemplatePicker(true)}
-                          onSelectPreset={(preset, theme, avatarUrl) => openGithubStudio(preset, theme, avatarUrl)}
+                          onSelectPreset={(preset, theme, avatarUrl, bannerUrl) => openGithubStudio(preset, theme, avatarUrl, bannerUrl)}
                           attachedTemplate={attachedGithubTemplate}
                           onClearAttachedTemplate={() => setAttachedGithubTemplate(null)}
                           onSelectTemplate={(t) => {
@@ -383,20 +384,14 @@ export default function Home() {
                               const t = attachedGithubTemplate;
                               const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
                               const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
-                              openGithubStudio(preset, t.theme, t.avatarUrl || randomAvatar);
+                              openGithubStudio(preset, t.theme, t.avatarUrl || randomAvatar, t.bannerUrl);
                             } else {
-                              // NO template selected: Start with a completely blank profile
-                              // so the AI generates everything from scratch based on the prompt.
-                              const emptyPreset: GithubRolePreset = {
-                                id: 'custom',
-                                label: 'My GitHub Profile',
-                                about: '',
-                                expertise: '',
-                                techStack: [],
-                                projects: [],
-                              };
+                              // NO template selected: Load default dummy template preset (Full Stack Developer)
+                              // so the user gets a complete, realistic, populated GitHub profile ready to edit.
+                              const defaultPreset = GITHUB_ROLE_PRESETS[0];
+                              const defaultTemplate = GITHUB_TEMPLATES[0];
                               const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
-                              openGithubStudio(emptyPreset, 'dark', randomAvatar);
+                              openGithubStudio(defaultPreset, 'dark', randomAvatar, defaultTemplate.bannerUrl);
                             }
                             setGithubInitialPrompt(promptText);
                             setAttachedGithubTemplate(null);

@@ -25,7 +25,7 @@ interface GithubLandingViewProps {
   /** Opens the "which field?" role picker modal. */
   onOpenRolePicker: () => void;
   /** Selects a specific preset and theme directly to launch editor. */
-  onSelectPreset?: (preset: GithubRolePreset, theme?: GithubProfileData['theme'], avatarUrl?: string) => void;
+  onSelectPreset?: (preset: GithubRolePreset, theme?: GithubProfileData['theme'], avatarUrl?: string, bannerUrl?: string) => void;
   attachedTemplate: GithubTemplateCard | null;
   onClearAttachedTemplate: () => void;
   onSelectTemplate?: (template: GithubTemplateCard) => void;
@@ -41,6 +41,7 @@ export interface GithubTemplateCard {
   tagline: string;
   badge: string;
   theme: GithubProfileData['theme'];
+  bannerUrl?: string;
   bgClass: string;
   borderClass: string;
   accentText: string;
@@ -60,6 +61,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     tagline: 'Clean, centered & to the point',
     badge: 'Popular',
     theme: 'dark',
+    bannerUrl: 'https://media2.dev.to/dynamic/image/width=800,height=200,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Farticles%2F4e0d816kuzyu700pdbjn.png',
     bgClass: 'bg-slate-950',
     borderClass: 'border-slate-800',
     accentText: 'text-indigo-400',
@@ -77,6 +79,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     tagline: 'Futuristic terminal & neon badges',
     badge: 'Trending',
     theme: 'cyberpunk',
+    bannerUrl: 'https://github.blog/wp-content/uploads/2023/10/Security-DarkMode-4.png?fit=800%2C200',
     bgClass: 'bg-gradient-to-br from-yellow-950/60 via-slate-950 to-cyan-950/60',
     borderClass: 'border-cyan-500/40 shadow-cyan-500/10',
     accentText: 'text-cyan-400',
@@ -94,6 +97,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     tagline: 'Rich tech grid & project showcases',
     badge: 'Featured',
     theme: 'tokyonight',
+    bannerUrl: 'https://res.cloudinary.com/dnqk2jlds/image/upload/f_auto,q_auto,w_800,h_200,c_fill/v1784892308/lms-assets/github-builder-banner.png',
     bgClass: 'bg-gradient-to-br from-indigo-950 via-slate-950 to-purple-950',
     borderClass: 'border-indigo-500/30 shadow-indigo-500/10',
     accentText: 'text-indigo-400',
@@ -111,6 +115,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     tagline: 'Infrastructure as Code & CI/CD workflows',
     badge: 'Infrastructure',
     theme: 'radial',
+    bannerUrl: 'https://github.blog/wp-content/uploads/2024/04/Enterprise-DarkMode-2-3.png?fit=800%2C200',
     bgClass: 'bg-gradient-to-br from-emerald-950/60 via-slate-950 to-teal-950/60',
     borderClass: 'border-emerald-500/30 shadow-emerald-500/10',
     accentText: 'text-emerald-400',
@@ -124,16 +129,17 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     id: 'opensource-maintainer',
     presetId: 'backend',
     category: 'devops',
-    name: 'Backend Developer',
+    name: 'Open-Source Maintainer',
     tagline: 'High-performance APIs & microservices',
-    badge: 'Backend',
+    badge: 'Open Source',
     theme: 'dracula',
+    bannerUrl: 'https://media.licdn.com/dms/image/v2/D4D22AQFdDNT0wF7QeA/feedshare-shrink_800/B4DZnTiPJ.HsAg-/0/1760190592128?e=2147483647&v=beta&t=TIR7gw8DvhVlNvj430XoNRE2szOwVuPZACPAR7O6mww',
     bgClass: 'bg-gradient-to-br from-purple-950/60 via-slate-950 to-pink-950/50',
     borderClass: 'border-purple-500/30 shadow-purple-500/10',
     accentText: 'text-pink-400',
     badges: ['Go', 'Node.js', 'Redis', 'Kafka'],
     features: ['💖 Sponsor Button', '📦 Package Stats', '📊 Contributor Graph'],
-    headline: 'Backend Engineer ⚡',
+    headline: 'Open-Source Maintainer 💖',
     subhead: 'Building high-throughput backend services & tools',
     avatarUrl: '/images/github-profile/git-profile-2.png',
   },
@@ -145,6 +151,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     tagline: 'Real-time models, OpenCV & TensorRT',
     badge: 'Specialized',
     theme: 'dark',
+    bannerUrl: 'https://t3.ftcdn.net/jpg/20/51/12/90/360_F_2051129030_uod7m0OoRgOBN03AcYRzK9ESwAAAnXdt.jpg',
     bgClass: 'bg-gradient-to-br from-blue-950/60 via-slate-950 to-slate-900',
     borderClass: 'border-blue-500/30 shadow-blue-500/10',
     accentText: 'text-blue-400',
@@ -162,6 +169,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     tagline: 'iOS & Android native & cross-platform',
     badge: 'Mobile',
     theme: 'tokyonight',
+    bannerUrl: 'https://media2.dev.to/dynamic/image/width=800,height=200,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Farticles%2F4e0d816kuzyu700pdbjn.png',
     bgClass: 'bg-gradient-to-br from-sky-950/60 via-slate-950 to-indigo-950/50',
     borderClass: 'border-sky-500/30 shadow-sky-500/10',
     accentText: 'text-sky-400',
@@ -175,10 +183,11 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     id: 'executive-lead',
     presetId: 'full-stack',
     category: 'web',
-    name: 'Software Engineering Lead',
+    name: 'Executive Tech Lead',
     tagline: 'System architecture & team impact',
-    badge: 'Staff/Lead',
+    badge: 'Leadership',
     theme: 'radial',
+    bannerUrl: 'https://github.blog/wp-content/uploads/2024/01/Productivity-DarkMode-3.png?fit=800%2C200',
     bgClass: 'bg-gradient-to-br from-slate-900 via-slate-950 to-zinc-900',
     borderClass: 'border-slate-700/60 shadow-slate-700/10',
     accentText: 'text-amber-400',

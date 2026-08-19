@@ -241,17 +241,54 @@ export async function POST(request: Request) {
     };
     const defaultAdditional: CvData['additional'] = { skills: '', interests: '' };
 
+    // Auto-fix: Ensure non-degree courses (Saylani, Coursera, Bootcamps, etc.) are in certifications, NOT education
+    const cleanEducation: CvData['education'] = [];
+    const extraCertifications: CvData['certifications'] = [];
+
+    const isNonDegreeCourse = (e: CvData['education'][number]) => {
+      const text = `${e.degree || ''} ${e.institution || ''}`.toLowerCase();
+      return (
+        text.includes('course') ||
+        text.includes('bootcamp') ||
+        text.includes('certification') ||
+        text.includes('saylani') ||
+        text.includes('udemy') ||
+        text.includes('coursera') ||
+        text.includes('edx')
+      );
+    };
+
+    for (const edu of nextCv.education ?? []) {
+      if (isNonDegreeCourse(edu)) {
+        extraCertifications.push({
+          name: edu.degree || edu.institution || 'Web and App Development Course',
+          organization: edu.institution || 'Saylani Mass IT',
+        });
+      } else if (edu.institution || edu.degree) {
+        cleanEducation.push(edu);
+      }
+    }
+
+    const mergedCertifications = [
+      ...(nextCv.certifications ?? []),
+      ...extraCertifications,
+    ].filter((c) => c.name || c.organization);
+
+    const uniqueCertifications = mergedCertifications.filter(
+      (c, index, self) => index === self.findIndex((t) => (t.name || '').toLowerCase() === (c.name || '').toLowerCase())
+    );
+
     const safeCv: CvData = {
       ...nextCv,
       cvType,
       personalInfo: nextCv.personalInfo ?? cv.personalInfo ?? defaultPersonalInfo,
-      education: (nextCv.education ?? []).filter((e) => e.institution || e.degree),
+      education: cleanEducation,
       workExperience: (cvType === 'student' ? cv.workExperience ?? [] : nextCv.workExperience ?? []).filter(
         (w) => w.company || w.title || w.bullets
       ),
       workshops: (cvType === 'student' ? nextCv.workshops ?? [] : cv.workshops ?? []).filter((w) => (w.content || '').trim()),
       projects: (nextCv.projects ?? []).filter((p) => (p.content || '').trim()),
-      certifications: (nextCv.certifications ?? []).filter((c) => c.name || c.organization),
+      certifications: uniqueCertifications,
       additional: nextCv.additional ?? cv.additional ?? defaultAdditional,
     };
 
