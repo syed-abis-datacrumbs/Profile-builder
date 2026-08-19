@@ -346,13 +346,44 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       .catch(() => setUnlocked(false));
   }, []);
 
-  const download = async (format: 'pdf' | 'png') => {
-    if (unlocked === false) {
-      setShowPaymentModal(true);
-      return;
+  // Temporarily injects rotated, translucent "Momentum" watermark divs into
+  // the live export DOM, positioned absolutely (so they scroll with content,
+  // tiled one per page-height band) — removed again right after export.
+  const injectWatermarks = (el: HTMLElement): HTMLElement[] => {
+    const injected: HTMLElement[] = [];
+    const contentWidth = el.scrollWidth || el.offsetWidth;
+    const contentHeight = el.scrollHeight || el.offsetHeight;
+    const pageHeight = Math.round(contentWidth * 1.4142);
+    for (let y = pageHeight / 2; y < contentHeight + pageHeight; y += pageHeight) {
+      const div = document.createElement('div');
+      div.setAttribute('data-watermark', 'true');
+      Object.assign(div.style, {
+        position: 'absolute',
+        left: '0',
+        top: `${y}px`,
+        width: '100%',
+        textAlign: 'center',
+        transform: 'translateY(-50%) rotate(-30deg)',
+        fontSize: `${Math.round(contentWidth * 0.1)}px`,
+        fontWeight: '700',
+        fontFamily: 'Arial, sans-serif',
+        color: 'rgba(15, 23, 42, 0.12)',
+        pointerEvents: 'none',
+        userSelect: 'none',
+        zIndex: '9999',
+      });
+      div.textContent = 'Momentum';
+      el.appendChild(div);
+      injected.push(div);
     }
+    return injected;
+  };
+  const removeWatermarks = (injected: HTMLElement[]) => injected.forEach((n) => n.remove());
+
+  const download = async (format: 'pdf' | 'png') => {
     const el = exportRef.current;
     if (!el || downloading) return;
+    const watermarkNodes = unlocked ? [] : injectWatermarks(el);
     try {
       setDownloading(format);
       const name = (cv.personalInfo.fullName || 'Resume').replace(/[^a-z0-9]/gi, '_');
@@ -412,6 +443,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       console.error('Resume download failed', err);
       alert(`Download failed: ${err.message || 'Please try again.'}`);
     } finally {
+      removeWatermarks(watermarkNodes);
       setDownloading(null);
       setDlMenu(false);
     }
