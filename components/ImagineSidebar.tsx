@@ -450,7 +450,8 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
 export const MobileNavBar: React.FC<{
   onOpenMenu: () => void;
   onOpenAuth: () => void;
-}> = ({ onOpenMenu, onOpenAuth }) => {
+  rightContent?: React.ReactNode;
+}> = ({ onOpenMenu, onOpenAuth, rightContent }) => {
   const { user } = useUser();
   const { signOut } = useClerk();
   const isLoggedIn = !!user;
@@ -485,8 +486,11 @@ export const MobileNavBar: React.FC<{
         </span>
       </div>
 
-      {/* Auth Account Button inside Mobile NavBar */}
-      <div className="relative shrink-0">
+      {rightContent ? (
+        <div className="shrink-0 flex items-center gap-1.5">{rightContent}</div>
+      ) : (
+        /* Auth Account Button inside Mobile NavBar */
+        <div className="relative shrink-0">
         <button
           onClick={handleButtonClick}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 hover:border-slate-300 text-[11px] sm:text-xs font-semibold transition-all shadow-2xs cursor-pointer"
@@ -519,6 +523,7 @@ export const MobileNavBar: React.FC<{
           </>
         )}
       </div>
+      )}
     </div>
   );
 };

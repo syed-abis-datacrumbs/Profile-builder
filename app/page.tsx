@@ -179,6 +179,8 @@ export default function Home() {
     });
   };
 
+  const [mobileHeaderRight, setMobileHeaderRight] = useState<React.ReactNode>(null);
+
   return (
     <div className="min-h-screen flex bg-[#FAFAFA] text-slate-900 font-sans">
       
@@ -213,6 +215,7 @@ export default function Home() {
         <MobileNavBar
           onOpenMenu={() => setIsMobileNavOpen(true)}
           onOpenAuth={() => setIsAuthOpen(true)}
+          rightContent={mobileHeaderRight}
         />
 
         {/* Top Header - hidden in full-bleed Studio mode */}
@@ -235,17 +238,17 @@ export default function Home() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.995 }}
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className={`relative flex-1 flex flex-col w-full mx-auto ${
+              className={`relative flex-1 min-h-0 flex flex-col w-full mx-auto ${
                 (activeTab === 'resume' && resumeMode === 'studio') ||
                 (activeTab === 'linkedin' && linkedinMode === 'studio') ||
                 (activeTab === 'github' && githubMode === 'studio')
-                  ? 'p-0 max-w-none h-full'
+                  ? 'p-0 max-w-none'
                   : 'p-4 sm:p-6 gap-4 max-w-7xl'
               }`}
             >
               {activeTab !== 'resume' && !isAuthorized && <BlockScreen />}
               {/* Active Editor Component */}
-              <div className="flex-1 h-full">
+              <div className="flex-1 min-h-0 flex flex-col">
                 <AnimatePresence mode="wait">
                   {activeTab === 'resume' && (
                     <motion.div
@@ -254,7 +257,7 @@ export default function Home() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2 }}
-                      className="h-full flex flex-col"
+                      className="flex-1 min-h-0 flex flex-col"
                     >
                       {resumeMode === 'studio' && studioCv ? (
                         <ResumeChatStudio
@@ -265,6 +268,7 @@ export default function Home() {
                           isLoggedIn={isLoggedIn}
                           onRequireAuth={() => setIsAuthOpen(true)}
                           initialPrompt={resumeInitialPrompt}
+                          setMobileHeaderRight={setMobileHeaderRight}
                         />
                       ) : resumeMode === 'editor' ? (
                         <div className="space-y-4">
