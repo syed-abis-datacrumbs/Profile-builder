@@ -4,7 +4,12 @@ import { Lock, LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export default function BlockScreen() {
+interface BlockScreenProps {
+  onOpenAuth?: () => void;
+  onClose?: () => void;
+}
+
+export default function BlockScreen({ onOpenAuth, onClose }: BlockScreenProps) {
   const router = useRouter();
   
   return (
@@ -23,20 +28,20 @@ export default function BlockScreen() {
         </p>
 
         {/* Buttons */}
-          <div className="flex w-full gap-3 justify-center">
+        <div className="flex w-full gap-3 justify-center">
           <button 
-            onClick={() => window.location.href = "/"}
+            onClick={onClose || (() => window.location.href = "/")}
             className="flex-1 py-2.5 px-4 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors"
           >
             Close
           </button>
-          <a 
-            href="https://lms.datacrumbs.org/student-login"
+          <button 
+            onClick={onOpenAuth}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-[#3B5998] text-white text-sm font-semibold rounded-lg hover:bg-[#2d4373] transition-colors"
           >
             <LogIn className="w-4 h-4" />
             Sign In to View
-          </a>
+          </button>
         </div>
       </div>
     </div>

@@ -247,7 +247,9 @@ export default function Home() {
                   : 'p-4 sm:p-6 gap-4 max-w-7xl'
               }`}
             >
-              {activeTab !== 'resume' && !isAuthorized && <BlockScreen />}
+              {activeTab !== 'resume' && !isAuthorized && (
+                <BlockScreen onOpenAuth={() => setIsAuthOpen(true)} onClose={() => setActiveTab('resume')} />
+              )}
               {/* Active Editor Component */}
               <div className="flex-1 min-h-0 flex flex-col">
                 <AnimatePresence mode="wait">
