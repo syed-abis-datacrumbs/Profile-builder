@@ -166,11 +166,11 @@ export const GithubReadmePreview: React.FC<{
         <div>
           <div className="text-lg font-bold text-white">{github.username ? github.username : 'your-username'}</div>
         </div>
-        <div className="flex items-center gap-1.5">
+        {/* <div className="flex items-center gap-1.5">
           <span className="px-3 py-1 rounded-full border border-slate-700 text-[11px] font-semibold text-slate-400">Follow</span>
           <span className="text-[11px] text-slate-600">·</span>
           <span className="text-[11px] text-slate-500">0 followers · 0 following</span>
-        </div>
+        </div> */}
       </div>
 
       {/* ── README content ── */}

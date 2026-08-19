@@ -32,8 +32,8 @@ export function generateGithubMarkdown(data: GithubProfileData): string {
   if (data.techStack.length > 0) {
     md += `### 🛠️ Tech Stack & Skills\n\n`;
     data.techStack.forEach((tech) => {
-      const b = BADGES[tech.toLowerCase()] ?? { color: '6366f1', logo: tech.toLowerCase() };
-      md += `![${tech}](https://img.shields.io/badge/${encodeURIComponent(tech)}-${b.color}?style=for-the-badge&logo=${b.logo}&logoColor=white) `;
+      const b = BADGES[tech.toLowerCase()] ?? { color: '6366f1', logo: tech.toLowerCase().replace(/\s+/g, '') };
+      md += `![${tech}](https://img.shields.io/badge/${encodeURIComponent(tech)}-${b.color}?style=for-the-badge&logo=${encodeURIComponent(b.logo)}&logoColor=white) `;
     });
     md += `\n\n`;
   }
