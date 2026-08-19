@@ -207,29 +207,27 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                  {/* <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" /> */}
                 </div>
               </div>
 
               {/* Action Buttons Row */}
               <div className="flex items-center gap-2 pt-0.5">
+                {!unlocked && (
+                  <button
+                    onClick={() => {
+                      setIsSettingsOpen(false);
+                      if (onOpenUpgrade) onOpenUpgrade();
+                    }}
+                    className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs transition-colors text-center"
+                  >
+                    Upgrade
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setIsSettingsOpen(false);
-                    if (onOpenUpgrade) onOpenUpgrade();
-                  }}
-                  className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs transition-colors text-center"
-                >
-                  Upgrade
-                </button>
-                <button
-                  onClick={() => {
-                    setIsSettingsOpen(false);
-                    if (onOpenAskExpert) {
-                      onOpenAskExpert();
-                    } else if (onOpenUpgrade) {
-                      onOpenUpgrade();
-                    }
+                    window.open('https://wa.me/923292020497', '_blank');
                   }}
                   className="flex-1 py-2 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-900 font-semibold text-xs transition-colors text-center truncate"
                 >
@@ -261,7 +259,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                   </button>
                 )}
 
-                <button
+                {/* <button
                   onClick={() => {
                     setIsSettingsOpen(false);
                   }}
@@ -285,7 +283,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                     <span>Help Center</span>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
+                </button> */}
 
                 {isLoggedIn && (
                   <button

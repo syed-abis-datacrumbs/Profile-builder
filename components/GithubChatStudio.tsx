@@ -306,7 +306,7 @@ export const GithubChatStudio: React.FC<{
             >
               View README
             </button>
-            <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-200 text-xs font-bold hidden sm:inline-block">
+            {/* <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-200 text-xs font-bold hidden sm:inline-block">
               Interface
             </span>
             <button
@@ -314,7 +314,7 @@ export const GithubChatStudio: React.FC<{
               className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
             >
               New chat
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -465,7 +465,7 @@ export const GithubChatStudio: React.FC<{
 
           <div className="flex items-center gap-2">
             {/* Banner picker toggle */}
-            <div className="relative">
+            {/* <div className="relative">
               <button
                 onClick={() => setShowBannerPicker((v) => !v)}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${showBannerPicker
@@ -478,7 +478,6 @@ export const GithubChatStudio: React.FC<{
                 <ChevronDown className={`w-3 h-3 transition-transform ${showBannerPicker ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* Banner picker dropdown */}
               {showBannerPicker && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowBannerPicker(false)} />
@@ -502,13 +501,11 @@ export const GithubChatStudio: React.FC<{
                           className={`rounded-lg border-2 overflow-hidden transition-all hover:scale-[1.03] ${github.bannerUrl === b.url ? 'border-indigo-500 shadow-md' : 'border-slate-200 hover:border-slate-300'
                             }`}
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={b.thumb} alt={b.label} className="w-full h-10 object-cover" />
                           <span className="block text-[10px] font-semibold text-slate-600 py-1">{b.label}</span>
                         </button>
                       ))}
                     </div>
-                    {/* Custom URL input */}
                     <div className="flex gap-1.5">
                       <input
                         type="text"
@@ -534,7 +531,7 @@ export const GithubChatStudio: React.FC<{
                   </div>
                 </>
               )}
-            </div>
+            </div> */}
             <button
               onClick={copyReadme}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors"
