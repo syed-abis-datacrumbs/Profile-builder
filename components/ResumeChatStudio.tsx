@@ -1149,10 +1149,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
       {/* Target Job Matcher Centered Pop-up Modal */}
       {targetJobModalOpen && (
-        <>
-          <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-[2px]" onClick={() => setTargetJobModalOpen(false)} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] max-w-[92vw] bg-white border border-slate-200 rounded-2xl shadow-2xl z-[65] overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs">
+          <div className="fixed inset-0" onClick={() => setTargetJobModalOpen(false)} />
+          <div className="relative w-full max-w-[420px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                 🎯 Target Job Matcher
               </h3>
@@ -1189,7 +1189,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               </button>
             </div>
           </div>
-        </>
+        </div>
       )}
       </div>
 
