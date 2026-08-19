@@ -49,9 +49,9 @@ export const GithubTemplatePreview: React.FC<GithubTemplatePreviewProps> = ({
             <span className="text-sm text-slate-500 hidden sm:inline">
               Template: <span className="font-bold text-slate-900">{template.name}</span>
             </span>
-            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200 uppercase tracking-wider">
+            {/* <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200 uppercase tracking-wider">
               {template.theme}
-            </span>
+            </span> */}
             <button
               onClick={onEdit}
               className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold transition-colors shadow-sm whitespace-nowrap"
