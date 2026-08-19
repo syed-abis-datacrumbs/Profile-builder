@@ -41,7 +41,7 @@ interface FreelancingLandingViewProps {
 }
 
 export const FreelancingLandingView: React.FC<FreelancingLandingViewProps> = ({
-  userName = "Abis",
+  userName = "",
   onUsePrompt,
   onOpenEditorDirectly,
   onNavigateToTab
@@ -243,7 +243,7 @@ export const FreelancingLandingView: React.FC<FreelancingLandingViewProps> = ({
       {/* Title Greeting */}
       <div className="text-center pt-2 space-y-2">
         <h1 className="text-4xl sm:text-5xl font-serif tracking-tight text-slate-900 flex items-center justify-center gap-3">
-          <span>Freelance Client Acquisition Blueprint, {userName.split(' ')[0]}.</span>
+          <span>Freelance Client Acquisition Blueprint{userName ? `, ${userName.split(' ')[0]}` : ''}.</span>
         </h1>
         <p className="text-sm text-slate-500 font-medium max-w-2xl mx-auto">
           Scale your freelance consulting revenue using LinkedIn inbound authority, personalized video audits, interactive client proposal MCQs, and written negotiation exams.

@@ -182,7 +182,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
 ];
 
 export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
-  userName = "Abis",
+  userName = "",
   onOpenRolePicker,
   onSelectPreset,
   attachedTemplate,
@@ -279,7 +279,7 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
       {/* Title Greeting */}
       <div className="text-center pt-2">
         <h1 className="text-4xl sm:text-5xl font-serif tracking-tight text-slate-900">
-          Elevate your GitHub Profile, {userName.split(' ')[0]}.
+          Elevate your GitHub Profile{userName ? `, ${userName.split(' ')[0]}` : ''}.
         </h1>
       </div>
 

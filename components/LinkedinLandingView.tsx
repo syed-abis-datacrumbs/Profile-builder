@@ -26,7 +26,7 @@ interface LinkedinLandingViewProps {
 }
 
 export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
-  userName = "Abis",
+  userName = "",
   attachedTemplate,
   onClearAttachedTemplate,
   onSelectTemplate,
@@ -104,11 +104,9 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
     >
 
       {/* Title Greeting */}
-      <div className="text-center pt-2">
         <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif tracking-tight text-slate-900 text-balance">
-          Optimize your LinkedIn Profile, {userName.split(' ')[0]}.
+          Optimize your LinkedIn Profile{userName ? `, ${userName.split(' ')[0]}` : ''}.
         </h1>
-      </div>
 
       {/* Central Input Box */}
       <div className="w-full">

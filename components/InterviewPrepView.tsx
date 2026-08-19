@@ -46,7 +46,7 @@ interface InterviewPrepViewProps {
 }
 
 export const InterviewPrepView: React.FC<InterviewPrepViewProps> = ({
-  userName = "Abis",
+  userName = "",
   onUsePrompt,
   onLaunchMockInterview,
   onNavigateToTab
@@ -315,7 +315,7 @@ export const InterviewPrepView: React.FC<InterviewPrepViewProps> = ({
       {/* Title Greeting */}
       <div className="text-center pt-2 space-y-2">
         <h1 className="text-4xl sm:text-5xl font-serif tracking-tight text-slate-900 flex items-center justify-center gap-3">
-          <span>AI Interview & Test Generator, {userName.split(' ')[0]}.</span>
+          <span>AI Interview & Test Generator{userName ? `, ${userName.split(' ')[0]}` : ''}.</span>
         </h1>
         <p className="text-sm text-slate-500 font-medium max-w-2xl mx-auto">
           Generate step-by-step interview preparation blueprints, MCQ practice carousels, interactive 10-question Technical & HR typed exam carousels, and live 1-on-1 AI mock interviews.

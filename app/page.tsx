@@ -30,6 +30,7 @@ import { PaymentModal } from '../components/PaymentModal';
 import { GithubChatStudio } from '../components/GithubChatStudio';
 import { LinkedinChatStudio } from '../components/LinkedinChatStudio';
 import { LinkedinRichProfile, buildInitialRichProfile } from '../lib/linkedinRichProfile';
+import BlockScreen from '../components/BlockScreen';
 import { BUILDER_ACCESS_EMAILS } from '../lib/accessConfig';
 
 import { ActiveTab, ResumeData, GithubProfileData, LinkedinProfileData, SavedProfile } from '../types';
@@ -227,6 +228,7 @@ export default function Home() {
                   : 'p-4 sm:p-6 gap-4 max-w-7xl'
               }`}
             >
+              {activeTab !== 'resume' && !isAuthorized && <BlockScreen />}
               {/* Active Editor Component */}
               <div className="flex-1 h-full">
                 <AnimatePresence mode="wait">
@@ -272,7 +274,7 @@ export default function Home() {
                       ) : (
                         <>
                           <ResumeLandingView
-                            userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
+                            userName={isLoggedIn ? userEmail?.split('@')[0] : ""}
                             onSelectField={loadResumeField}
                             onSelectTemplate={(sample) => {
                               setResumePreviewSample(sample);
@@ -455,7 +457,7 @@ export default function Home() {
                       transition={{ duration: 0.2 }}
                     >
                       <JobHuntingLandingView
-                        userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
+                        userName={isLoggedIn ? userEmail?.split('@')[0] : ""}
                         onUsePrompt={(promptText) => {
                           setAssistantPrompt(promptText);
                           setActiveTab('assistant');
@@ -478,7 +480,7 @@ export default function Home() {
                       transition={{ duration: 0.2 }}
                     >
                       <FreelancingLandingView
-                        userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
+                        userName={isLoggedIn ? userEmail?.split('@')[0] : ""}
                         onUsePrompt={(promptText) => {
                           setAssistantPrompt(promptText);
                           setActiveTab('assistant');
@@ -501,7 +503,7 @@ export default function Home() {
                       transition={{ duration: 0.2 }}
                     >
                       <InterviewPrepView
-                        userName={isLoggedIn ? userEmail?.split('@')[0] || "Abis" : "Abis"}
+                        userName={isLoggedIn ? userEmail?.split('@')[0] : ""}
                         onUsePrompt={(promptText) => {
                           setAssistantPrompt(promptText);
                           setActiveTab('assistant');

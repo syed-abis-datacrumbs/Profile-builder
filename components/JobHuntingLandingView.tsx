@@ -95,7 +95,7 @@ const formatDateOrdinal = (dateInput?: string): string => {
 };
 
 export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
-  userName = "Abis",
+  userName = "",
   onUsePrompt,
   onOpenEditorDirectly,
   onNavigateToTab
@@ -436,7 +436,7 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
       {/* Title Greeting */}
       <div className="text-center pt-2 space-y-2">
         <h1 className="text-4xl sm:text-5xl font-serif tracking-tight text-slate-900 flex items-center justify-center gap-3">
-          <span>Job Hunting Blueprint, {userName.split(' ')[0]}.</span>
+          <span>Job Hunting Blueprint{userName ? `, ${userName.split(' ')[0]}` : ''}.</span>
         </h1>
         <p className="text-sm text-slate-500 font-medium max-w-2xl mx-auto">
           Step-by-step masterclass blueprint, recruiter outreach practice carousels, and an interactive Job & Recruiter Contact Spreadsheet.
