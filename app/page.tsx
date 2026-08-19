@@ -379,9 +379,24 @@ export default function Home() {
                             setGithubMode('preview');
                           }}
                           onUsePrompt={(promptText) => {
-                            const t = attachedGithubTemplate || GITHUB_TEMPLATES[0];
-                            const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
-                            openGithubStudio(preset, t.theme, t.avatarUrl);
+                            if (attachedGithubTemplate) {
+                              const t = attachedGithubTemplate;
+                              const preset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
+                              openGithubStudio(preset, t.theme, t.avatarUrl);
+                            } else {
+                              // NO template selected: Start with a completely blank profile
+                              // so the AI generates everything from scratch based on the prompt.
+                              const emptyPreset: GithubRolePreset = {
+                                id: 'custom',
+                                label: 'My GitHub Profile',
+                                about: '',
+                                expertise: '',
+                                techStack: [],
+                                projects: [],
+                              };
+                              const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
+                              openGithubStudio(emptyPreset, 'dark', randomAvatar);
+                            }
                             setGithubInitialPrompt(promptText);
                             setAttachedGithubTemplate(null);
                           }}

@@ -319,10 +319,12 @@ export function applyRolePresetToGithub(
     .join('\n\n');
   return {
     ...data,
-    title: preset.label,
+    username: preset.id === 'custom' ? 'your-github-username' : data.username,
+    title: preset.id === 'custom' ? 'Hi 👋' : preset.label,
+    socialLinks: preset.id === 'custom' ? { linkedin: '', twitter: '', email: '', website: '' } : data.socialLinks,
     about: preset.about,
     techStack,
-    customSections: [
+    customSections: preset.id === 'custom' ? [] : [
       { title: '💡 Expertise', content: preset.expertise },
       { title: '🚀 Featured Projects', content: projectsMd },
     ],

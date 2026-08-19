@@ -203,19 +203,19 @@ export const GithubReadmePreview: React.FC<{
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {github.showStatsCard && (
                 isRealUsername(github.username)
-                  ? <StatImg src={`https://github-readme-stats-ten-kohl-77.vercel.app/api?username=${encodeURIComponent(github.username)}&show_icons=true&theme=${github.theme}`} alt="GitHub Stats" fallback={<DummyStatsCard />} />
+                  ? <StatImg src={`https://github-readme-stats.vercel.app/api?username=${encodeURIComponent(github.username)}&show_icons=true&theme=${github.theme}`} alt="GitHub Stats" fallback={<DummyStatsCard />} />
                   : <DummyStatsCard />
               )}
               {github.showTopLangsCard && (
                 isRealUsername(github.username)
-                  ? <StatImg src={`https://github-readme-stats-ten-kohl-77.vercel.app/api/top-langs/?username=${encodeURIComponent(github.username)}&layout=compact&theme=${github.theme}`} alt="Top Languages" fallback={<DummyTopLangsCard />} />
+                  ? <StatImg src={`https://github-readme-stats.vercel.app/api/top-langs/?username=${encodeURIComponent(github.username)}&layout=compact&theme=${github.theme}`} alt="Top Languages" fallback={<DummyTopLangsCard />} />
                   : <DummyTopLangsCard />
               )}
-              {github.showStreakCard && (
+              {/* github.showStreakCard && (
                 isRealUsername(github.username)
                   ? <StatImg src={`https://github-readme-streak-stats.herokuapp.com/?user=${encodeURIComponent(github.username)}&theme=${github.theme}`} alt="GitHub Streak" fallback={<DummyStreakCard />} />
                   : <DummyStreakCard />
-              )}
+              ) */}
             </div>
             {!isRealUsername(github.username) && (
               <p className="text-[10px] text-slate-600 italic">

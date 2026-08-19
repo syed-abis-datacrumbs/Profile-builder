@@ -66,13 +66,7 @@ export const GithubChatStudio: React.FC<{
    *  the AI automatically once, on mount. */
   initialPrompt?: string;
 }> = ({ github, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt }) => {
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      role: 'assistant',
-      content:
-        'Loaded your README. Edit the text directly on the right, or ask me for anything — e.g. "add a Python badge", "enable the streak card", "use the tokyonight theme", "change the banner", or "add my LinkedIn https://…".',
-    },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -355,6 +349,26 @@ export const GithubChatStudio: React.FC<{
 
         {/* Chat Scroll Container */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4 bg-white text-sm">
+          {messages.length === 0 && !loading && (
+            <div className="pt-2 space-y-2">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Try asking</p>
+              <div className="flex flex-row lg:flex-col gap-3 lg:gap-2 overflow-x-auto lg:overflow-visible pb-3 lg:pb-0 -mx-5 px-5 lg:mx-0 lg:px-0 snap-x lg:snap-none hide-scrollbar">
+                {[
+                  'Add a Python and Next.js badge',
+                  'Add more expertise and skills',
+                  'I want to add a new project to my profile',
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => send(suggestion)}
+                    className="shrink-0 snap-start w-[240px] lg:w-full text-left px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm hover:border-slate-300 hover:bg-slate-50 transition-colors whitespace-normal"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
