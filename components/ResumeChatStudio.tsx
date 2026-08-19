@@ -1055,15 +1055,13 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               ))}
             </div>
 
-
-
             {/* Download Action */}
-            <div>
+            <div className="relative">
               <button
                 type="button"
                 onClick={() => setDlMenu((o) => !o)}
                 disabled={!!downloading}
-                className="h-7 px-2 sm:px-2.5 rounded-lg bg-blue-600 text-white text-xs font-bold shadow-xs hover:bg-blue-700 transition-all flex items-center justify-center gap-1 leading-none text-center cursor-pointer disabled:opacity-50 shrink-0"
+                className="h-7 px-2 sm:px-2.5 rounded-lg bg-blue-600 text-white text-xs font-bold shadow-xs hover:bg-blue-700 transition-all flex items-center justify-center gap-1 leading-none text-center cursor-pointer disabled:opacity-70 shrink-0"
               >
                 {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                 <span className="leading-none hidden sm:inline">
@@ -1075,11 +1073,21 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setDlMenu(false)} />
                   <div className="fixed top-12 right-4 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden text-xs">
-                    <button onClick={() => download('pdf')} className="w-full text-left px-3.5 py-2.5 text-slate-700 hover:bg-slate-50 font-semibold border-b border-slate-100">
-                      Download PDF
+                    <button
+                      onClick={() => download('pdf')}
+                      disabled={!!downloading}
+                      className="w-full text-left px-3.5 py-2.5 text-slate-700 hover:bg-slate-50 font-semibold border-b border-slate-100 flex items-center justify-between cursor-pointer disabled:opacity-60"
+                    >
+                      <span>Download PDF</span>
+                      {downloading === 'pdf' && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 shrink-0" />}
                     </button>
-                    <button onClick={() => download('png')} className="w-full text-left px-3.5 py-2.5 text-slate-700 hover:bg-slate-50 font-semibold">
-                      Download PNG
+                    <button
+                      onClick={() => download('png')}
+                      disabled={!!downloading}
+                      className="w-full text-left px-3.5 py-2.5 text-slate-700 hover:bg-slate-50 font-semibold flex items-center justify-between cursor-pointer disabled:opacity-60"
+                    >
+                      <span>Download PNG</span>
+                      {downloading === 'png' && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 shrink-0" />}
                     </button>
                     {unlocked === false && (
                       <button
@@ -1088,10 +1096,9 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                           if (!isLoggedIn) { onRequireAuth(); return; }
                           setShowPaymentModal(true);
                         }}
-                        className="w-full text-left px-3.5 py-2.5 text-blue-700 hover:bg-blue-50 font-semibold border-t border-slate-100 flex items-center gap-1.5"
+                        className="w-full text-left px-3.5 py-2 text-amber-700 bg-amber-50 hover:bg-amber-100 font-bold border-t border-amber-200/80 flex items-center gap-1.5 cursor-pointer"
                       >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        Remove Watermark
+                        <span>Upgrade to remove watermark</span>
                       </button>
                     )}
                   </div>
@@ -1184,7 +1191,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           'Add another work experience or project',
           'Make my bullet points sound more senior and impactful',
         ]}
-        onBack={onBack}
+        onBack={() => setIsMobileChatOpen(false)}
         isLoggedIn={isLoggedIn}
         onRequireAuth={onRequireAuth}
         badgeAction={

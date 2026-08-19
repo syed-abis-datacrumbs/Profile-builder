@@ -712,7 +712,7 @@ export const GithubChatStudio: React.FC<{
           'Make my bio sound more professional',
           'Add a GitHub streak card',
         ]}
-        onBack={onBack}
+        onBack={() => setIsMobileChatOpen(false)}
         unlocked={unlocked === true}
         aiMessagesUsed={aiMessagesUsed}
       />
