@@ -28,19 +28,12 @@ export default function BlockScreen({ onOpenAuth, onClose }: BlockScreenProps) {
         </p>
 
         {/* Buttons */}
-        <div className="flex w-full gap-3 justify-center">
+        <div className="flex w-full justify-center">
           <button 
             onClick={onClose || (() => window.location.href = "/")}
-            className="flex-1 py-2.5 px-4 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+            className="w-full py-2.5 px-4 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm"
           >
             Close
-          </button>
-          <button 
-            onClick={onOpenAuth}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-[#3B5998] text-white text-sm font-semibold rounded-lg hover:bg-[#2d4373] transition-colors"
-          >
-            <LogIn className="w-4 h-4" />
-            Sign In to View
           </button>
         </div>
       </div>
