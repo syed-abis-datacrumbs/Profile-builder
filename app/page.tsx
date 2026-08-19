@@ -30,7 +30,6 @@ import { PaymentModal } from '../components/PaymentModal';
 import { GithubChatStudio } from '../components/GithubChatStudio';
 import { LinkedinChatStudio } from '../components/LinkedinChatStudio';
 import { LinkedinRichProfile, buildInitialRichProfile } from '../lib/linkedinRichProfile';
-import BlockScreen from '../components/BlockScreen';
 import { BUILDER_ACCESS_EMAILS } from '../lib/accessConfig';
 
 import { ActiveTab, ResumeData, GithubProfileData, LinkedinProfileData, SavedProfile } from '../types';
@@ -124,6 +123,10 @@ export default function Home() {
   // onto the GitHub data, then jumps into the editor.
   // Loads a preset's content into the GitHub data and opens the chat Studio.
   const openGithubStudio = (preset: GithubRolePreset, theme?: GithubProfileData['theme']) => {
+    if (!isLoggedIn) {
+      setIsAuthOpen(true);
+      return;
+    }
     setGithubData((prev) => {
       const g = applyRolePresetToGithub(prev, preset);
       return {
@@ -140,6 +143,10 @@ export default function Home() {
 
   // Loads a field's ready-made resume (LMS CvData) into the chat Studio.
   const loadResumeField = (sample: LmsResumeSample) => {
+    if (!isLoggedIn) {
+      setIsAuthOpen(true);
+      return;
+    }
     setStudioCv(cvMarkdownToHtml(sample.data as CvData));
     setStudioLabel(sample.label);
     setResumeInitialPrompt('');
@@ -220,7 +227,6 @@ export default function Home() {
                   : 'p-4 sm:p-6 gap-4 max-w-7xl'
               }`}
             >
-              {activeTab !== 'resume' && !isAuthorized && <BlockScreen />}
               {/* Active Editor Component */}
               <div className="flex-1 h-full">
                 <AnimatePresence mode="wait">
@@ -287,7 +293,13 @@ export default function Home() {
                               if (promptText.trim()) setResumeInitialPrompt(promptText);
                               setAttachedResumeTemplate(null);
                             }}
-                            onOpenEditorDirectly={() => setResumeMode('editor')}
+                            onOpenEditorDirectly={() => {
+                              if (!isLoggedIn) {
+                                setIsAuthOpen(true);
+                                return;
+                              }
+                              setResumeMode('editor');
+                            }}
                           />
                         </>
                       )}
@@ -352,7 +364,13 @@ export default function Home() {
                             setGithubInitialPrompt(promptText);
                             setAttachedGithubTemplate(null);
                           }}
-                          onOpenEditorDirectly={() => setGithubMode('editor')}
+                          onOpenEditorDirectly={() => {
+                            if (!isLoggedIn) {
+                              setIsAuthOpen(true);
+                              return;
+                            }
+                            setGithubMode('editor');
+                          }}
                         />
                       )}
                     </motion.div>
@@ -406,13 +424,23 @@ export default function Home() {
                             setLinkedinMode('preview');
                           }}
                           onUsePrompt={(promptText) => {
+                            if (!isLoggedIn) {
+                              setIsAuthOpen(true);
+                              return;
+                            }
                             const tid = attachedLinkedinTemplate || 'linkedin-1';
                             setLinkedinRichProfile(buildInitialRichProfile(tid));
                             setLinkedinInitialPrompt(promptText);
                             setLinkedinMode('studio');
                             setAttachedLinkedinTemplate(null);
                           }}
-                          onOpenEditorDirectly={() => setLinkedinMode('editor')}
+                          onOpenEditorDirectly={() => {
+                            if (!isLoggedIn) {
+                              setIsAuthOpen(true);
+                              return;
+                            }
+                            setLinkedinMode('editor');
+                          }}
                         />
                       )}
                     </motion.div>
