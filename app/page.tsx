@@ -106,10 +106,24 @@ export default function Home() {
   const isLoggedIn = !!user;
   const isAuthorized = isLoggedIn && BUILDER_ACCESS_EMAILS.has(userEmail || '');
   const [assistantPrompt, setAssistantPrompt] = useState('');
-  
+
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
   const [lastApprovedAt, setLastApprovedAt] = useState<string | null>(null);
   const [showProCelebrationModal, setShowProCelebrationModal] = useState(false);
+  const [lockedResumeName, setLockedResumeName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetch('/api/resumes/name')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.fullName) setLockedResumeName(data.fullName);
+        })
+        .catch(() => {});
+    }
+  }, [isLoggedIn]);
+
+  const displayFullName = lockedResumeName || clerkFullName || undefined;
 
   const checkUnlockStatus = () => {
     fetch('/api/payment/status')
@@ -236,7 +250,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex bg-[#FAFAFA] text-slate-900 font-sans">
-      
+
       {/* ImagineArt Style Left Sidebar */}
       <ImagineSidebar
         activeTab={activeTab}
@@ -256,12 +270,11 @@ export default function Home() {
       />
 
       {/* Main Content Area */}
-      <div ref={mainContentRef} className={`flex-1 flex flex-col min-w-0 h-screen ${
-        (activeTab === 'resume' && resumeMode === 'studio') ||
-        (activeTab === 'linkedin' && linkedinMode === 'studio') ||
-        (activeTab === 'github' && githubMode === 'studio')
+      <div ref={mainContentRef} className={`flex-1 flex flex-col min-w-0 h-screen ${(activeTab === 'resume' && resumeMode === 'studio') ||
+          (activeTab === 'linkedin' && linkedinMode === 'studio') ||
+          (activeTab === 'github' && githubMode === 'studio')
           ? 'overflow-hidden' : 'overflow-y-auto'
-      }`}>
+        }`}>
 
         {/* Mobile menu bar — rendered in every mode, including full-bleed
             Studio, since it is the only nav a phone gets. */}
@@ -277,355 +290,354 @@ export default function Home() {
           (activeTab === 'linkedin' && linkedinMode === 'studio') ||
           (activeTab === 'github' && githubMode === 'studio')
         ) && (
-          <ImagineHeader
-            onOpenUpgrade={() => setIsPaymentModalOpen(true)}
-            onOpenAuth={() => setIsAuthOpen(true)}
-          />
-        )}
+            <ImagineHeader
+              onOpenUpgrade={() => setIsPaymentModalOpen(true)}
+              onOpenAuth={() => setIsAuthOpen(true)}
+            />
+          )}
 
         {/* Studio Workspace View */}
         <AnimatePresence mode="wait">
-            <motion.div
-              key={`studio-view-${activeTab}`}
-              initial={{ opacity: 0, y: 14, scale: 0.995 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.995 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className={`relative flex-1 min-h-0 flex flex-col w-full mx-auto ${
-                (activeTab === 'resume' && resumeMode === 'studio') ||
+          <motion.div
+            key={`studio-view-${activeTab}`}
+            initial={{ opacity: 0, y: 14, scale: 0.995 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.995 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className={`relative flex-1 min-h-0 flex flex-col w-full mx-auto ${(activeTab === 'resume' && resumeMode === 'studio') ||
                 (activeTab === 'linkedin' && linkedinMode === 'studio') ||
                 (activeTab === 'github' && githubMode === 'studio')
-                  ? 'p-0 max-w-none'
-                  : 'p-4 sm:p-6 gap-4 max-w-7xl'
+                ? 'p-0 max-w-none'
+                : 'p-4 sm:p-6 gap-4 max-w-7xl'
               }`}
-            >
-              {activeTab !== 'resume' && !isAuthorized && (
-                <BlockScreen onOpenAuth={() => setIsAuthOpen(true)} onClose={() => setActiveTab('resume')} />
-              )}
-              {/* Active Editor Component */}
-              <div className="flex-1 min-h-0 flex flex-col">
-                <AnimatePresence mode="wait">
-                  {activeTab === 'resume' && (
-                    <motion.div
-                      key={`tab-resume-${resumeMode === 'preview' ? 'landing' : resumeMode}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="flex-1 min-h-0 flex flex-col"
-                    >
-                      {resumeMode === 'studio' && studioCv ? (
-                        <ResumeChatStudio
-                          cv={studioCv}
-                          onChange={(v) => setStudioCv(v)}
-                          fieldLabel={studioLabel}
-                          onBack={() => setResumeMode('landing')}
-                          isLoggedIn={isLoggedIn}
-                          onRequireAuth={() => setIsAuthOpen(true)}
-                          initialPrompt={resumeInitialPrompt}
-                          setMobileHeaderRight={setMobileHeaderRight}
-                          clerkName={clerkFullName || undefined}
-                        />
-                      ) : resumeMode === 'editor' ? (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between no-print">
-                            <button
-                              onClick={() => setResumeMode('landing')}
-                              className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1 transition-colors"
-                            >
-                              <ArrowLeft className="w-3.5 h-3.5" />
-                              <span>Back to Resume Templates & Prompts</span>
-                            </button>
-                          </div>
-                          <ResumeEditor
-                            data={resumeData}
-                            onChange={setResumeData}
-                            onAIRefine={(f) => {
-                              setActiveTab('assistant');
-                              setAssistantPrompt(`Optimize my ${f}`);
-                            }}
-                          />
+          >
+            {activeTab !== 'resume' && !isAuthorized && (
+              <BlockScreen onOpenAuth={() => setIsAuthOpen(true)} onClose={() => setActiveTab('resume')} />
+            )}
+            {/* Active Editor Component */}
+            <div className="flex-1 min-h-0 flex flex-col">
+              <AnimatePresence mode="wait">
+                {activeTab === 'resume' && (
+                  <motion.div
+                    key={`tab-resume-${resumeMode === 'preview' ? 'landing' : resumeMode}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex-1 min-h-0 flex flex-col"
+                  >
+                    {resumeMode === 'studio' && studioCv ? (
+                      <ResumeChatStudio
+                        cv={studioCv}
+                        onChange={(v) => setStudioCv(v)}
+                        fieldLabel={studioLabel}
+                        onBack={() => setResumeMode('landing')}
+                        isLoggedIn={isLoggedIn}
+                        onRequireAuth={() => setIsAuthOpen(true)}
+                        initialPrompt={resumeInitialPrompt}
+                        setMobileHeaderRight={setMobileHeaderRight}
+                        clerkName={clerkFullName || undefined}
+                      />
+                    ) : resumeMode === 'editor' ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between no-print">
+                          <button
+                            onClick={() => setResumeMode('landing')}
+                            className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1 transition-colors"
+                          >
+                            <ArrowLeft className="w-3.5 h-3.5" />
+                            <span>Back to Resume Templates & Prompts</span>
+                          </button>
                         </div>
-                      ) : (
-                        <>
+                        <ResumeEditor
+                          data={resumeData}
+                          onChange={setResumeData}
+                          onAIRefine={(f) => {
+                            setActiveTab('assistant');
+                            setAssistantPrompt(`Optimize my ${f}`);
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <>
                           <ResumeLandingView
                             userName={firstName}
-                            clerkFullName={clerkFullName || undefined}
+                            clerkFullName={displayFullName}
                             onSelectField={loadResumeField}
-                            onSelectTemplate={(sample) => {
-                              setResumePreviewSample(sample);
-                              setResumeMode('preview');
-                            }}
-                            attachedTemplate={attachedResumeTemplate}
-                            onClearAttachedTemplate={() => setAttachedResumeTemplate(null)}
-                            onUsePrompt={(promptText) => {
-                              // If a template was attached via "Use Template"
-                              // in the preview popup, that's the base — an
-                              // explicit user choice beats the closest-match
-                              // guess. Otherwise (typed straight into the
-                              // landing box) auto-pick the closest matching
-                              // field so the AI has a sensible base to work
-                              // from rather than always the same one.
-                              const sample = attachedResumeTemplate ?? matchResumeSampleToPrompt(promptText);
-                              loadResumeField(sample);
-                              if (promptText.trim()) setResumeInitialPrompt(promptText);
-                              setAttachedResumeTemplate(null);
-                            }}
-                            onOpenEditorDirectly={() => {
-                              if (!isLoggedIn) {
-                                setIsAuthOpen(true);
-                                return;
-                              }
-                              setResumeMode('editor');
-                            }}
-                          />
-                        </>
-                      )}
-                    </motion.div>
-                  )}
+                          onSelectTemplate={(sample) => {
+                            setResumePreviewSample(sample);
+                            setResumeMode('preview');
+                          }}
+                          attachedTemplate={attachedResumeTemplate}
+                          onClearAttachedTemplate={() => setAttachedResumeTemplate(null)}
+                          onUsePrompt={(promptText) => {
+                            // If a template was attached via "Use Template"
+                            // in the preview popup, that's the base — an
+                            // explicit user choice beats the closest-match
+                            // guess. Otherwise (typed straight into the
+                            // landing box) auto-pick the closest matching
+                            // field so the AI has a sensible base to work
+                            // from rather than always the same one.
+                            const sample = attachedResumeTemplate ?? matchResumeSampleToPrompt(promptText);
+                            loadResumeField(sample);
+                            if (promptText.trim()) setResumeInitialPrompt(promptText);
+                            setAttachedResumeTemplate(null);
+                          }}
+                          onOpenEditorDirectly={() => {
+                            if (!isLoggedIn) {
+                              setIsAuthOpen(true);
+                              return;
+                            }
+                            setResumeMode('editor');
+                          }}
+                        />
+                      </>
+                    )}
+                  </motion.div>
+                )}
 
-                  {activeTab === 'github' && (
-                    <motion.div
-                      key={`tab-github-${githubMode === 'preview' ? 'landing' : githubMode}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="h-full flex flex-col"
-                    >
-                      {githubMode === 'studio' ? (
-                        <GithubChatStudio
-                          github={githubData}
+                {activeTab === 'github' && (
+                  <motion.div
+                    key={`tab-github-${githubMode === 'preview' ? 'landing' : githubMode}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="h-full flex flex-col"
+                  >
+                    {githubMode === 'studio' ? (
+                      <GithubChatStudio
+                        github={githubData}
+                        onChange={setGithubData}
+                        onBack={() => setGithubMode('landing')}
+                        isLoggedIn={isLoggedIn}
+                        onRequireAuth={() => setIsAuthOpen(true)}
+                        initialPrompt={githubInitialPrompt}
+                      />
+                    ) : githubMode === 'editor' ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between no-print">
+                          <button
+                            onClick={() => setGithubMode('landing')}
+                            className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1 transition-colors"
+                          >
+                            <ArrowLeft className="w-3.5 h-3.5" />
+                            <span>Back to GitHub README Templates & Prompts</span>
+                          </button>
+                        </div>
+                        <GithubEditor
+                          data={githubData}
                           onChange={setGithubData}
-                          onBack={() => setGithubMode('landing')}
+                          onAIRefine={() => {
+                            setActiveTab('assistant');
+                            setAssistantPrompt("Generate a cyberpunk GitHub README bio");
+                          }}
                           isLoggedIn={isLoggedIn}
                           onRequireAuth={() => setIsAuthOpen(true)}
-                          initialPrompt={githubInitialPrompt}
                         />
-                      ) : githubMode === 'editor' ? (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between no-print">
-                            <button
-                              onClick={() => setGithubMode('landing')}
-                              className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1 transition-colors"
-                            >
-                              <ArrowLeft className="w-3.5 h-3.5" />
-                              <span>Back to GitHub README Templates & Prompts</span>
-                            </button>
-                          </div>
-                          <GithubEditor
-                            data={githubData}
-                            onChange={setGithubData}
-                            onAIRefine={() => {
-                              setActiveTab('assistant');
-                              setAssistantPrompt("Generate a cyberpunk GitHub README bio");
-                            }}
-                            isLoggedIn={isLoggedIn}
-                            onRequireAuth={() => setIsAuthOpen(true)}
-                          />
-                        </div>
-                      ) : (
-                        <GithubLandingView
-                          userName={firstName || undefined}
-                          onOpenRolePicker={() => setShowGithubTemplatePicker(true)}
-                          onSelectPreset={(preset, theme, avatarUrl, bannerUrl) => openGithubStudio(preset, theme, avatarUrl, bannerUrl)}
-                          attachedTemplate={attachedGithubTemplate}
-                          onClearAttachedTemplate={() => setAttachedGithubTemplate(null)}
-                          onSelectTemplate={(t) => {
-                            setGithubPreviewTemplate(t);
-                            setGithubMode('preview');
-                          }}
-                          onUsePrompt={(promptText) => {
-                            if (attachedGithubTemplate) {
-                              const t = attachedGithubTemplate;
-                              const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
-                              const preset = { ...basePreset, label: t.name };
-                              const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
-                              openGithubStudio(preset, t.theme, t.avatarUrl || randomAvatar, t.bannerUrl);
-                            } else {
-                              // NO template selected: Load default dummy template preset (Full Stack Developer)
-                              // so the user gets a complete, realistic, populated GitHub profile ready to edit.
-                              const defaultPreset = GITHUB_ROLE_PRESETS[0];
-                              const defaultTemplate = GITHUB_TEMPLATES[0];
-                              const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
-                              openGithubStudio(defaultPreset, 'dark', randomAvatar, defaultTemplate.bannerUrl);
-                            }
-                            setGithubInitialPrompt(promptText);
-                            setAttachedGithubTemplate(null);
-                          }}
-                          onOpenEditorDirectly={() => {
-                            if (!isLoggedIn) {
-                              setIsAuthOpen(true);
-                              return;
-                            }
-                            setGithubMode('editor');
-                          }}
-                        />
-                      )}
-                    </motion.div>
-                  )}
-
-                  {activeTab === 'linkedin' && (
-                    <motion.div
-                      key={`tab-linkedin-${linkedinMode === 'preview' ? 'landing' : linkedinMode}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="h-full flex flex-col"
-                    >
-                      {linkedinMode === 'editor' ? (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between no-print">
-                            <button
-                              onClick={() => setLinkedinMode('landing')}
-                              className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1 transition-colors"
-                            >
-                              <ArrowLeft className="w-3.5 h-3.5" />
-                              <span>Back to LinkedIn Presets & Prompts</span>
-                            </button>
-                          </div>
-                          <LinkedinEditor
-                            data={linkedinData}
-                            onChange={setLinkedinData}
-                            onAIRefine={(f) => {
-                              setActiveTab('assistant');
-                              setAssistantPrompt(`Optimize LinkedIn ${f}`);
-                            }}
-                          />
-                        </div>
-                      ) : linkedinMode === 'studio' && linkedinRichProfile ? (
-                        <LinkedinChatStudio
-                          profile={linkedinRichProfile}
-                          onChange={setLinkedinRichProfile}
-                          onBack={() => setLinkedinMode('landing')}
-                          isLoggedIn={isLoggedIn}
-                          onRequireAuth={() => setIsAuthOpen(true)}
-                          initialPrompt={linkedinInitialPrompt}
-                        />
-                      ) : (
-                        <LinkedinLandingView
-                          userName={firstName || undefined}
-                          attachedTemplate={attachedLinkedinTemplate}
-                          onClearAttachedTemplate={() => setAttachedLinkedinTemplate(null)}
-                          onSelectTemplate={(tid) => {
-                            setLinkedinPreviewTemplateId(tid);
-                            setLinkedinMode('preview');
-                          }}
-                          onUsePrompt={(promptText) => {
-                            if (!isLoggedIn) {
-                              setIsAuthOpen(true);
-                              return;
-                            }
-                            const tid = attachedLinkedinTemplate || 'linkedin-1';
-                            setLinkedinRichProfile(buildInitialRichProfile(tid));
-                            setLinkedinInitialPrompt(promptText);
-                            setLinkedinMode('studio');
-                            setAttachedLinkedinTemplate(null);
-                          }}
-                          onOpenEditorDirectly={() => {
-                            if (!isLoggedIn) {
-                              setIsAuthOpen(true);
-                              return;
-                            }
-                            setLinkedinMode('editor');
-                          }}
-                        />
-                      )}
-                    </motion.div>
-                  )}
-
-                  {activeTab === 'jobhunting' && (
-                    <motion.div
-                      key="tab-jobhunting"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <JobHuntingLandingView
-                        userName={firstName}
+                      </div>
+                    ) : (
+                      <GithubLandingView
+                        userName={firstName || undefined}
+                        onOpenRolePicker={() => setShowGithubTemplatePicker(true)}
+                        onSelectPreset={(preset, theme, avatarUrl, bannerUrl) => openGithubStudio(preset, theme, avatarUrl, bannerUrl)}
+                        attachedTemplate={attachedGithubTemplate}
+                        onClearAttachedTemplate={() => setAttachedGithubTemplate(null)}
+                        onSelectTemplate={(t) => {
+                          setGithubPreviewTemplate(t);
+                          setGithubMode('preview');
+                        }}
                         onUsePrompt={(promptText) => {
-                          setAssistantPrompt(promptText);
-                          setActiveTab('assistant');
+                          if (attachedGithubTemplate) {
+                            const t = attachedGithubTemplate;
+                            const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
+                            const preset = { ...basePreset, label: t.name };
+                            const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
+                            openGithubStudio(preset, t.theme, t.avatarUrl || randomAvatar, t.bannerUrl);
+                          } else {
+                            // NO template selected: Load default dummy template preset (Full Stack Developer)
+                            // so the user gets a complete, realistic, populated GitHub profile ready to edit.
+                            const defaultPreset = GITHUB_ROLE_PRESETS[0];
+                            const defaultTemplate = GITHUB_TEMPLATES[0];
+                            const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
+                            openGithubStudio(defaultPreset, 'dark', randomAvatar, defaultTemplate.bannerUrl);
+                          }
+                          setGithubInitialPrompt(promptText);
+                          setAttachedGithubTemplate(null);
                         }}
                         onOpenEditorDirectly={() => {
-                          setActiveTab('assistant');
-                          setAssistantPrompt("Find top tech jobs & auto-apply");
+                          if (!isLoggedIn) {
+                            setIsAuthOpen(true);
+                            return;
+                          }
+                          setGithubMode('editor');
                         }}
-                        onNavigateToTab={(tab) => setActiveTab(tab)}
                       />
-                    </motion.div>
-                  )}
+                    )}
+                  </motion.div>
+                )}
 
-                  {activeTab === 'freelancing' && (
-                    <motion.div
-                      key="tab-freelancing"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <FreelancingLandingView
-                        userName={firstName}
+                {activeTab === 'linkedin' && (
+                  <motion.div
+                    key={`tab-linkedin-${linkedinMode === 'preview' ? 'landing' : linkedinMode}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="h-full flex flex-col"
+                  >
+                    {linkedinMode === 'editor' ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between no-print">
+                          <button
+                            onClick={() => setLinkedinMode('landing')}
+                            className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1 transition-colors"
+                          >
+                            <ArrowLeft className="w-3.5 h-3.5" />
+                            <span>Back to LinkedIn Presets & Prompts</span>
+                          </button>
+                        </div>
+                        <LinkedinEditor
+                          data={linkedinData}
+                          onChange={setLinkedinData}
+                          onAIRefine={(f) => {
+                            setActiveTab('assistant');
+                            setAssistantPrompt(`Optimize LinkedIn ${f}`);
+                          }}
+                        />
+                      </div>
+                    ) : linkedinMode === 'studio' && linkedinRichProfile ? (
+                      <LinkedinChatStudio
+                        profile={linkedinRichProfile}
+                        onChange={setLinkedinRichProfile}
+                        onBack={() => setLinkedinMode('landing')}
+                        isLoggedIn={isLoggedIn}
+                        onRequireAuth={() => setIsAuthOpen(true)}
+                        initialPrompt={linkedinInitialPrompt}
+                      />
+                    ) : (
+                      <LinkedinLandingView
+                        userName={firstName || undefined}
+                        attachedTemplate={attachedLinkedinTemplate}
+                        onClearAttachedTemplate={() => setAttachedLinkedinTemplate(null)}
+                        onSelectTemplate={(tid) => {
+                          setLinkedinPreviewTemplateId(tid);
+                          setLinkedinMode('preview');
+                        }}
                         onUsePrompt={(promptText) => {
-                          setAssistantPrompt(promptText);
-                          setActiveTab('assistant');
+                          if (!isLoggedIn) {
+                            setIsAuthOpen(true);
+                            return;
+                          }
+                          const tid = attachedLinkedinTemplate || 'linkedin-1';
+                          setLinkedinRichProfile(buildInitialRichProfile(tid));
+                          setLinkedinInitialPrompt(promptText);
+                          setLinkedinMode('studio');
+                          setAttachedLinkedinTemplate(null);
                         }}
                         onOpenEditorDirectly={() => {
-                          setActiveTab('assistant');
-                          setAssistantPrompt("Generate client proposal contract");
+                          if (!isLoggedIn) {
+                            setIsAuthOpen(true);
+                            return;
+                          }
+                          setLinkedinMode('editor');
                         }}
-                        onNavigateToTab={(tab) => setActiveTab(tab)}
                       />
-                    </motion.div>
-                  )}
+                    )}
+                  </motion.div>
+                )}
 
-                  {activeTab === 'interview' && (
-                    <motion.div
-                      key="tab-interview"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <InterviewPrepView
-                        userName={firstName}
-                        onUsePrompt={(promptText) => {
-                          setAssistantPrompt(promptText);
-                          setActiveTab('assistant');
-                        }}
-                        onLaunchMockInterview={(role, jdText) => {
-                          setActiveTab('assistant');
-                          setAssistantPrompt(`Act as a Hiring Manager at a top tech company interviewing me for the ${role} position. Here is the job context: ${jdText}. Start by asking me the first technical or behavioral question.`);
-                        }}
-                      />
-                    </motion.div>
-                  )}
+                {activeTab === 'jobhunting' && (
+                  <motion.div
+                    key="tab-jobhunting"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <JobHuntingLandingView
+                      userName={firstName}
+                      onUsePrompt={(promptText) => {
+                        setAssistantPrompt(promptText);
+                        setActiveTab('assistant');
+                      }}
+                      onOpenEditorDirectly={() => {
+                        setActiveTab('assistant');
+                        setAssistantPrompt("Find top tech jobs & auto-apply");
+                      }}
+                      onNavigateToTab={(tab) => setActiveTab(tab)}
+                    />
+                  </motion.div>
+                )}
 
-                  {activeTab === 'assistant' && (
-                    <motion.div
-                      key="tab-assistant"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <AIChatStudio
-                        resumeData={resumeData}
-                        setResumeData={setResumeData}
-                        githubData={githubData}
-                        setGithubData={setGithubData}
-                        linkedinData={linkedinData}
-                        setLinkedinData={setLinkedinData}
-                        onApplyPromptText={assistantPrompt}
-                        selectedModel={selectedModel}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </motion.div>
+                {activeTab === 'freelancing' && (
+                  <motion.div
+                    key="tab-freelancing"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <FreelancingLandingView
+                      userName={firstName}
+                      onUsePrompt={(promptText) => {
+                        setAssistantPrompt(promptText);
+                        setActiveTab('assistant');
+                      }}
+                      onOpenEditorDirectly={() => {
+                        setActiveTab('assistant');
+                        setAssistantPrompt("Generate client proposal contract");
+                      }}
+                      onNavigateToTab={(tab) => setActiveTab(tab)}
+                    />
+                  </motion.div>
+                )}
+
+                {activeTab === 'interview' && (
+                  <motion.div
+                    key="tab-interview"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <InterviewPrepView
+                      userName={firstName}
+                      onUsePrompt={(promptText) => {
+                        setAssistantPrompt(promptText);
+                        setActiveTab('assistant');
+                      }}
+                      onLaunchMockInterview={(role, jdText) => {
+                        setActiveTab('assistant');
+                        setAssistantPrompt(`Act as a Hiring Manager at a top tech company interviewing me for the ${role} position. Here is the job context: ${jdText}. Start by asking me the first technical or behavioral question.`);
+                      }}
+                    />
+                  </motion.div>
+                )}
+
+                {activeTab === 'assistant' && (
+                  <motion.div
+                    key="tab-assistant"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <AIChatStudio
+                      resumeData={resumeData}
+                      setResumeData={setResumeData}
+                      githubData={githubData}
+                      setGithubData={setGithubData}
+                      linkedinData={linkedinData}
+                      setLinkedinData={setLinkedinData}
+                      onApplyPromptText={assistantPrompt}
+                      selectedModel={selectedModel}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
         </AnimatePresence>
 
       </div>
@@ -649,7 +661,7 @@ export default function Home() {
       {resumeMode === 'preview' && resumePreviewSample && (
         <ResumeTemplatePreview
           sample={resumePreviewSample}
-          clerkFullName={clerkFullName || undefined}
+          clerkFullName={displayFullName}
           onUse={() => {
             // Doesn't jump into the Studio directly — closes back to the
             // landing page with this attached, so the user can add an
@@ -905,20 +917,20 @@ export default function Home() {
           (activeTab === 'linkedin' && linkedinMode === 'studio') ||
           (activeTab === 'github' && githubMode === 'studio')
         ) && (
-          <motion.button
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => {
-              mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="fixed bottom-6 right-6 p-3.5 rounded-full bg-[#2a2a2e] hover:bg-black text-white shadow-xl hover:shadow-2xl transition-all z-40 focus:outline-none flex items-center justify-center cursor-pointer border border-slate-700/20"
-            title="Scroll to Top"
-          >
-            <ArrowUp className="w-5 h-5" />
-          </motion.button>
-        )}
+            <motion.button
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => {
+                mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="fixed bottom-6 right-6 p-3.5 rounded-full bg-[#2a2a2e] hover:bg-black text-white shadow-xl hover:shadow-2xl transition-all z-40 focus:outline-none flex items-center justify-center cursor-pointer border border-slate-700/20"
+              title="Scroll to Top"
+            >
+              <ArrowUp className="w-5 h-5" />
+            </motion.button>
+          )}
       </AnimatePresence>
 
     </div>
