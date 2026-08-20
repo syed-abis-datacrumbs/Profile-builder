@@ -90,27 +90,34 @@ function RichText({
       dangerouslySetInnerHTML={{ __html: html || '' }}
       className={`${className || ''} outline-none rounded-sm hover:bg-slate-50/60 cursor-text empty:before:content-[attr(data-ph)] empty:before:text-slate-300`}
       onKeyDown={(e) => {
-        // Deleting a text SELECTION ourselves here, at keydown — an
-        // earlier attempt did this from onBeforeInput instead (the
-        // "purpose-built" event for intercepting contentEditable edits),
-        // but live testing showed it's unreliable in practice: it didn't
-        // fire at all for some Backspace presses, and even fired with
-        // inputType undefined for plain typing in this React version.
-        // keydown always fires, no ambiguity — verified live that
-        // preventDefault() here does stop the browser's own deletion, so
-        // deleteContents() is the only thing that runs.
         if (e.key === 'Backspace' || e.key === 'Delete') {
           const sel = window.getSelection();
           if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
             const range = sel.getRangeAt(0);
             if (e.currentTarget.contains(range.commonAncestorContainer)) {
-              e.preventDefault();
-              range.deleteContents();
-              return;
+              const textContent = (e.currentTarget.textContent || '').trim();
+              const selText = sel.toString().trim();
+              if (selText.length >= textContent.length && textContent.length > 0) {
+                // User selected the entire bullet content and hit delete/backspace -> remove immediately!
+                e.preventDefault();
+                e.currentTarget.innerHTML = '';
+                if (bullet) {
+                  bullet.onBackspaceEmpty();
+                  return;
+                } else if (onEmptyBackspace) {
+                  onEmptyBackspace();
+                  return;
+                }
+              } else {
+                e.preventDefault();
+                range.deleteContents();
+                return;
+              }
             }
           }
         }
-        const isEmpty = (e.currentTarget.textContent ?? '') === '';
+        const textVal = (e.currentTarget.textContent ?? '').trim();
+        const isEmpty = textVal === '' || textVal === '\u200B' || e.currentTarget.innerHTML === '' || e.currentTarget.innerHTML === '<br>';
         if (bullet) {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -125,6 +132,7 @@ function RichText({
         if (onEmptyBackspace && e.key === 'Backspace' && isEmpty) {
           e.preventDefault();
           onEmptyBackspace();
+          return;
         }
       }}
       onPaste={(e) => {
@@ -273,6 +281,55 @@ function CvPreviewBase({
     onEnter: (h) => bulletEnter(wi, li, h),
     onBackspaceEmpty: () => bulletBackspace(wi, li),
     onPasteLines: (h, lines) => bulletPaste(wi, li, h, lines),
+  });
+
+  const projEnter = (i: number, html: string) => {
+    const next = [...data.projects];
+    next[i] = { content: html };
+    next.splice(i + 1, 0, { content: '' });
+    commit({ ...data, projects: next });
+  };
+  const projBackspace = (i: number) => {
+    if (data.projects.length <= 1) {
+      commit({ ...data, projects: [{ content: '' }] });
+      return;
+    }
+    commit({ ...data, projects: data.projects.filter((_, j) => j !== i) });
+  };
+  const projKeysFor = (i: number): BulletKeys => ({
+    onEnter: (h) => projEnter(i, h),
+    onBackspaceEmpty: () => projBackspace(i),
+    onPasteLines: (h, lines) => {
+      const next = [...data.projects];
+      next[i] = { content: h + (lines[0] ?? '') };
+      next.splice(i + 1, 0, ...lines.slice(1).map((c) => ({ content: c })));
+      commit({ ...data, projects: next });
+    },
+  });
+
+  const wsEnter = (i: number, html: string) => {
+    const list = [...(data.workshops ?? [])];
+    list[i] = { content: html };
+    list.splice(i + 1, 0, { content: '' });
+    commit({ ...data, workshops: list });
+  };
+  const wsBackspace = (i: number) => {
+    const list = data.workshops ?? [];
+    if (list.length <= 1) {
+      commit({ ...data, workshops: [{ content: '' }] });
+      return;
+    }
+    commit({ ...data, workshops: list.filter((_, j) => j !== i) });
+  };
+  const wsKeysFor = (i: number): BulletKeys => ({
+    onEnter: (h) => wsEnter(i, h),
+    onBackspaceEmpty: () => wsBackspace(i),
+    onPasteLines: (h, lines) => {
+      const list = [...(data.workshops ?? [])];
+      list[i] = { content: h + (lines[0] ?? '') };
+      list.splice(i + 1, 0, ...lines.slice(1).map((c) => ({ content: c })));
+      commit({ ...data, workshops: list });
+    },
   });
 
   const isStudent = data.cvType === 'student';
@@ -547,6 +604,7 @@ function CvPreviewBase({
                       html={proj.content}
                       placeholder="Project Title (Technologies) – Description"
                       onCommit={(v) => setProj(i, v)}
+                      bullet={projKeysFor(i)}
                       onEmptyBackspace={() => projectEmptyBackspace(i)}
                     />
                   ) : (
@@ -574,6 +632,7 @@ function CvPreviewBase({
                       html={ws.content}
                       placeholder="Workshop Title: Description"
                       onCommit={(v) => setWs(i, v)}
+                      bullet={wsKeysFor(i)}
                       onEmptyBackspace={() => workshopEmptyBackspace(i)}
                     />
                   ) : (

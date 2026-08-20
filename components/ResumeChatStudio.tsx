@@ -18,6 +18,7 @@ import {
   Edit2,
   Check,
   Plus,
+  Target,
   X
 } from 'lucide-react';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
@@ -126,6 +127,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       setPast((p) => [...p.slice(-99), cv]);
       setFuture([]);
       onChange(next);
+      setAtsScore(null);
     },
     [cv, onChange]
   );
@@ -138,6 +140,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     setFuture([]);
     onChange(next);
     setRevision((r) => r + 1);
+    setAtsScore(null);
   };
 
   const handleUndo = () => {
@@ -388,12 +391,13 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const atsScoredCvRef = useRef<CvData | null>(null);
   const atsScoredJobRef = useRef<string>('');
 
-  const handleCheckAts = async () => {
+  const handleCheckAts = async (autoTriggered = false, overrideJob?: string) => {
     if (!isLoggedIn) { onRequireAuth(); return; }
+    const activeJob = overrideJob !== undefined ? overrideJob : targetJob;
     // Always re-score — never use cache if job description or cv changed
     const cvChanged = atsScoredCvRef.current !== cv;
-    const jobChanged = atsScoredJobRef.current !== targetJob;
-    if (atsScore !== null && !cvChanged && !jobChanged) {
+    const jobChanged = atsScoredJobRef.current !== activeJob;
+    if (!autoTriggered && atsScore !== null && !cvChanged && !jobChanged) {
       // Nothing changed — just toggle the popover open/closed
       setAtsPopoverOpen((o) => !o);
       return;
@@ -406,17 +410,29 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       const res = await fetch('/api/ats-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cv, jobDescription: targetJob }),
+        body: JSON.stringify({ cv, jobDescription: activeJob }),
       });
       const json = await res.json();
       if (!res.ok) {
         setAtsError(json.error || 'Failed to calculate score.');
         return;
       }
-      setAtsScore(json.score);
+      const scoreNum = json.score;
+      setAtsScore(scoreNum);
       setAtsBreakdown(json.breakdown ?? []);
       atsScoredCvRef.current = cv;
-      atsScoredJobRef.current = targetJob;
+      atsScoredJobRef.current = activeJob;
+
+      // Auto-recommendation: If score < 95%, automatically post analysis & recommendations in chat!
+      if (scoreNum < 95 && Array.isArray(json.breakdown) && json.breakdown.length > 0) {
+        const breakdownItems = (json.breakdown as string[]).map((item) => `• ${item}`).join('\n');
+        const recMsg = `🎯 **Target Job ATS Match Score: ${scoreNum}%** (Target: 95%+)\n\n**Analysis & Recommended Actions:**\n${breakdownItems}\n\n💡 *Ask me to optimize your resume or click "Auto-Inject ATS Keywords" below to reach 95%+ match!*`;
+        setMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.content?.includes('Target Job ATS Match Score')) return prev;
+          return [...prev, { role: 'assistant', content: recMsg }];
+        });
+      }
     } catch {
       setAtsError('Failed to calculate score — check your connection.');
     } finally {
@@ -804,16 +820,35 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
         {/* Bottom Input Area */}
         <div className="shrink-0 p-3.5 bg-white border-t border-slate-200 flex flex-col gap-2">
-          {targetJob.trim() && (
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
-              onClick={() => send("Please analyze my resume against my target job description. Rewrite my bullet points and add missing keywords to perfectly match the ATS requirements.")}
+              onClick={() => send("make it in one page please")}
               disabled={loading}
-              className="self-start text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              Auto-Inject ATS Keywords
+              <FileText className="w-3.5 h-3.5 text-blue-600" />
+              Fit in 1 Page
             </button>
-          )}
+            {targetJob.trim() ? (
+              <button
+                onClick={() => send("Please analyze my resume against my target job description. Rewrite my bullet points and add missing keywords to perfectly match the ATS requirements.")}
+                disabled={loading}
+                className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Auto-Inject ATS Keywords
+              </button>
+            ) : (
+              <button
+                onClick={() => send("Please optimize and enhance my resume: rewrite bullet points with strong action verbs and quantified metrics, improve keyword density, and polish overall formatting.")}
+                disabled={loading}
+                className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                ✨ Optimize & Enhance Resume
+              </button>
+            )}
+          </div>
           <div className="bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
             <textarea
               ref={chatTextareaRef}
@@ -1096,63 +1131,6 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           {/* Right Controls Group */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
 
-            {/* ATS Score Badge in Toolbar (Desktop only) */}
-            <div className="relative shrink-0 hidden xl:block">
-              <button
-                onClick={handleCheckAts}
-                disabled={atsLoading}
-                className="h-7 px-1.5 sm:px-2 rounded-lg bg-emerald-50 border border-emerald-200/80 hover:bg-emerald-100/80 text-slate-900 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-70 shadow-2xs"
-                title="Check ATS Score"
-              >
-                {atsLoading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-                ) : (
-                  <>
-                    <span className="font-black text-slate-900 text-xs">{atsScore ?? '–'}</span>
-                    <span className="text-[9px] font-extrabold text-emerald-600 uppercase tracking-tight">ATS</span>
-                  </>
-                )}
-              </button>
-
-              {atsPopoverOpen && !atsLoading && (atsScore !== null || atsError) && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setAtsPopoverOpen(false)} />
-                  <div className="absolute top-9 right-0 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-3.5 text-xs text-left">
-                    {atsError ? (
-                      <p className="text-red-600 font-medium">{atsError}</p>
-                    ) : (
-                      <>
-                        <div className="font-bold text-slate-900 mb-2">ATS Score: {atsScore}</div>
-                        <ul className="space-y-1.5 text-slate-600">
-                          {atsBreakdown.map((b, i) => (
-                            <li key={i} className="flex gap-1.5">
-                              <span className="shrink-0">•</span>
-                              <span>{b}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Target Job Match Button (Desktop only) */}
-            <div className="relative shrink-0 hidden xl:block">
-              <button
-                onClick={() => setTargetJobModalOpen(!targetJobModalOpen)}
-                className={`h-7 px-2 sm:px-2.5 rounded-full text-[11px] font-bold transition-all shadow-2xs flex items-center justify-center gap-1 cursor-pointer border ${
-                  targetJob.trim()
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-400 hover:bg-emerald-100'
-                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <div className={`w-1.5 h-1.5 rounded-full ${targetJob.trim() ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                <span>Target Job Match</span>
-              </button>
-            </div>
-
             {/* Professional / Student Pill */}
             <div className="h-7 flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5 border border-slate-200 shrink-0">
               {(['professional', 'student'] as const).map((t) => (
@@ -1235,13 +1213,51 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         </div>
 
         {/* Live Resume Canvas Area */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex justify-center items-start">
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex justify-center items-start relative">
           <PaginatedCvPreview
             data={cv}
             exportRef={exportRef}
             accentColor={accent}
             onChange={recordChange}
           />
+
+          {/* Floating Target Job Pill + Circular ATS Badge Widget on Desktop / Web View (Bottom-Right) */}
+          <div className="hidden md:flex fixed bottom-8 right-8 z-40 items-center select-none">
+            {/* Left Pill: Clicking opens Target Job Modal */}
+            <button
+              onClick={() => setTargetJobModalOpen(true)}
+              className="h-14 pl-5 pr-7 rounded-l-full bg-white border border-r-0 border-slate-200 shadow-2xl text-base font-bold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer flex items-center gap-3"
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${targetJob.trim() ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+                <Target className="w-4 h-4" />
+              </div>
+              <span className="text-xs truncate max-w-[140px]">{targetJob.trim() ? 'Target Job Active' : 'Set Target Job'}</span>
+            </button>
+
+            {/* Right Circle: Clicking Recalculates Score and Sends Recommendations */}
+            <div className="relative">
+              <button
+                onClick={() => handleCheckAts()}
+                disabled={atsLoading}
+                className="w-16 h-16 rounded-full bg-slate-950 text-white shadow-2xl flex items-center justify-center relative z-20 border-[3px] border-white transition-all hover:bg-black hover:scale-105 cursor-pointer disabled:opacity-75"
+                title="Click to Recalculate ATS Score"
+              >
+                {atsLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center leading-none">
+                    <span className="text-base font-black text-white">{atsScore ?? '–'}</span>
+                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mt-0.5">ATS</span>
+                  </div>
+                )}
+
+                {/* Green indicator badge if target job active */}
+                {targetJob.trim() && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full animate-pulse" />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
 
       {/* Target Job Matcher Centered Pop-up Modal */}
@@ -1279,8 +1295,13 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 Clear
               </button>
               <button
-                onClick={() => setTargetJobModalOpen(false)}
-                className="px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm"
+                onClick={() => {
+                  setTargetJobModalOpen(false);
+                  if (targetJob.trim()) {
+                    handleCheckAts(true, targetJob);
+                  }
+                }}
+                className="px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
               >
                 {targetJob.trim() ? 'Save Target Job' : 'Close'}
               </button>
@@ -1309,16 +1330,35 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         isLoggedIn={isLoggedIn}
         onRequireAuth={onRequireAuth}
         badgeAction={
-          targetJob.trim() ? (
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
-              onClick={() => send("Please analyze my resume against my target job description. Rewrite my bullet points and add missing keywords to perfectly match the ATS requirements.")}
+              onClick={() => send("make it in one page please")}
               disabled={loading}
-              className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-sm"
+              className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-xs cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              Auto-Inject ATS Keywords
+              <FileText className="w-3.5 h-3.5 text-blue-600" />
+              Fit in 1 Page
             </button>
-          ) : undefined
+            {targetJob.trim() ? (
+              <button
+                onClick={() => send("Please analyze my resume against my target job description. Rewrite my bullet points and add missing keywords to perfectly match the ATS requirements.")}
+                disabled={loading}
+                className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Auto-Inject ATS Keywords
+              </button>
+            ) : (
+              <button
+                onClick={() => send("Please optimize and enhance my resume: rewrite bullet points with strong action verbs and quantified metrics, improve keyword density, and polish overall formatting.")}
+                disabled={loading}
+                className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                ✨ Optimize & Enhance Resume
+              </button>
+            )}
+          </div>
         }
       />
 

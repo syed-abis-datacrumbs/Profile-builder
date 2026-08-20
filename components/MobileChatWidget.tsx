@@ -216,7 +216,7 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
 
               {/* Bottom Action / Input Area */}
               <div className="shrink-0 p-3 bg-white border-t border-slate-200/80 flex flex-col gap-2">
-                {badgeAction && <div className="self-start">{badgeAction}</div>}
+                {badgeAction && <div className="w-full flex items-center gap-1.5 flex-wrap">{badgeAction}</div>}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
                   <textarea
                     ref={textareaRef}

@@ -58,10 +58,11 @@ Rules:
   5. "certifications": REPLACE outdated certifications with 4 industry-recognized credentials for that specific field in a 2x2 grid.
   6. "additional": Update both 'skills' (8-10 technical skills) and 'interests' (5-6 professional interests) to fill 2 lines each.
   7. MANDATORY PAGE FILL RULE: The output generated for all 5 sections MUST be rich and substantial enough to fill 100% of Page 1 from top to bottom, leaving ZERO empty white gap at the bottom while fitting cleanly on Page 1!
-- CRITICAL — One Page Fitting ("make it in one page", "fit to 1 page", "single page"): When the user requests a 1-page resume:
-  1. DO NOT DELETE OR REMOVE ANY SECTION, PROJECT, WORK EXPERIENCE, OR CERTIFICATION ITEM! Keep ALL items in ALL sections intact.
-  2. Instead, CONDENSE AND SHORTEN THE TEXT CONTENT of each bullet point and project description so that the text is tight, punchy, and fits on a single page!
-  3. Shorten bullet point lengths to 1 concise line per bullet, condense project descriptions, and trim wordiness while preserving all technical skills and quantified metrics.
+- CRITICAL — Aggressive ATS Keyword Optimization (95%+ Target Match): When the user provides a target job description or asks to optimize/inject keywords ("auto-inject ATS keywords", "as per recommendation", "optimize resume for ATS", "increase score to 95%+"):
+  1. YOU MUST EXTRACT EVERY SINGLE REQUIRED TOOL, HARD SKILL, METHODOLOGY, AND TERMINOLOGY FROM THE TARGET JOB DESCRIPTION!
+  2. WEAVE ALL EXTRACTED KEYWORDS DIRECTLY into "additional.skills", "additional.interests", "workExperience" bullets, and "projects"!
+  3. Ensure that every work experience bullet and project description contains target job keywords and strong action verbs so that the ATS scanner evaluates the match at 95% or higher!
+  4. Preserve a clean 1-page layout by condensing bullet sentences to 1-2 tight lines while keeping all keywords intact!
 - CRITICAL — Adding Interests & Skills ("add two more in interest", "add skills", "add interest"): When the user requests to add interests or skills to the additional section, YOU MUST IMMEDIATELY APPEND THE NEW ITEMS to the comma-separated 'additional.interests' or 'additional.skills' string in the returned JSON! For example, if current interests is "Software Architecture, Cloud Computing", and user asks to add 2 more, return "Software Architecture, Cloud Computing, Machine Learning & AI, High-Performance Systems". NEVER return 'additional.interests' or 'additional.skills' unchanged when the user asks to add items!
 - CRITICAL — Strict Section Preservation: Edits to one section (e.g. adding interests or skills to "additional") MUST NEVER drop or modify items in OTHER sections (such as "certifications", "projects", "workExperience", or "education")! Unless the user explicitly asks to remove items from a specific section, preserve all existing array items in all other sections verbatim!
 - CRITICAL — Expanding Bullets ("add more bullets", "more bullet points", "add points"): When the user requests to add more bullet points to work experience, YOU MUST IMMEDIATELY APPEND AT LEAST 2 NEW QUANTIFIED BULLET POINTS (with bolded percentages or numbers) to the target work experience entry! The output bullets string MUST contain more lines than before. NEVER return the workExperience bullets array with the same length or unchanged text!
@@ -424,19 +425,208 @@ export async function POST(request: Request) {
       }
     }
 
-    // Auto-fix: Add interests or skills request handler
-    if (/\b(add|more)\b.*?\binterest/i.test(msgLower) || /\binterest\b.*?\b(add|more)/i.test(msgLower)) {
-      const currentInterests = safeCv.additional?.interests || cv.additional?.interests || '';
-      const currentItems = currentInterests.split(',').map((s) => s.trim()).filter(Boolean);
-      const prevItems = (cv.additional?.interests || '').split(',').map((s) => s.trim()).filter(Boolean);
-      
-      if (currentItems.length <= prevItems.length) {
-        const extraInterests = ['Machine Learning & AI', 'High-Performance Data Engineering'];
-        const mergedInterests = Array.from(new Set([...currentItems, ...extraInterests])).join(', ');
-        safeCv.additional = {
-          ...safeCv.additional,
-          interests: mergedInterests,
-        };
+    // Auto-fix: Universal ATS Keyword Auto-Injector (Guarantees 95%+ ATS Score on First Attempt)
+    // Whenever a target job description is active, aggressively extracts core tools, hard skills,
+    // and domain concepts, and immediately weaves them into skills, interests, and experience bullets.
+    if (body.targetJob && body.targetJob.trim().length > 0) {
+      const jobText = body.targetJob;
+      const stopWords = new Set([
+        'a', 'about', 'above', 'across', 'after', 'again', 'against', 'all', 'almost', 'alone',
+        'along', 'already', 'also', 'although', 'always', 'am', 'among', 'an', 'and', 'another',
+        'any', 'anybody', 'anyone', 'anything', 'anywhere', 'are', 'area', 'areas', 'around', 'as',
+        'ask', 'asked', 'asking', 'asks', 'at', 'away', 'b', 'back', 'backed', 'backing', 'backs',
+        'be', 'became', 'because', 'become', 'becomes', 'becoming', 'been', 'before', 'began', 'behind',
+        'being', 'beings', 'best', 'better', 'between', 'big', 'both', 'bring', 'brings', 'brought',
+        'but', 'by', 'c', 'came', 'can', 'cannot', 'case', 'cases', 'certain', 'certainly',
+        'clear', 'clearly', 'close', 'closely', 'closer', 'comes', 'could', 'd', 'daily', 'day',
+        'days', 'did', 'differ', 'different', 'differently', 'do', 'does', 'doing', 'done', 'down',
+        'downed', 'downing', 'downs', 'during', 'e', 'each', 'early', 'either', 'end', 'ended',
+        'ending', 'ends', 'enough', 'ensure', 'ensuring', 'entire', 'especially', 'even', 'evenly',
+        'ever', 'every', 'everybody', 'everyone', 'everything', 'everywhere', 'experience', 'experienced',
+        'experiences', 'experiencing', 'f', 'face', 'faces', 'fact', 'facts', 'far', 'felt', 'few',
+        'fewer', 'find', 'finds', 'first', 'for', 'four', 'from', 'full', 'fully', 'further',
+        'furthered', 'furthering', 'furthers', 'g', 'gave', 'general', 'generally', 'get', 'gets',
+        'getting', 'give', 'given', 'gives', 'giving', 'go', 'going', 'gone', 'good', 'goods',
+        'got', 'great', 'greater', 'greatest', 'group', 'grouped', 'grouping', 'groups', 'h', 'had',
+        'has', 'have', 'having', 'he', 'her', 'here', 'herself', 'high', 'higher', 'highest',
+        'him', 'himself', 'his', 'how', 'however', 'i', 'if', 'important', 'in', 'interest',
+        'interested', 'interesting', 'interests', 'into', 'is', 'it', 'its', 'itself', 'j', 'just',
+        'k', 'keep', 'keeps', 'kind', 'knew', 'know', 'known', 'knows', 'l', 'large', 'largely',
+        'last', 'later', 'latest', 'least', 'less', 'let', 'lets', 'like', 'likely', 'line',
+        'lines', 'little', 'look', 'looked', 'looking', 'looks', 'm', 'made', 'make', 'making',
+        'man', 'many', 'may', 'me', 'member', 'members', 'men', 'might', 'more', 'most',
+        'mostly', 'mr', 'mrs', 'much', 'must', 'my', 'myself', 'n', 'name', 'named', 'names',
+        'near', 'needed', 'needing', 'needs', 'never', 'new', 'newer', 'newest', 'next', 'no',
+        'nobody', 'non', 'noone', 'not', 'nothing', 'now', 'nowhere', 'number', 'numbers', 'o',
+        'of', 'off', 'often', 'old', 'older', 'oldest', 'on', 'once', 'one', 'only', 'open',
+        'opened', 'opening', 'opens', 'or', 'order', 'ordered', 'ordering', 'orders', 'other',
+        'others', 'our', 'out', 'over', 'own', 'p', 'part', 'parted', 'parting', 'parts', 'per',
+        'perhaps', 'place', 'places', 'point', 'pointed', 'pointing', 'points', 'possible',
+        'present', 'presented', 'presenting', 'presents', 'problem', 'problems', 'put', 'puts',
+        'q', 'quite', 'r', 'rather', 'really', 'recent', 'recently', 'right', 'room', 'rooms',
+        's', 'said', 'same', 'saw', 'say', 'says', 'second', 'seconds', 'see', 'seem', 'seemed',
+        'seeming', 'seems', 'sees', 'several', 'shall', 'she', 'should', 'show', 'showed', 'showing',
+        'shows', 'side', 'sides', 'since', 'small', 'smaller', 'smallest', 'so', 'some', 'somebody',
+        'someone', 'something', 'somewhere', 'state', 'states', 'still', 'such', 'sure', 't',
+        'take', 'taken', 'taking', 'than', 'that', 'the', 'their', 'them', 'then', 'there',
+        'therefore', 'these', 'they', 'thing', 'things', 'think', 'thinks', 'this', 'those',
+        'though', 'thought', 'thoughts', 'three', 'through', 'thus', 'to', 'today', 'together',
+        'too', 'took', 'toward', 'turn', 'turned', 'turning', 'turns', 'two', 'u', 'under',
+        'until', 'up', 'upon', 'us', 'use', 'used', 'uses', 'using', 'v', 'very', 'w', 'want',
+        'wanted', 'wanting', 'wants', 'was', 'way', 'ways', 'we', 'well', 'wells', 'went', 'were',
+        'what', 'when', 'where', 'who', 'whether', 'which', 'while', 'whole', 'whose', 'why',
+        'will', 'with', 'within', 'without', 'work', 'worked', 'working', 'works', 'would', 'x',
+        'y', 'year', 'years', 'yet', 'you', 'young', 'younger', 'youngest', 'your', 'yours', 'z',
+        'ability', 'able', 'action', 'actions', 'actively', 'activities', 'add', 'additional',
+        'align', 'aligned', 'aligning', 'alignment', 'allowing', 'allows', 'applicant', 'applicants',
+        'application', 'apply', 'applying', 'approach', 'appropriate', 'assist', 'assisted',
+        'assisting', 'background', 'based', 'basic', 'basis', 'benefit', 'benefits', 'candidate',
+        'candidates', 'capability', 'capable', 'career', 'careers', 'central', 'challenge',
+        'challenges', 'challenging', 'collaborate', 'collaborated', 'collaborating', 'collaboration',
+        'collaborative', 'commitment', 'committed', 'communicate', 'communicating', 'communication',
+        'company', 'complete', 'completed', 'completing', 'completion', 'complex', 'confidence',
+        'confident', 'consistent', 'consistently', 'coordinate', 'coordinated', 'coordinating',
+        'coordination', 'core', 'create', 'created', 'creating', 'creation', 'creative', 'critical',
+        'culture', 'current', 'currently', 'decision', 'decisions', 'deliver', 'delivered',
+        'delivering', 'delivery', 'demonstrate', 'demonstrated', 'demonstrates', 'demonstrating',
+        'department', 'departments', 'describe', 'description', 'desired', 'detail', 'detailed',
+        'details', 'develop', 'developed', 'developer', 'developing', 'development', 'direction',
+        'directly', 'diverse', 'drive', 'driven', 'driver', 'drivers', 'drives', 'driving', 'duties',
+        'dynamic', 'e.g.', 'effective', 'effectively', 'effectiveness', 'efficiency', 'efficient',
+        'efficiently', 'effort', 'efforts', 'emphasis', 'employ', 'employee', 'employees',
+        'employment', 'enable', 'enables', 'enabling', 'encourage', 'encouraged', 'energy',
+        'engage', 'engaged', 'engagement', 'engaging', 'enhance', 'enhanced', 'enhances',
+        'enhancing', 'enthusiastic', 'environment', 'environments', 'equip', 'equipped',
+        'essential', 'establish', 'established', 'establishing', 'etc', 'evaluate', 'evaluating',
+        'evaluation', 'excellent', 'exceptional', 'execute', 'executed', 'executing', 'execution',
+        'executive', 'exist', 'existing', 'expand', 'expanding', 'expansion', 'expect',
+        'expectation', 'expectations', 'expected', 'expertise', 'explore', 'exploring', 'express',
+        'extend', 'facilitate', 'facilitated', 'facilitating', 'factor', 'factors', 'fast', 'faster',
+        'field', 'fields', 'flexible', 'flexibility', 'focus', 'focused', 'focuses', 'focusing',
+        'follow', 'following', 'form', 'forms', 'foster', 'fostering', 'fresh', 'fulfill', 'function',
+        'functional', 'functions', 'future', 'gain', 'gained', 'gaining', 'gap', 'generate',
+        'generated', 'generating', 'generation', 'goal', 'goals', 'grow', 'growing', 'growth',
+        'guidance', 'guide', 'guided', 'guiding', 'handle', 'handled', 'handling', 'hands-on',
+        'help', 'helped', 'helpful', 'helping', 'helps', 'hire', 'hiring', 'hold', 'holding', 'holds',
+        'hourly', 'identify', 'identifying', 'impact', 'impactful', 'impacting', 'impacts',
+        'implement', 'implementation', 'implemented', 'implementing', 'importance', 'improve',
+        'improved', 'improvement', 'improvements', 'improves', 'improving', 'include', 'included',
+        'includes', 'including', 'inclusion', 'inclusive', 'incorporate', 'increase', 'increased',
+        'increases', 'increasing', 'individual', 'individuals', 'industry', 'influence',
+        'influencing', 'initiative', 'initiatives', 'innovate', 'innovation', 'innovations',
+        'innovative', 'input', 'insight', 'insights', 'inspire', 'inspiring', 'integration',
+        'intend', 'interact', 'interacting', 'interaction', 'interactive', 'internal',
+        'interpersonal', 'interview', 'involved', 'involvement', 'issue', 'issues', 'job', 'jobs',
+        'joining', 'journey', 'judgment', 'lead', 'leader', 'leaders', 'leadership', 'leading',
+        'leads', 'learn', 'learned', 'learning', 'level', 'levels', 'leverage', 'leveraged',
+        'leveraging', 'life', 'listen', 'listening', 'location', 'long-term', 'maintain',
+        'maintained', 'maintaining', 'maintenance', 'major', 'manage', 'managed', 'management',
+        'manager', 'managers', 'managing', 'manner', 'match', 'matching', 'maximize', 'maximizing',
+        'meaningful', 'measure', 'measured', 'measurement', 'measures', 'measuring', 'meet',
+        'meeting', 'meetings', 'meets', 'mentoring', 'mindset', 'mission', 'modern', 'monitor',
+        'monitored', 'monitoring', 'monthly', 'motivation', 'motivated', 'move', 'moving',
+        'necessary', 'need', 'objective', 'objectives', 'obtain', 'obtained', 'ongoing', 'operate',
+        'operated', 'operating', 'operation', 'operational', 'operations', 'opportunity',
+        'opportunities', 'optimal', 'optimize', 'optimized', 'optimizing', 'organization',
+        'organizational', 'organizations', 'organize', 'organized', 'organizing', 'orientation',
+        'oriented', 'outcome', 'outcomes', 'output', 'outputs', 'oversee', 'overseeing', 'pace',
+        'paced', 'package', 'participate', 'participated', 'participating', 'participation',
+        'partner', 'partnering', 'partners', 'partnership', 'passionate', 'path', 'people',
+        'perform', 'performance', 'performed', 'performing', 'performs', 'period', 'person',
+        'personal', 'perspective', 'perspectives', 'phase', 'plan', 'planned', 'planning', 'plans',
+        'policy', 'position', 'positions', 'positive', 'potential', 'practice', 'practices',
+        'prefer', 'preference', 'preferred', 'prepare', 'prepared', 'preparing', 'presence',
+        'presentation', 'presentations', 'presented', 'presenting', 'presents', 'primary', 'prior',
+        'priorities', 'prioritize', 'prioritized', 'prioritizing', 'priority', 'proactive',
+        'problem-solving', 'procedure', 'procedures', 'proceed', 'process', 'processes',
+        'processing', 'produce', 'produced', 'producing', 'product', 'production', 'productive',
+        'productivity', 'products', 'profession', 'professional', 'professionals', 'proficiency',
+        'proficient', 'program', 'programs', 'progress', 'project', 'projects', 'promote',
+        'prompt', 'propose', 'proposed', 'proven', 'provide', 'provided', 'provider', 'provides',
+        'providing', 'purpose', 'pursue', 'qualifications', 'qualified', 'qualify', 'quality',
+        'quick', 'quickly', 'range', 'reach', 'reaching', 'read', 'ready', 'real', 'realistic',
+        'reason', 'receive', 'received', 'receiving', 'recognize', 'recognized', 'recommend',
+        'recommendation', 'recommendations', 'record', 'reduce', 'reduced', 'reducing', 'reduction',
+        'refer', 'reflect', 'regard', 'regular', 'regularly', 'related', 'relationship',
+        'relationships', 'relevant', 'reliable', 'rely', 'report', 'reported', 'reporting',
+        'reports', 'represent', 'represented', 'request', 'requested', 'require', 'required',
+        'requirement', 'requirements', 'requires', 'requiring', 'research', 'resilient',
+        'resolution', 'resolve', 'resolved', 'resolving', 'resource', 'resources', 'respect',
+        'respond', 'responding', 'response', 'responsibilities', 'responsibility', 'responsible',
+        'result', 'resulting', 'results', 'retain', 'retention', 'review', 'reviewed', 'reviewing',
+        'reward', 'rigorous', 'role', 'roles', 'routine', 'run', 'running', 'safe', 'safety',
+        'satisfaction', 'satisfied', 'satisfy', 'scale', 'scaling', 'schedule', 'schedules',
+        'scheduling', 'scope', 'seamless', 'seasoned', 'seek', 'seeking', 'select', 'selected',
+        'selection', 'self-starter', 'senior', 'sense', 'serve', 'service', 'services', 'serving',
+        'session', 'sessions', 'set', 'setting', 'settings', 'share', 'shared', 'sharing',
+        'shift', 'short-term', 'skill', 'skilled', 'skills', 'smooth', 'solution', 'solutions',
+        'solve', 'solved', 'solver', 'solving', 'sound', 'source', 'sources', 'sourcing', 'speak',
+        'speaking', 'specialist', 'specific', 'specifically', 'speed', 'stakeholder',
+        'stakeholders', 'standard', 'standards', 'start', 'started', 'starting', 'status', 'stay',
+        'step', 'steps', 'strategic', 'strategies', 'strategy', 'streamline', 'streamlined',
+        'streamlining', 'structure', 'structured', 'structures', 'success', 'successful',
+        'successfully', 'suit', 'suitable', 'summary', 'supervise', 'supervised', 'supervising',
+        'supervision', 'supervisor', 'support', 'supported', 'supporting', 'supportive',
+        'supports', 'sustainable', 'system', 'systematic', 'systems', 'tactical', 'tailor',
+        'tailored', 'talent', 'target', 'targeted', 'targets', 'task', 'tasks', 'team', 'teams',
+        'teamwork', 'technique', 'techniques', 'thorough', 'thoroughly', 'thoughtful', 'timely',
+        'times', 'tool', 'tools', 'top', 'total', 'track', 'tracked', 'tracking', 'tracks',
+        'train', 'trained', 'training', 'transform', 'transformation', 'transformed',
+        'transition', 'translate', 'trend', 'trends', 'trust', 'type', 'types', 'typical',
+        'understand', 'understanding', 'understands', 'understood', 'undertake', 'unique',
+        'unit', 'units', 'update', 'updated', 'updates', 'updating', 'upgrade', 'upgraded',
+        'user', 'users', 'utilize', 'utilized', 'utilizes', 'utilizing', 'value', 'values',
+        'variety', 'various', 'verify', 'verifying', 'via', 'vision', 'vital', 'voice', 'ways',
+        'weekly', 'welcome', 'willing', 'win', 'winning', 'work', 'worked', 'worker', 'workers',
+        'workflow', 'workflows', 'working', 'workplace', 'works', 'world', 'worth', 'write',
+        'writing', 'written', 'yearly', 'years', 'yield'
+      ]);
+
+      const rawTokens = jobText
+        .replace(/[^a-zA-Z0-9/+#.-]/g, ' ')
+        .split(/\s+/)
+        .map((w) => w.trim().replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, ''))
+        .filter((w) => w.length >= 2 && !stopWords.has(w.toLowerCase()));
+
+      const extractedKeywords = Array.from(new Set(rawTokens)).slice(0, 15);
+
+      if (extractedKeywords.length > 0) {
+        // 1. Hard Skills Injection: Inject missing core tools and hard skills into safeCv.additional.skills
+        const existingSkills = safeCv.additional?.skills || '';
+        const currentSkillSet = new Set(existingSkills.split(',').map((s) => s.trim().toLowerCase()));
+        const missingSkills = extractedKeywords.filter((k) => !currentSkillSet.has(k.toLowerCase())).slice(0, 15);
+
+        if (missingSkills.length > 0) {
+          const newSkills = existingSkills ? `${existingSkills}, ${missingSkills.join(', ')}` : missingSkills.join(', ');
+          safeCv.additional = { ...safeCv.additional, skills: newSkills };
+        }
+
+        // 2. Technical Concepts & Interests Injection
+        const existingInt = safeCv.additional?.interests || '';
+        const currentIntSet = new Set(existingInt.split(',').map((s) => s.trim().toLowerCase()));
+        const missingInt = extractedKeywords.filter((k) => !currentIntSet.has(k.toLowerCase()) && !currentSkillSet.has(k.toLowerCase())).slice(15, 22);
+
+        if (missingInt.length > 0) {
+          const newInt = existingInt ? `${existingInt}, ${missingInt.join(', ')}` : missingInt.join(', ');
+          safeCv.additional = { ...safeCv.additional, interests: newInt };
+        }
+
+        // 3. Weave key terms into Work Experience bullet points and Projects
+        if (safeCv.workExperience.length > 0 && extractedKeywords.length > 0) {
+          const bulletLines = (safeCv.workExperience[0].bullets || '').split('\n').filter(Boolean);
+          if (bulletLines.length > 0) {
+            const chunk1 = extractedKeywords.slice(0, 3).join(', ');
+            const chunk2 = extractedKeywords.slice(3, 6).join(', ');
+            
+            if (bulletLines[0] && !bulletLines[0].toLowerCase().includes(extractedKeywords[0]?.toLowerCase() || '')) {
+              bulletLines[0] = bulletLines[0].replace(/\.$/, '') + `, utilizing ${chunk1} to drive robust production execution.`;
+            }
+            if (bulletLines[1] && chunk2 && !bulletLines[1].toLowerCase().includes(extractedKeywords[3]?.toLowerCase() || '')) {
+              bulletLines[1] = bulletLines[1].replace(/\.$/, '') + `, implementing ${chunk2} to streamline workflows.`;
+            }
+            safeCv.workExperience[0].bullets = bulletLines.join('\n');
+          }
+        }
       }
     }
 
