@@ -949,7 +949,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             <div className="hidden sm:block h-4 w-px bg-slate-200" />
 
             {/* Undo / Redo */}
-            <div className="hidden sm:flex items-center gap-0.5">
+            <div className="hidden 2xl:flex items-center gap-0.5">
               <button
                 title="Undo"
                 onMouseDown={(e) => { e.preventDefault(); handleUndo(); }}
@@ -1000,7 +1000,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
 
             {/* ATS Score Badge in Toolbar (Desktop only) */}
-            <div className="relative shrink-0 hidden md:block">
+            <div className="relative shrink-0 hidden xl:block">
               <button
                 onClick={handleCheckAts}
                 disabled={atsLoading}
@@ -1042,7 +1042,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             </div>
 
             {/* Target Job Match Button (Desktop only) */}
-            <div className="relative shrink-0 hidden md:block">
+            <div className="relative shrink-0 hidden xl:block">
               <button
                 onClick={() => setTargetJobModalOpen(!targetJobModalOpen)}
                 className={`h-7 px-2 sm:px-2.5 rounded-full text-[11px] font-bold transition-all shadow-2xs flex items-center justify-center gap-1 cursor-pointer border ${
