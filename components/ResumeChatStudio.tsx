@@ -46,6 +46,13 @@ interface Msg {
   content: string;
 }
 
+interface NameStatus {
+  fullName: string;
+  editsUsed: number;
+  editsRemaining: number;
+  pendingRequest: { id: string; requestedName: string; createdAt: string } | null;
+}
+
 interface ResumeChatStudioProps {
   cv: CvData;
   onChange: (cv: CvData) => void;
@@ -57,6 +64,9 @@ interface ResumeChatStudioProps {
    *  the AI automatically once, on mount. */
   initialPrompt?: string;
   setMobileHeaderRight?: (node: React.ReactNode) => void;
+  /** Full name from Clerk registration — auto-seeds the locked name on a
+   *  user's very first visit (no need to type it manually). */
+  clerkName?: string;
 }
 
 export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
@@ -68,6 +78,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   onRequireAuth,
   initialPrompt,
   setMobileHeaderRight,
+  clerkName,
 }) => {
   // Same accent stripe the template's grid card and preview popup show —
   // derived from fieldLabel (the loaded template's name), so it stays
@@ -189,6 +200,113 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       external({ ...cv, additional: { ...cv.additional, bulletStyle: style } });
     }
   };
+
+  // ─── Name Lock ───────────────────────────────────────────────────────────
+  // Mirrors the LMS CV Builder's name-lock pattern. On every user's first
+  // visit the locked name is auto-seeded from their Clerk registration name
+  // (passed in as `clerkName`). After that they get MAX_FREE_RESUME_NAME_EDITS
+  // self-service changes; beyond that any change needs admin approval.
+  const [nameStatus, setNameStatus] = useState<NameStatus | null>(null);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [nameModalInput, setNameModalInput] = useState('');
+  const [nameModalSubmitting, setNameModalSubmitting] = useState(false);
+  // Blocking alert popup after a name-change attempt (applied / blocked /
+  // pending) — matches LMS's `nameAlert` pattern.
+  const [nameAlert, setNameAlert] = useState<{
+    title: string;
+    message: string;
+    tone: 'success' | 'warning';
+  } | null>(null);
+
+  // Fetch the user's name-lock status on mount (authenticated only).
+  // If the name has never been set and Clerk gave us their registration name,
+  // auto-seed it immediately (one free edit consumed).
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetch('/api/resumes/name')
+      .then((r) => r.json())
+      .then(async (data: NameStatus) => {
+        setNameStatus(data);
+        // Auto-seed: first-time user has no locked name yet, but we have the
+        // Clerk registration name — apply it silently (counts as 1 free edit).
+        if (!data.fullName && clerkName) {
+          const res = await fetch('/api/resumes/name', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newName: clerkName }),
+          });
+          const result = await res.json();
+          if (result.status === 'applied') {
+            setNameStatus({
+              fullName: result.fullName,
+              editsUsed: result.editsUsed,
+              editsRemaining: result.editsRemaining,
+              pendingRequest: null,
+            });
+            onChange({ ...cv, personalInfo: { ...cv.personalInfo, fullName: result.fullName } });
+          }
+        }
+      })
+      .catch(() => {/* silent — name lock is non-blocking */});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
+
+  // Attempt a name change — mirrors LMS's commitNameChange().
+  const commitNameChange = async (typedName: string) => {
+    const trimmed = typedName.trim();
+    if (!trimmed || nameModalSubmitting) return;
+    setNameModalSubmitting(true);
+    try {
+      const res = await fetch('/api/resumes/name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newName: trimmed }),
+      });
+      const result = await res.json();
+      if (result.status === 'applied') {
+        setNameStatus({
+          fullName: result.fullName,
+          editsUsed: result.editsUsed,
+          editsRemaining: result.editsRemaining,
+          pendingRequest: null,
+        });
+        onChange({ ...cv, personalInfo: { ...cv.personalInfo, fullName: result.fullName } });
+        setShowNameModal(false);
+        setNameAlert({
+          title: 'Name Updated',
+          message:
+            result.editsRemaining > 0
+              ? `Your name has been changed to "${result.fullName}" — ${result.editsRemaining} change${result.editsRemaining === 1 ? '' : 's'} remaining.`
+              : `Your name has been changed to "${result.fullName}" — that was your last free change. Any further change will need admin approval.`,
+          tone: 'success',
+        });
+      } else if (result.status === 'pendingCreated') {
+        setNameStatus((prev) =>
+          prev ? { ...prev, pendingRequest: { id: '', requestedName: trimmed, createdAt: new Date().toISOString() } } : prev
+        );
+        setShowNameModal(false);
+        setNameAlert({
+          title: 'Approval Required',
+          message: `You've used all your free name changes. Your request to change your name to "${trimmed}" has been sent to an admin for approval.`,
+          tone: 'warning',
+        });
+      } else if (result.status === 'pending') {
+        setShowNameModal(false);
+        setNameAlert({
+          title: 'Request Already Pending',
+          message: `You already have a pending request to change your name to "${result.requestedName}" — please wait for admin approval.`,
+          tone: 'warning',
+        });
+      } else if (result.status === 'unchanged') {
+        setShowNameModal(false);
+      }
+    } catch {
+      setNameAlert({ title: 'Error', message: 'Failed to update name — check your connection.', tone: 'warning' });
+    } finally {
+      setNameModalSubmitting(false);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Saved resumes — persisted per account (Postgres, via /api/resumes),
   // shown in the "Resume" dropdown at the top of the canvas.
@@ -612,6 +730,12 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       } else {
         if (data.cv) external(data.cv as CvData);
         setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Done.' }]);
+        // If the AI updated the name, it consumed an edit. Re-fetch the lock status
+        // so the toolbar badge stays in sync automatically.
+        fetch('/api/resumes/name')
+          .then(r => r.json())
+          .then(data => setNameStatus(data))
+          .catch(() => {});
       }
     } catch {
       setMessages((m) => [...m, { role: 'assistant', content: '⚠️ Something went wrong. Please try again.' }]);
@@ -999,6 +1123,33 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           {/* Right Controls Group */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
 
+            {/* Change Name Button — only shown for logged-in users */}
+            {isLoggedIn && nameStatus && (
+              <button
+                onClick={() => {
+                  setNameModalInput(nameStatus.fullName || '');
+                  setShowNameModal(true);
+                }}
+                title="Change your locked resume name"
+                className={`h-7 px-1.5 sm:px-2 rounded-lg text-[11px] sm:text-xs font-bold transition-colors border flex items-center gap-1 leading-none cursor-pointer shrink-0 ${
+                  nameStatus.pendingRequest
+                    ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                    : nameStatus.editsRemaining === 0
+                    ? 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200'
+                    : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                }`}
+              >
+                <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                <span className="leading-none hidden sm:inline">
+                  {nameStatus.pendingRequest
+                    ? 'Pending…'
+                    : nameStatus.editsRemaining > 0
+                    ? `Name (${nameStatus.editsRemaining} left)`
+                    : 'Name'}
+                </span>
+              </button>
+            )}
+
             {/* ATS Score Badge in Toolbar (Desktop only) */}
             <div className="relative shrink-0 hidden xl:block">
               <button
@@ -1224,6 +1375,91 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           ) : undefined
         }
       />
+
+      {/* ── Name-Lock: Change Name Modal ─────────────────────────────── */}
+      {showNameModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowNameModal(false)}>
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 border border-slate-200" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+                <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-slate-900">Change Your Name</h3>
+                {nameStatus && nameStatus.editsRemaining > 0 ? (
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    This name appears on your resume. You have{' '}
+                    <span className="font-bold text-blue-600">{nameStatus.editsRemaining} free change{nameStatus.editsRemaining === 1 ? '' : 's'}</span>{' '}
+                    remaining.
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-600 mt-0.5 font-medium">
+                    You've used all free changes. This request will go to an admin for approval.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Current name hint */}
+            {nameStatus?.fullName && (
+              <div className="mb-3 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200">
+                <p className="text-[11px] text-slate-400 uppercase font-semibold tracking-wide mb-0.5">Current name</p>
+                <p className="text-sm font-semibold text-slate-700">{nameStatus.fullName}</p>
+              </div>
+            )}
+
+            {/* Input */}
+            <input
+              autoFocus
+              type="text"
+              value={nameModalInput}
+              onChange={(e) => setNameModalInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') commitNameChange(nameModalInput); if (e.key === 'Escape') setShowNameModal(false); }}
+              placeholder="Enter your full name…"
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 mb-4"
+            />
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowNameModal(false)}
+                className="flex-1 h-9 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+              >Cancel</button>
+              <button
+                onClick={() => commitNameChange(nameModalInput)}
+                disabled={nameModalSubmitting || !nameModalInput.trim()}
+                className="flex-1 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                {nameModalSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                {nameStatus && nameStatus.editsRemaining > 0 ? 'Update Name' : 'Submit Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Name-Lock: Alert / Notification Dialog ────────────────────── */}
+      {nameAlert && (
+        <div className="fixed inset-0 z-[310] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 border border-slate-200">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-4 mx-auto ${
+              nameAlert.tone === 'success' ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'
+            }`}>
+              {nameAlert.tone === 'success'
+                ? <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                : <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+              }
+            </div>
+            <h3 className="text-sm font-bold text-slate-900 text-center mb-2">{nameAlert.title}</h3>
+            <p className="text-xs text-slate-600 text-center mb-5 leading-relaxed">{nameAlert.message}</p>
+            <button
+              onClick={() => setNameAlert(null)}
+              className="w-full h-9 rounded-xl bg-slate-900 hover:bg-slate-700 text-white text-sm font-bold transition-colors cursor-pointer"
+            >Got it</button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

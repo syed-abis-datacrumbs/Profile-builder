@@ -14,9 +14,10 @@ import { CvPreview } from './CvPreview';
 // resume (header + first section), not the whole page squeezed in.
 const DESIGN_WIDTH = 794;
 
-export const ResumeTemplateThumbnail: React.FC<{ sample: LmsResumeSample; accentColor: string }> = ({
+export const ResumeTemplateThumbnail: React.FC<{ sample: LmsResumeSample; accentColor: string; clerkFullName?: string }> = ({
   sample,
   accentColor,
+  clerkFullName,
 }) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
@@ -36,6 +37,9 @@ export const ResumeTemplateThumbnail: React.FC<{ sample: LmsResumeSample; accent
   }, [measure]);
 
   const cv = cvMarkdownToHtml(sample.data as CvData);
+  if (clerkFullName && cv.personalInfo) {
+    cv.personalInfo.fullName = clerkFullName;
+  }
 
   return (
     <div

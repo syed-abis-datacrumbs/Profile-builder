@@ -96,6 +96,13 @@ export default function Home() {
   const { user } = useUser();
   const userEmail = user?.primaryEmailAddress?.emailAddress || undefined;
   const firstName = user?.firstName || user?.fullName?.split(' ')[0] || userEmail?.split('@')[0] || '';
+  // Full name from Clerk registration — used by ResumeChatStudio to seed the
+  // locked name on a user's very first visit (mirrors LMS pattern).
+  const clerkFullName = (
+    user?.fullName ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
+    ''
+  ).trim();
   const isLoggedIn = !!user;
   const isAuthorized = isLoggedIn && BUILDER_ACCESS_EMAILS.has(userEmail || '');
   const [assistantPrompt, setAssistantPrompt] = useState('');
@@ -317,6 +324,7 @@ export default function Home() {
                           onRequireAuth={() => setIsAuthOpen(true)}
                           initialPrompt={resumeInitialPrompt}
                           setMobileHeaderRight={setMobileHeaderRight}
+                          clerkName={clerkFullName || undefined}
                         />
                       ) : resumeMode === 'editor' ? (
                         <div className="space-y-4">
@@ -342,6 +350,7 @@ export default function Home() {
                         <>
                           <ResumeLandingView
                             userName={firstName}
+                            clerkFullName={clerkFullName || undefined}
                             onSelectField={loadResumeField}
                             onSelectTemplate={(sample) => {
                               setResumePreviewSample(sample);
@@ -640,6 +649,7 @@ export default function Home() {
       {resumeMode === 'preview' && resumePreviewSample && (
         <ResumeTemplatePreview
           sample={resumePreviewSample}
+          clerkFullName={clerkFullName || undefined}
           onUse={() => {
             // Doesn't jump into the Studio directly — closes back to the
             // landing page with this attached, so the user can add an

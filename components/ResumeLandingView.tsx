@@ -22,6 +22,7 @@ import { ResumeTemplateThumbnail } from './ResumeTemplateThumbnail';
 
 interface ResumeLandingViewProps {
   userName?: string;
+  clerkFullName?: string;
   /** Loads the chosen field's ready-made resume directly. */
   onSelectField: (sample: LmsResumeSample) => void;
   /** Triggers template preview popup modal before editing. */
@@ -37,6 +38,7 @@ interface ResumeLandingViewProps {
 
 export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
   userName = "",
+  clerkFullName = "",
   onSelectField,
   onSelectTemplate,
   onUsePrompt,
@@ -267,7 +269,7 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
               >
                 {/* Real resume preview, scaled down to card size */}
                 <div className="rounded-xl overflow-hidden border border-slate-200 group-hover:scale-[1.01] transition-transform">
-                  <ResumeTemplateThumbnail sample={sample} accentColor={accent} />
+                  <ResumeTemplateThumbnail sample={sample} accentColor={accent} clerkFullName={clerkFullName} />
                 </div>
 
                 <div className="flex items-center justify-between px-1">

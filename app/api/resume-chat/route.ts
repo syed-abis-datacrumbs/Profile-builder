@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import type { CvData } from '../../../lib/cvTypes';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
+import { MAX_FREE_RESUME_NAME_EDITS } from '../../../lib/resumeNameLock';
 
 export const runtime = 'nodejs';
 
@@ -292,7 +293,58 @@ export async function POST(request: Request) {
       additional: nextCv.additional ?? cv.additional ?? defaultAdditional,
     };
 
-    const reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.';
+    let reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.';
+
+    // ─── Enforce Name Lock on AI-generated Name Changes ────────────────────
+    const currentName = cv.personalInfo?.fullName?.trim() || '';
+    const newName = safeCv.personalInfo?.fullName?.trim() || '';
+
+    if (user?.id && newName && currentName && newName !== currentName) {
+      const [profile, pending] = await Promise.all([
+        db.resumeProfile.findUnique({ where: { userId: user.id } }),
+        db.resumeNameChangeRequest.findFirst({
+          where: { userId: user.id, status: 'PENDING' },
+        }),
+      ]);
+
+      const editsUsed = profile?.fullNameEditsUsed ?? 0;
+
+      if (pending) {
+        // Revert name, already a request pending
+        safeCv.personalInfo.fullName = currentName;
+        reply += `\n\n(Note: You already have a pending name change request for "${pending.requestedName}". Your name remains "${currentName}" until an admin approves it.)`;
+      } else if (editsUsed < MAX_FREE_RESUME_NAME_EDITS) {
+        // Apply immediately
+        const newEditsUsed = editsUsed + 1;
+        const remaining = MAX_FREE_RESUME_NAME_EDITS - newEditsUsed;
+
+        // Update all existing saves
+        const allSaves = await db.resumeSave.findMany({ where: { userId: user.id }, select: { id: true, data: true } });
+        await Promise.all(
+          allSaves.map((s) => {
+            const d = s.data as any;
+            const updated = { ...d, personalInfo: { ...d.personalInfo, fullName: newName } };
+            return db.resumeSave.update({ where: { id: s.id }, data: { data: updated } });
+          })
+        );
+        // Upsert counter
+        await db.resumeProfile.upsert({
+          where: { userId: user.id },
+          create: { userId: user.id, fullNameEditsUsed: newEditsUsed },
+          update: { fullNameEditsUsed: newEditsUsed },
+        });
+
+        reply += `\n\n(Note: Your name has been changed to "${newName}". You have ${remaining} free name change${remaining === 1 ? '' : 's'} remaining.)`;
+      } else {
+        // Locked — revert name in cv, create request
+        safeCv.personalInfo.fullName = currentName;
+        await db.resumeNameChangeRequest.create({
+          data: { userId: user.id, currentName, requestedName: newName },
+        });
+        reply += `\n\n(Note: You've used all your free name changes. A request to change your name to "${newName}" has been sent to an admin for approval. Until approved, your name remains "${currentName}".)`;
+      }
+    }
+    // ───────────────────────────────────────────────────────────────────────
 
     // Log the turn
     if (sessionId !== 'unknown') {

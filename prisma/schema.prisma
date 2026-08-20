@@ -162,3 +162,38 @@ model ProfileBuilderChatLog {
   @@index([userId])
   @@map("profile_builder_chat_logs")
 }
+
+// Tracks how many times a user has self-service-changed their resume name
+// (personalInfo.fullName). Once fullNameEditsUsed >= MAX_FREE_RESUME_NAME_EDITS
+// any further change creates a ResumeNameChangeRequest instead — mirrors
+// LMS's CvProfile.fullNameEditsUsed in cv-actions.ts.
+model ResumeProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  fullNameEditsUsed Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  nameChangeRequests ResumeNameChangeRequest[]
+
+  @@map("profile_builder_resume_profiles")
+}
+
+// A student's request to change their locked resume name after using up all
+// free self-service edits — requires admin approval. Only one PENDING request
+// per user is allowed at a time. Mirrors LMS's CvNameChangeRequest model.
+model ResumeNameChangeRequest {
+  id            String    @id @default(cuid())
+  userId        String
+  currentName   String
+  requestedName String
+  status        String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  createdAt     DateTime  @default(now())
+  decidedAt     DateTime?
+
+  profile ResumeProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("profile_builder_resume_name_requests")
+}

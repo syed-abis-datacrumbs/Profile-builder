@@ -11,6 +11,7 @@ const DESIGN_WIDTH = 794;
 
 interface ResumeTemplatePreviewProps {
   sample: LmsResumeSample;
+  clerkFullName?: string;
   onUse: () => void;
   onClose: () => void;
 }
@@ -27,8 +28,11 @@ interface ResumeTemplatePreviewProps {
 // the visually-shrunk one. The spacer div below is explicitly sized to
 // naturalHeight * scale — the real visual height — so the scroll area
 // always matches what's actually on screen.
-export const ResumeTemplatePreview: React.FC<ResumeTemplatePreviewProps> = ({ sample, onUse, onClose }) => {
+export const ResumeTemplatePreview: React.FC<ResumeTemplatePreviewProps> = ({ sample, clerkFullName, onUse, onClose }) => {
   const cv = cvMarkdownToHtml(sample.data as CvData);
+  if (clerkFullName && cv.personalInfo) {
+    cv.personalInfo.fullName = clerkFullName;
+  }
   const accent = getResumeAccentColor(sample);
 
   const panelRef = useRef<HTMLDivElement>(null);
