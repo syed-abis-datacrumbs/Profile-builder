@@ -394,18 +394,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const handleCheckAts = async (autoTriggered = false, overrideJob?: string) => {
     if (!isLoggedIn) { onRequireAuth(); return; }
     const activeJob = overrideJob !== undefined ? overrideJob : targetJob;
-    // Always re-score — never use cache if job description or cv changed
-    const cvChanged = atsScoredCvRef.current !== cv;
-    const jobChanged = atsScoredJobRef.current !== activeJob;
-    if (!autoTriggered && atsScore !== null && !cvChanged && !jobChanged) {
-      // Nothing changed — just toggle the popover open/closed
-      setAtsPopoverOpen((o) => !o);
-      return;
-    }
-    // Something changed (cv or job description) — always fire fresh API call
     setAtsLoading(true);
     setAtsError(null);
-    setAtsPopoverOpen(true);
     try {
       const res = await fetch('/api/ats-score', {
         method: 'POST',
@@ -423,15 +413,14 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       atsScoredCvRef.current = cv;
       atsScoredJobRef.current = activeJob;
 
-      // Auto-recommendation: If score < 95%, automatically post analysis & recommendations in chat!
-      if (scoreNum < 95 && Array.isArray(json.breakdown) && json.breakdown.length > 0) {
+      // Post latest analysis & recommended actions directly to chat
+      if (Array.isArray(json.breakdown) && json.breakdown.length > 0) {
         const breakdownItems = (json.breakdown as string[]).map((item) => `• ${item}`).join('\n');
-        const recMsg = `🎯 **Target Job ATS Match Score: ${scoreNum}%** (Target: 95%+)\n\n**Analysis & Recommended Actions:**\n${breakdownItems}\n\n💡 *Ask me to optimize your resume or click "Auto-Inject ATS Keywords" below to reach 95%+ match!*`;
-        setMessages((prev) => {
-          const lastMsg = prev[prev.length - 1];
-          if (lastMsg?.content?.includes('Target Job ATS Match Score')) return prev;
-          return [...prev, { role: 'assistant', content: recMsg }];
-        });
+        const recMsg = scoreNum >= 95
+          ? `🎯 **Target Job ATS Match Score: ${scoreNum}%** (Target: 95%+)\n\n**Analysis & Breakdown:**\n${breakdownItems}\n\n✨ *Outstanding! Your resume achieves a 95%+ ATS compatibility score.*`
+          : `🎯 **Target Job ATS Match Score: ${scoreNum}%** (Target: 95%+)\n\n**Analysis & Recommended Actions:**\n${breakdownItems}\n\n💡 *Ask me to optimize your resume or click "Auto-Inject ATS Keywords" below to reach 95%+ match!*`;
+
+        setMessages((prev) => [...prev, { role: 'assistant', content: recMsg }]);
       }
     } catch {
       setAtsError('Failed to calculate score — check your connection.');

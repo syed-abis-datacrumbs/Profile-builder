@@ -262,17 +262,63 @@ export async function POST(request: Request) {
 
     // ─────────────────────────────────────────────────────────────────────────
     // 4. Default Case: If no Target Job Description provided
+    // Evaluate based on Domain Skills Density, Bullet Quantified Impact & Structure
     // ─────────────────────────────────────────────────────────────────────────
     if (!jobDescription || jobDescription.trim().length === 0) {
-      const defaultScore = structureScore + qualityScore + 25 + 20; // 25 structure + 15 quality + 25 baseline exp + 20 baseline keywords
-      return Response.json({
-        score: Math.min(88, defaultScore),
-        breakdown: [
-          `Structure & Completeness: ${structureScore}/25 pts`,
-          `Resume Quality & Readability: ${qualityScore}/15 pts`,
-          'Paste a Target Job Description to evaluate Weighted Keyword Coverage & Experience Relevance.',
-        ],
-      });
+      // 1. Technical Skills Density (0–35 pts)
+      const skillList = (cv.additional?.skills || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length >= 2 && !STOP_WORDS.has(s.toLowerCase()));
+
+      let skillDensityScore = 0;
+      if (skillList.length >= 10) skillDensityScore = 35;
+      else if (skillList.length >= 7) skillDensityScore = 28;
+      else if (skillList.length >= 4) skillDensityScore = 20;
+      else if (skillList.length >= 1) skillDensityScore = 12;
+      else skillDensityScore = 5;
+
+      // 2. Experience Impact & Quantified Metrics (0–25 pts)
+      let expImpactScore = 0;
+      const totalBullets = (cv.workExperience || []).flatMap((w) => (w.bullets || '').split('\n').filter(Boolean));
+      const quantifiedBullets = totalBullets.filter((b) => /\d+|%/i.test(b));
+
+      if (totalBullets.length >= 3 && quantifiedBullets.length >= 3) expImpactScore += 12;
+      else if (totalBullets.length >= 2 && quantifiedBullets.length >= 1) expImpactScore += 8;
+      else if (totalBullets.length >= 1) expImpactScore += 5;
+
+      // Projects impact
+      const totalProjects = (cv.projects || []).filter((p) => (p.content || '').trim().length > 20);
+      if (totalProjects.length >= 3) expImpactScore += 8;
+      else if (totalProjects.length >= 2) expImpactScore += 6;
+      else if (totalProjects.length >= 1) expImpactScore += 3;
+
+      // Action verbs check
+      const hasStrongVerbs = totalBullets.some((b) => /^(led|conducted|developed|created|analyzed|engineered|managed|built|designed|implemented|optimized|streamlined|researched|oversaw)/i.test(b.trim().replace(/^[-•*]\s*/, '')));
+      if (hasStrongVerbs) expImpactScore += 5;
+      else if (totalBullets.length > 0) expImpactScore += 2;
+
+      expImpactScore = Math.min(25, expImpactScore);
+
+      const rawDefaultScore = structureScore + skillDensityScore + expImpactScore + qualityScore;
+      const finalDefaultScore = Math.min(98, Math.max(30, rawDefaultScore));
+
+      const breakdown: string[] = [
+        `ATS Score: ${finalDefaultScore}/100 • General Field Compatibility`,
+        `Structure: ${structureScore}/25 • Skills Density: ${skillDensityScore}/35 • Impact & Metrics: ${expImpactScore}/25 • Quality: ${qualityScore}/15`,
+      ];
+
+      if (finalDefaultScore >= 95) {
+        breakdown.push('Excellent! All core sections, skills density, and quantified metrics are thoroughly optimized.');
+      } else if (skillList.length < 8) {
+        breakdown.push('Consider adding 3–5 more technical skills/tools to increase skill density score.');
+      } else if (quantifiedBullets.length < 3) {
+        breakdown.push('Enhance bullet points with bolded percentage metrics (e.g. 25% efficiency increase).');
+      } else {
+        breakdown.push('Add a Target Job Description to evaluate exact ATS keyword match.');
+      }
+
+      return Response.json({ score: finalDefaultScore, breakdown });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
