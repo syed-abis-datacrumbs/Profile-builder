@@ -33,5 +33,23 @@ export async function GET() {
   if (PAYMENT_TESTING_MODE) return Response.json({ unlocked: false, aiMessagesUsed });
 
   const unlock = await db.paymentUnlock.findUnique({ where: { userId } });
-  return Response.json({ unlocked: !!unlock, aiMessagesUsed });
+  if (unlock) {
+    return Response.json({ unlocked: true, aiMessagesUsed });
+  }
+
+  // Double check if user has ANY approved PaymentProof
+  const approvedProof = await db.paymentProof.findFirst({
+    where: { userId, status: 'APPROVED' },
+  });
+
+  if (approvedProof) {
+    await db.paymentUnlock.upsert({
+      where: { userId },
+      update: {},
+      create: { userId },
+    });
+    return Response.json({ unlocked: true, aiMessagesUsed });
+  }
+
+  return Response.json({ unlocked: false, aiMessagesUsed });
 }

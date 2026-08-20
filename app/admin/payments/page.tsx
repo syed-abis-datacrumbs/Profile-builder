@@ -6,6 +6,7 @@ import { CheckCircle, XCircle, Clock, Loader2, Image as ImageIcon, CreditCard } 
 type Proof = {
   id: string;
   userId: string;
+  userEmail?: string;
   imageUrl: string;
   status: string;
   extractedTitle: string | null;
@@ -38,7 +39,7 @@ export default function PaymentsPage() {
 
   useEffect(() => { load(activeTab); }, [activeTab]);
 
-  const action = async (id: string, act: 'approve' | 'reject') => {
+  const action = async (id: string, act: 'approve' | 'reject' | 'pending') => {
     setActionId(id);
     await fetch(`/api/admin/payments/${id}`, {
       method: 'PATCH',
@@ -86,7 +87,7 @@ export default function PaymentsPage() {
       ) : (
         <div className="space-y-3">
           {proofs.map((p) => (
-            <div key={p.id} className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 flex items-start gap-4">
+            <div key={p.id} className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 flex items-start gap-4 flex-col sm:flex-row">
               {/* Screenshot Thumbnail */}
               <button
                 onClick={() => setPreview(p)}
@@ -98,8 +99,13 @@ export default function PaymentsPage() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-white font-mono text-xs bg-slate-700 px-2 py-0.5 rounded">{p.userId.slice(0, 20)}…</span>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  <span className="text-white font-medium text-xs bg-slate-700/80 border border-slate-600/60 px-2.5 py-1 rounded-md flex items-center gap-1.5" title={`User ID: ${p.userId}`}>
+                    <span className="font-semibold text-slate-100">{p.userEmail || p.userId}</span>
+                    {p.userEmail && p.userEmail !== p.userId && (
+                      <span className="text-[10px] text-slate-400 font-mono">({p.userId.slice(0, 10)}…)</span>
+                    )}
+                  </span>
+                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
                     p.status === 'APPROVED' ? 'bg-emerald-500/15 text-emerald-400'
                     : p.status === 'REJECTED' ? 'bg-red-500/15 text-red-400'
                     : 'bg-amber-500/15 text-amber-400'
@@ -123,8 +129,8 @@ export default function PaymentsPage() {
               </div>
 
               {/* Actions */}
-              {p.status === 'PENDING' && (
-                <div className="flex gap-2 shrink-0">
+              <div className="flex gap-2 shrink-0 flex-wrap self-end sm:self-center">
+                {p.status !== 'APPROVED' && (
                   <button
                     onClick={() => action(p.id, 'approve')}
                     disabled={actionId === p.id}
@@ -133,16 +139,28 @@ export default function PaymentsPage() {
                     {actionId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
                     Approve
                   </button>
+                )}
+                {p.status !== 'REJECTED' && (
                   <button
                     onClick={() => action(p.id, 'reject')}
                     disabled={actionId === p.id}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/80 hover:bg-red-500 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
                   >
-                    <XCircle className="w-3.5 h-3.5" />
+                    {actionId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
                     Reject
                   </button>
-                </div>
-              )}
+                )}
+                {p.status !== 'PENDING' && (
+                  <button
+                    onClick={() => action(p.id, 'pending')}
+                    disabled={actionId === p.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {actionId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
+                    Mark Pending
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -152,9 +170,9 @@ export default function PaymentsPage() {
       {preview && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setPreview(null)}>
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
-            <img src={preview.imageUrl} alt="Payment Proof" className="w-full rounded-lg" />
-            {preview.status === 'PENDING' && (
-              <div className="flex gap-3 mt-4">
+            <img src={preview.imageUrl} alt="Payment Proof" className="w-full rounded-lg max-h-[65vh] object-contain bg-black" />
+            <div className="flex gap-2 mt-4 flex-wrap">
+              {preview.status !== 'APPROVED' && (
                 <button
                   onClick={() => action(preview.id, 'approve')}
                   disabled={actionId === preview.id}
@@ -163,17 +181,29 @@ export default function PaymentsPage() {
                   {actionId === preview.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                   Approve
                 </button>
+              )}
+              {preview.status !== 'REJECTED' && (
                 <button
                   onClick={() => action(preview.id, 'reject')}
                   disabled={actionId === preview.id}
                   className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg text-sm flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <XCircle className="w-4 h-4" />
+                  {actionId === preview.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
                   Reject
                 </button>
-              </div>
-            )}
-            <button onClick={() => setPreview(null)} className="w-full mt-2 py-2 text-slate-400 hover:text-white text-sm transition-colors">Close</button>
+              )}
+              {preview.status !== 'PENDING' && (
+                <button
+                  onClick={() => action(preview.id, 'pending')}
+                  disabled={actionId === preview.id}
+                  className="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-lg text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {actionId === preview.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
+                  Mark Pending
+                </button>
+              )}
+            </div>
+            <button onClick={() => setPreview(null)} className="w-full mt-2 py-2 text-slate-400 hover:text-white text-sm transition-colors font-medium">Close</button>
           </div>
         </div>
       )}

@@ -101,12 +101,24 @@ export default function Home() {
   const [assistantPrompt, setAssistantPrompt] = useState('');
   
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
-  useEffect(() => {
+  const checkUnlockStatus = () => {
     fetch('/api/payment/status')
       .then((r) => r.json())
       .then((d: { unlocked: boolean }) => setUnlocked(d.unlocked))
       .catch(() => setUnlocked(false));
+  };
+
+  useEffect(() => {
+    checkUnlockStatus();
+    window.addEventListener('focus', checkUnlockStatus);
+    return () => window.removeEventListener('focus', checkUnlockStatus);
   }, []);
+
+  useEffect(() => {
+    if (!isPaymentModalOpen) {
+      checkUnlockStatus();
+    }
+  }, [isPaymentModalOpen]);
 
   // Listen to scrolling on mainContentRef to show/hide Scroll to Top button
   useEffect(() => {
