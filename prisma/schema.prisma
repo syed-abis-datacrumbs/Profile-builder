@@ -198,3 +198,17 @@ model ResumeNameChangeRequest {
   @@index([status])
   @@map("profile_builder_resume_name_requests")
 }
+
+// User-submitted issues or bug reports from the Resume Builder
+model ProfileBuilderIssue {
+  id        String   @id @default(cuid())
+  userId    String?
+  text      String
+  imageUrl  String?
+  status    String   @default("OPEN") // OPEN, RESOLVED
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([status])
+  @@map("profile_builder_issues")
+}
