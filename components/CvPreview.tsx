@@ -370,44 +370,77 @@ function CvPreviewBase({
             {editable ? <RichText html={p.phone} placeholder="Phone" onCommit={(v) => setPersonal({ phone: v })} /> : <Html html={p.phone} />}
           </div>
           <div className="flex flex-nowrap justify-center gap-x-3 whitespace-nowrap">
-            {(editable || p.linkedin) && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  openLinkModal('linkedin', p.linkedinLabel || 'Linkedin', p.linkedin || '');
-                }}
-                className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
-                title="Click to add or change LinkedIn link"
-              >
-                {p.linkedinLabel || 'Linkedin'}
-              </button>
+            {(editable ? p.linkedin !== undefined : !!p.linkedin) && (
+              <span className="inline-flex items-center group relative">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openLinkModal('linkedin', p.linkedinLabel || 'Linkedin', p.linkedin || '');
+                  }}
+                  className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                  title="Click to add or change LinkedIn link"
+                >
+                  {p.linkedinLabel || 'Linkedin'}
+                </button>
+                {editable && (
+                  <button
+                    onClick={() => setPersonal({ linkedin: undefined, linkedinLabel: undefined })}
+                    className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
+                    title="Remove"
+                  >
+                    <span className="text-[10px] font-bold leading-none mb-[1px]">✕</span>
+                  </button>
+                )}
+              </span>
             )}
-            {(editable || p.github) && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  openLinkModal('github', p.githubLabel || 'GitHub', p.github || '');
-                }}
-                className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
-                title="Click to add or change GitHub link"
-              >
-                {p.githubLabel || 'GitHub'}
-              </button>
+            {(editable ? p.github !== undefined : !!p.github) && (
+              <span className="inline-flex items-center group relative">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openLinkModal('github', p.githubLabel || 'GitHub', p.github || '');
+                  }}
+                  className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                  title="Click to add or change GitHub link"
+                >
+                  {p.githubLabel || 'GitHub'}
+                </button>
+                {editable && (
+                  <button
+                    onClick={() => setPersonal({ github: undefined, githubLabel: undefined })}
+                    className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
+                    title="Remove"
+                  >
+                    <span className="text-[10px] font-bold leading-none mb-[1px]">✕</span>
+                  </button>
+                )}
+              </span>
             )}
-            {(editable || p.kaggle) && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  openLinkModal('kaggle', p.kaggleLabel || 'Kaggle', p.kaggle || '');
-                }}
-                className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
-                title="Click to add or change Kaggle link"
-              >
-                {p.kaggleLabel || 'Kaggle'}
-              </button>
+            {(editable ? p.kaggle !== undefined : !!p.kaggle) && (
+              <span className="inline-flex items-center group relative">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openLinkModal('kaggle', p.kaggleLabel || 'Kaggle', p.kaggle || '');
+                  }}
+                  className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                  title="Click to add or change Kaggle link"
+                >
+                  {p.kaggleLabel || 'Kaggle'}
+                </button>
+                {editable && (
+                  <button
+                    onClick={() => setPersonal({ kaggle: undefined, kaggleLabel: undefined })}
+                    className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
+                    title="Remove"
+                  >
+                    <span className="text-[10px] font-bold leading-none mb-[1px]">✕</span>
+                  </button>
+                )}
+              </span>
             )}
           </div>
           <div className="text-right text-blue-700 underline whitespace-nowrap">
