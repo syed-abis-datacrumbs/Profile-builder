@@ -185,7 +185,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     category: 'web',
     name: 'Software Developer',
     tagline: 'System architecture & team impact',
-    badge: 'Full Stack',
+    badge: 'Software',
     theme: 'radial',
     bannerUrl: 'https://github.blog/wp-content/uploads/2024/01/Productivity-DarkMode-3.png?fit=800%2C200',
     bgClass: 'bg-gradient-to-br from-slate-900 via-slate-950 to-zinc-900',
