@@ -101,6 +101,8 @@ export default function Home() {
   const [assistantPrompt, setAssistantPrompt] = useState('');
   
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  const [showProCelebrationModal, setShowProCelebrationModal] = useState(false);
+
   const checkUnlockStatus = () => {
     fetch('/api/payment/status')
       .then((r) => r.json())
@@ -119,6 +121,29 @@ export default function Home() {
       checkUnlockStatus();
     }
   }, [isPaymentModalOpen]);
+
+  // Trigger celebration modal + confetti ONLY ONCE per user when Pro status is approved
+  useEffect(() => {
+    if (unlocked === true && user?.id) {
+      const storageKey = `has_celebrated_pro_unlock_${user.id}`;
+      const alreadyCelebrated = localStorage.getItem(storageKey);
+
+      if (!alreadyCelebrated) {
+        setShowProCelebrationModal(true);
+        try {
+          confetti({
+            particleCount: 120,
+            spread: 80,
+            origin: { y: 0.5 },
+            colors: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'],
+          });
+        } catch (e) {
+          console.error('[Confetti] Trigger error:', e);
+        }
+        localStorage.setItem(storageKey, 'true');
+      }
+    }
+  }, [unlocked, user?.id]);
 
   // Listen to scrolling on mainContentRef to show/hide Scroll to Top button
   useEffect(() => {
@@ -799,6 +824,61 @@ export default function Home() {
           onClose={() => setIsPaymentModalOpen(false)}
         />
       )}
+
+      {/* Pro Upgrade Celebration Modal (Shown ONCE when admin approves payment) */}
+      <AnimatePresence>
+        {showProCelebrationModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white border border-slate-200 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl relative overflow-hidden"
+            >
+              {/* Background Sparkle Glow */}
+              <div className="absolute -top-24 -left-24 w-48 h-48 bg-gradient-to-br from-blue-400/20 to-emerald-400/20 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-gradient-to-br from-purple-400/20 to-amber-400/20 rounded-full blur-2xl pointer-events-none" />
+
+              {/* Icon Badge */}
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center mx-auto mb-5 shadow-lg shadow-blue-500/25">
+                <Sparkles className="w-8 h-8 animate-pulse" />
+              </div>
+
+              {/* Title & Description */}
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">
+                You're Now Pro Active! 🎉
+              </h2>
+              <p className="text-sm text-slate-600 leading-relaxed mb-6">
+                Your payment screenshot has been verified by the team. All watermarks have been removed and full Pro access is active for your account.
+              </p>
+
+              {/* Feature Highlights */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 mb-6 text-left space-y-2 text-xs font-semibold text-slate-700">
+                <div className="flex items-center gap-2 text-emerald-600">
+                  <span className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-bold">✓</span>
+                  <span>No Watermark on any downloaded resume</span>
+                </div>
+                <div className="flex items-center gap-2 text-emerald-600">
+                  <span className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-bold">✓</span>
+                  <span>Full access to AI Chat Studio & Resume Generator</span>
+                </div>
+                <div className="flex items-center gap-2 text-emerald-600">
+                  <span className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-bold">✓</span>
+                  <span>Unlimited ATS Optimization checks</span>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <button
+                onClick={() => setShowProCelebrationModal(false)}
+                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer"
+              >
+                Start Creating Now
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Scroll to Top Button */}
       <AnimatePresence>

@@ -21,11 +21,17 @@ export async function GET(req: NextRequest) {
   if (uniqueUserIds.length > 0) {
     try {
       const client = await clerkClient();
-      const usersRes = await client.users.getUserList({ userId: uniqueUserIds, limit: 100 });
-      usersRes.data.forEach((u) => {
-        const email = u.primaryEmailAddress?.emailAddress || u.emailAddresses[0]?.emailAddress || u.id;
-        userEmailMap.set(u.id, email);
-      });
+      await Promise.all(
+        uniqueUserIds.map(async (uid) => {
+          try {
+            const u = await client.users.getUser(uid);
+            const email = u.primaryEmailAddress?.emailAddress || u.emailAddresses?.[0]?.emailAddress || uid;
+            userEmailMap.set(uid, email);
+          } catch {
+            // fallback to uid if user not found in Clerk
+          }
+        })
+      );
     } catch (e) {
       console.error('[Admin Payments] Failed to fetch Clerk emails:', e);
     }

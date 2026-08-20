@@ -20,12 +20,12 @@ type Proof = {
   createdAt: string;
 };
 
-const STATUS_TABS = ['PENDING', 'APPROVED', 'REJECTED'];
+const STATUS_TABS = ['APPROVED', 'REJECTED'];
 
 export default function PaymentsPage() {
   const [proofs, setProofs] = useState<Proof[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('PENDING');
+  const [activeTab, setActiveTab] = useState('APPROVED');
   const [actionId, setActionId] = useState<string | null>(null);
   const [preview, setPreview] = useState<Proof | null>(null);
 
@@ -150,6 +150,7 @@ export default function PaymentsPage() {
                     Reject
                   </button>
                 )}
+                {/* Pending button commented out for now:
                 {p.status !== 'PENDING' && (
                   <button
                     onClick={() => action(p.id, 'pending')}
@@ -159,7 +160,7 @@ export default function PaymentsPage() {
                     {actionId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
                     Mark Pending
                   </button>
-                )}
+                )} */}
               </div>
             </div>
           ))}
@@ -192,6 +193,7 @@ export default function PaymentsPage() {
                   Reject
                 </button>
               )}
+              {/* Pending button commented out for now:
               {preview.status !== 'PENDING' && (
                 <button
                   onClick={() => action(preview.id, 'pending')}
@@ -201,7 +203,7 @@ export default function PaymentsPage() {
                   {actionId === preview.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
                   Mark Pending
                 </button>
-              )}
+              )} */}
             </div>
             <button onClick={() => setPreview(null)} className="w-full mt-2 py-2 text-slate-400 hover:text-white text-sm transition-colors font-medium">Close</button>
           </div>
