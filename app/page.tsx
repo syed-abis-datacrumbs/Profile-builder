@@ -41,7 +41,7 @@ import { matchResumeSampleToPrompt } from '../lib/resumeHelpers';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { ResumeChatStudio } from '../components/ResumeChatStudio';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Sparkles, FileText, Download, Award, Terminal, ArrowUp } from 'lucide-react';
+import { ArrowLeft, Sparkles, FileText, Download, Award, Terminal, ArrowUp, Loader2 } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '../components/icons';
 
 export default function Home() {
@@ -93,7 +93,7 @@ export default function Home() {
   const [isAskExpertOpen, setIsAskExpertOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const userEmail = user?.primaryEmailAddress?.emailAddress || undefined;
   const firstName = user?.firstName || user?.fullName?.split(' ')[0] || userEmail?.split('@')[0] || '';
   // Full name from Clerk registration — used by ResumeChatStudio to seed the
@@ -110,18 +110,24 @@ export default function Home() {
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
   const [lastApprovedAt, setLastApprovedAt] = useState<string | null>(null);
   const [showProCelebrationModal, setShowProCelebrationModal] = useState(false);
-  const [lockedResumeName, setLockedResumeName] = useState<string | null>(null);
+  const [lockedResumeName, setLockedResumeName] = useState('');
+  const [hasFetchedName, setHasFetchedName] = useState(false);
 
   useEffect(() => {
+    if (!isLoaded) return;
     if (isLoggedIn) {
+      setHasFetchedName(false);
       fetch('/api/resumes/name')
         .then((r) => r.json())
         .then((data) => {
           if (data.fullName) setLockedResumeName(data.fullName);
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setHasFetchedName(true));
+    } else {
+      setHasFetchedName(true);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isLoaded]);
 
   const displayFullName = lockedResumeName || clerkFullName || undefined;
 
@@ -247,6 +253,14 @@ export default function Home() {
   };
 
   const [mobileHeaderRight, setMobileHeaderRight] = useState<React.ReactNode>(null);
+
+  if (!isLoaded || !hasFetchedName) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA]">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-[#FAFAFA] text-slate-900 font-sans">
