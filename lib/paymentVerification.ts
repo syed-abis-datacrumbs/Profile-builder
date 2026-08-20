@@ -1,4 +1,4 @@
-import sharp from 'sharp';
+import crypto from 'crypto';
 import exifr from 'exifr';
 import OpenAI from 'openai';
 import { distance as levenshteinDistance } from 'fastest-levenshtein';
@@ -17,26 +17,33 @@ const DUPLICATE_LOOKBACK_MONTHS = 6;
  * brightness per row. Ported from LMS's cv-payment-verification.ts.
  */
 export async function computeImageHash(buffer: Buffer): Promise<string> {
-  const { data } = await sharp(buffer)
-    .resize(9, 8, { fit: 'fill' })
-    .grayscale()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
+  try {
+    const sharpModule = await import('sharp');
+    const sharp = sharpModule.default || sharpModule;
+    const { data } = await sharp(buffer)
+      .resize(9, 8, { fit: 'fill' })
+      .grayscale()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
 
-  let bits = '';
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const left = data[row * 9 + col];
-      const right = data[row * 9 + col + 1];
-      bits += left < right ? '1' : '0';
+    let bits = '';
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const left = data[row * 9 + col];
+        const right = data[row * 9 + col + 1];
+        bits += left < right ? '1' : '0';
+      }
     }
-  }
 
-  let hex = '';
-  for (let i = 0; i < bits.length; i += 4) {
-    hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
+    let hex = '';
+    for (let i = 0; i < bits.length; i += 4) {
+      hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
+    }
+    return hex;
+  } catch (err) {
+    console.warn('[computeImageHash] sharp unavailable on runtime platform, using sha256 fallback:', err);
+    return crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 16);
   }
-  return hex;
 }
 
 export function hammingDistance(hashA: string, hashB: string): number {
