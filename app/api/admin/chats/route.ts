@@ -26,27 +26,88 @@ export async function GET(req: NextRequest) {
     where.userId = { in: userIds };
   }
 
-  const grouped = await db.profileBuilderChatLog.groupBy({
-    by: ["sessionId"],
+  // Fetch all sessions to group them in memory
+  const rawSessions = await db.profileBuilderChatLog.groupBy({
+    by: ["sessionId", "userId"],
     where,
     _count: { _all: true },
     _min: { createdAt: true },
     _max: { createdAt: true },
     orderBy: { _max: { createdAt: "desc" } },
-    skip: (page - 1) * PAGE_SIZE,
-    take: PAGE_SIZE,
   });
 
-  const allSessions = await db.profileBuilderChatLog.groupBy({ by: ["sessionId"], where });
-  const total = allSessions.length;
+  const mergedList: any[] = [];
+  const userSessions = new Map<string, typeof rawSessions>();
 
-  if (grouped.length === 0) {
+  for (const s of rawSessions) {
+    if (!s.userId) {
+      // Anonymous users cannot be securely grouped, keep separate
+      mergedList.push({
+        sessionIds: [s.sessionId],
+        userId: null,
+        turnCount: s._count._all,
+        startedAt: s._min.createdAt ?? new Date(),
+        lastAt: s._max.createdAt ?? new Date(),
+      });
+    } else {
+      if (!userSessions.has(s.userId)) userSessions.set(s.userId, []);
+      userSessions.get(s.userId)!.push(s);
+    }
+  }
+
+  // Merge sessions for the same user if they are within 1 hour
+  for (const [userId, sessions] of userSessions.entries()) {
+    // Sessions are already sorted by _max.createdAt DESC
+    let currentGroup: any = null;
+
+    for (const s of sessions) {
+      if (!currentGroup) {
+        currentGroup = {
+          sessionIds: [s.sessionId],
+          userId,
+          turnCount: s._count._all,
+          startedAt: s._min.createdAt ?? new Date(),
+          lastAt: s._max.createdAt ?? new Date(),
+        };
+      } else {
+        const diff = currentGroup.startedAt.getTime() - (s._max.createdAt ?? new Date()).getTime();
+        // If the previous session ended within 1 hour before the next session started
+        if (diff <= 60 * 60 * 1000 && diff >= 0) {
+          currentGroup.sessionIds.push(s.sessionId);
+          currentGroup.turnCount += s._count._all;
+          currentGroup.startedAt = s._min.createdAt ?? new Date();
+        } else {
+          mergedList.push(currentGroup);
+          currentGroup = {
+            sessionIds: [s.sessionId],
+            userId,
+            turnCount: s._count._all,
+            startedAt: s._min.createdAt ?? new Date(),
+            lastAt: s._max.createdAt ?? new Date(),
+          };
+        }
+      }
+    }
+    if (currentGroup) mergedList.push(currentGroup);
+  }
+
+  // Sort all grouped sessions by their latest activity
+  mergedList.sort((a, b) => b.lastAt.getTime() - a.lastAt.getTime());
+
+  const total = mergedList.length;
+
+  if (total === 0) {
     return NextResponse.json({ sessions: [], total, page, pageSize: PAGE_SIZE });
   }
 
-  const sessionIds = grouped.map((g) => g.sessionId);
+  const paginated = mergedList.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // We need to fetch the first turns to get the initial messages
+  // We'll just use the earliest sessionId from each group to get the first message
+  const firstSessionIds = paginated.map((g) => g.sessionIds[g.sessionIds.length - 1]);
+  
   const firstTurns = await db.profileBuilderChatLog.findMany({
-    where: { sessionId: { in: sessionIds } },
+    where: { sessionId: { in: firstSessionIds } },
     orderBy: { createdAt: "asc" },
     select: {
       sessionId: true,
@@ -81,16 +142,18 @@ export async function GET(req: NextRequest) {
     }
   });
 
-  const sessions = grouped
+  const sessions = paginated
     .map((g) => {
-      const first = firstBySession.get(g.sessionId);
+      // The first session is the last one in the array because we pushed them in descending order
+      const firstSessionId = g.sessionIds[g.sessionIds.length - 1];
+      const first = firstBySession.get(firstSessionId);
       if (!first) return null;
-      const student = first.userId ? userMap.get(first.userId) : null;
+      const student = g.userId ? userMap.get(g.userId) : null;
       return {
-        sessionId: g.sessionId,
-        turnCount: g._count._all,
-        startedAt: (g._min.createdAt ?? new Date()).toISOString(),
-        lastAt: (g._max.createdAt ?? new Date()).toISOString(),
+        sessionId: g.sessionIds.join(','),
+        turnCount: g.turnCount,
+        startedAt: g.startedAt.toISOString(),
+        lastAt: g.lastAt.toISOString(),
         firstMessage: first.userMessage,
         student: student || { id: 'unknown', name: 'Anonymous', email: 'N/A' },
       };

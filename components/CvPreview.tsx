@@ -459,53 +459,66 @@ function CvPreviewBase({
 
       {/* Social Link Edit Modal */}
       {editingLinkKey && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs" onClick={() => setEditingLinkKey(null)}>
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-sm w-full shadow-2xl font-sans" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900 mb-1">
-              Edit {editingLinkKey === 'linkedin' ? 'LinkedIn' : editingLinkKey === 'github' ? 'GitHub' : 'Kaggle'} Link
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Enter the URL and optional label text for this link.
-            </p>
+        <div className="fixed inset-0 z-[110] flex items-start justify-center pt-24 p-3 sm:p-4 bg-black/50">
+          <div className="fixed inset-0" onClick={() => setEditingLinkKey(null)} />
+          <div className="relative w-full max-w-[420px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[85vh]">
+            
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                Edit {editingLinkKey === 'linkedin' ? 'LinkedIn' : editingLinkKey === 'github' ? 'GitHub' : 'Kaggle'} Link
+              </h3>
+              <button onClick={() => setEditingLinkKey(null)} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
 
-            <div className="space-y-3 mb-5 text-left">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Link URL</label>
-                <input
-                  type="text"
-                  value={editingLinkUrl}
-                  onChange={(e) => setEditingLinkUrl(e.target.value)}
-                  placeholder={
-                    editingLinkKey === 'linkedin'
-                      ? 'https://linkedin.com/in/username'
-                      : editingLinkKey === 'github'
-                      ? 'https://github.com/username'
-                      : 'https://kaggle.com/username'
-                  }
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-slate-900"
-                  autoFocus
-                />
-              </div>
+            {/* Body */}
+            <div className="p-4 flex-1 flex flex-col gap-3 min-h-0 text-left">
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Enter the URL and optional label text for this link.
+              </p>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Link URL</label>
+                  <input
+                    type="text"
+                    value={editingLinkUrl}
+                    onChange={(e) => setEditingLinkUrl(e.target.value)}
+                    placeholder={
+                      editingLinkKey === 'linkedin'
+                        ? 'https://linkedin.com/in/username'
+                        : editingLinkKey === 'github'
+                        ? 'https://github.com/username'
+                        : 'https://kaggle.com/username'
+                    }
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 font-mono text-slate-900 transition-all"
+                    autoFocus
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Button Label Text</label>
-                <input
-                  type="text"
-                  value={editingLinkLabel}
-                  onChange={(e) => setEditingLinkLabel(e.target.value)}
-                  placeholder={
-                    editingLinkKey === 'linkedin'
-                      ? 'Linkedin'
-                      : editingLinkKey === 'github'
-                      ? 'GitHub'
-                      : 'Kaggle'
-                  }
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-                />
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Button Label Text</label>
+                  <input
+                    type="text"
+                    value={editingLinkLabel}
+                    onChange={(e) => setEditingLinkLabel(e.target.value)}
+                    placeholder={
+                      editingLinkKey === 'linkedin'
+                        ? 'Linkedin'
+                        : editingLinkKey === 'github'
+                        ? 'GitHub'
+                        : 'Kaggle'
+                    }
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-900 transition-all"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end">
+            {/* Footer */}
+            <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -514,14 +527,14 @@ function CvPreviewBase({
                   if (editingLinkKey === 'kaggle') setPersonal({ kaggle: '', kaggleLabel: '' });
                   setEditingLinkKey(null);
                 }}
-                className="px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-rose-200 cursor-pointer"
+                className="px-4 py-2 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors border border-rose-200 cursor-pointer mr-auto"
               >
-                Remove
+                Clear
               </button>
               <button
                 type="button"
                 onClick={() => setEditingLinkKey(null)}
-                className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -533,11 +546,12 @@ function CvPreviewBase({
                   if (editingLinkKey === 'kaggle') setPersonal({ kaggle: editingLinkUrl, kaggleLabel: editingLinkLabel });
                   setEditingLinkKey(null);
                 }}
-                className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-xs cursor-pointer"
+                className="px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
               >
-                Save Link
+                Save
               </button>
             </div>
+
           </div>
         </div>
       )}

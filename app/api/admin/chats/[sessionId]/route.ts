@@ -10,9 +10,10 @@ export async function GET(
   if (auth instanceof NextResponse) return auth;
 
   const { sessionId } = await params;
+  const sessionIds = sessionId.split(',');
 
   const rows = await db.profileBuilderChatLog.findMany({
-    where: { sessionId },
+    where: { sessionId: { in: sessionIds } },
     orderBy: { createdAt: "asc" },
     select: { id: true, userMessage: true, aiReply: true, isAutoFit: true, createdAt: true },
   });
