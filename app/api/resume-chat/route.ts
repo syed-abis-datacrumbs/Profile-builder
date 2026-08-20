@@ -54,10 +54,18 @@ Rules:
   1. YOU MUST DYNAMICALLY REWRITE AND ALIGN 100% OF ALL SECTIONS TO MATCH THAT SPECIFIC TARGET ROLE WITH FULL, HIGH-DENSITY CONTENT THAT FILLS PAGE 1 TOP-TO-BOTTOM!
   2. "education": Update degree to align with the target field.
   3. "workExperience": Generate 4 RICH, COMPREHENSIVE BULLET POINTS featuring industry-standard practices, tools, methodologies, and bolded quantified metrics (percentages or numbers). Provide full, detailed 2-line bullet sentences that thoroughly cover achievements, technical execution, and business results.
-  4. "projects": REPLACE ALL outdated or mismatched projects with 3 detailed, high-impact role-aligned projects describing technical execution, tools/frameworks, and quantifiable business outcomes. Each project description MUST be rich and detailed (140-170 characters) so that each project occupies 2 full visual lines.
+  4. "projects": REPLACE ALL outdated or mismatched projects with 3 detailed, high-impact role-aligned projects describing technical execution, tools/frameworks, and quantifiable business outcomes. Each project description MUST be rich and detailed (140-160 characters) so that each project occupies 2 full visual lines.
   5. "certifications": REPLACE outdated certifications with 4 industry-recognized credentials for that specific field in a 2x2 grid.
   6. "additional": Update both 'skills' (8-10 technical skills) and 'interests' (5-6 professional interests) to fill 2 lines each.
   7. MANDATORY PAGE FILL RULE: The output generated for all 5 sections MUST be rich and substantial enough to fill 100% of Page 1 from top to bottom, leaving ZERO empty white gap at the bottom while fitting cleanly on Page 1!
+- CRITICAL — Filling Page 1 White Space ("fill the page", "fill remaining space", "increase content so space gets filled", "no empty space at end", "page has space at the end"):
+  1. ALL CONTENT MUST RESIDE 100% ON PAGE 1! NEVER OVERFLOW OR SPILL ANY SECTION (SUCH AS ADDITIONAL) ONTO PAGE 2!
+  2. To eliminate empty white space at the bottom of Page 1:
+     - DO NOT add a 4th or 5th project (keep EXACTLY 3 projects).
+     - DO NOT add a 2nd work experience or 5th-6th bullets (keep EXACTLY 4 rich bullets).
+     - EXPAND the text descriptions of the existing 4 work bullets and 3 projects to be rich, detailed 2-line sentences (130-150 characters each) with specific technologies and bolded percentage metrics.
+     - Ensure 'additional.skills' has 10-12 technical skills (filling 2 lines) and 'additional.interests' has 5-6 professional interests (filling 2 lines).
+     - This exact calibration fills 100% of Page 1 top-to-bottom with ZERO empty space and ZERO page 2 overflow!
 - CRITICAL — Aggressive ATS Keyword Optimization (95%+ Target Match): When the user provides a target job description or asks to optimize/inject keywords ("auto-inject ATS keywords", "as per recommendation", "optimize resume for ATS", "increase score to 95%+"):
   1. YOU MUST EXTRACT EVERY SINGLE REQUIRED TOOL, HARD SKILL, METHODOLOGY, AND TERMINOLOGY FROM THE TARGET JOB DESCRIPTION!
   2. WEAVE ALL EXTRACTED KEYWORDS DIRECTLY into "additional.skills", "additional.interests", "workExperience" bullets, and "projects"!
@@ -68,6 +76,10 @@ Rules:
 - CRITICAL — Expanding Bullets ("add more bullets", "more bullet points", "add points"): When the user requests to add more bullet points to work experience, YOU MUST IMMEDIATELY APPEND AT LEAST 2 NEW QUANTIFIED BULLET POINTS (with bolded percentages or numbers) to the target work experience entry! The output bullets string MUST contain more lines than before. NEVER return the workExperience bullets array with the same length or unchanged text!
 - CRITICAL — Quantified Metrics in Work Experience Bullets: EVERY SINGLE BULLET POINT in "workExperience" MUST CONTAIN QUANTIFIED NUMBERS OR PERCENTAGES with bolded metrics! (e.g. "<strong>achieving a 25% increase</strong> in user engagement", "<strong>reducing latency by 40%</strong>", "<strong>improving efficiency by 35%</strong>", "<strong>serving 100k+ active users</strong>", "<strong>cutting manual work by 80%</strong>"). No matter how many bullets are created or edited, EVERY bullet MUST include at least one specific percentage (%) or numerical metric in bold HTML tags (<strong>...</strong>). NEVER return a workExperience bullet line without numbers or percentages!
 - CRITICAL — Adding & Updating Projects: When the user describes a project (e.g. "For projects I created...", "I built a...", "Add project...", "I have created an AI post generator...", "automated door lock..."), YOU MUST IMMEDIATELY ADD OR UPDATE IT as an entry in the "projects" array in the returned JSON! Format each project as { "content": "<strong>Project Title</strong> (Tech Stack) – Description of features, technical implementation, and impact." }. Place real user projects at the top of the "projects" array and replace irrelevant placeholder projects. NEVER return "Done" or a chat reply claiming you updated the resume without modifying the "projects" array in the JSON!
+- CRITICAL — Field-Specific Minor Edits & Absolute Section Preservation: When the user asks to edit a specific field (e.g. "change the email to X", "update phone to Y", "change university duration", "update link", "change title", "edit summary"):
+  1. ONLY modify the requested target field.
+  2. PRESERVE the EXACT state of all other sections from 'CURRENT resume as JSON' verbatim!
+  3. NEVER resurrect, re-add, or generate previously deleted items (such as deleted education/college entries, deleted projects, or deleted certifications)! If 'education' in the current resume has only 1 entry, KEEP ONLY THAT 1 ENTRY.
 - Output valid JSON only.`;
 
 interface ChatMessage {
@@ -225,6 +237,36 @@ export async function POST(request: Request) {
         });
       }
     }
+    // ── Direct Contact Field Handlers ──────────────────────────────────────
+    const emailMatch = lastUserMessage.match(/\b(?:change|update|set)?\s*(?:the\s+)?email\s*(?:to|:|=)?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/i);
+    if (emailMatch && emailMatch[1]) {
+      const updatedCv: CvData = {
+        ...cv,
+        personalInfo: {
+          ...cv.personalInfo,
+          email: emailMatch[1],
+        },
+      };
+      return Response.json({
+        reply: `I've updated your email to ${emailMatch[1]}.`,
+        cv: updatedCv,
+      });
+    }
+
+    const phoneMatch = lastUserMessage.match(/\b(?:change|update|set)?\s*(?:the\s+)?phone\s*(?:to|:|=)?\s*(\+?[\d\s-]{7,20})\b/i);
+    if (phoneMatch && phoneMatch[1]) {
+      const updatedCv: CvData = {
+        ...cv,
+        personalInfo: {
+          ...cv.personalInfo,
+          phone: phoneMatch[1].trim(),
+        },
+      };
+      return Response.json({
+        reply: `I've updated your phone number to ${phoneMatch[1].trim()}.`,
+        cv: updatedCv,
+      });
+    }
     // ───────────────────────────────────────────────────────────────────────
 
     const openai = new OpenAI({ apiKey });
@@ -302,16 +344,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // Ensure education array has AT LEAST 2 items by default unless user explicitly requested an education removal
-    const userWantsEduRemoval = /\b(remove|delete)\b.*?\beducation\b/i.test(userMessage);
-    if (cleanEducation.length < 2 && !userWantsEduRemoval) {
-      const fallbackEdu2 = cv.education?.[1] || {
-        institution: 'Nixor College',
-        degree: 'A-Levels (Pre-Engineering)',
-        start: 'Jun 2020',
-        end: 'Jun 2022',
-      };
-      cleanEducation.push(fallbackEdu2);
+    // Preserve user's clean education list — never forcibly re-insert previously deleted colleges
+    if (cleanEducation.length === 0 && Array.isArray(cv.education) && cv.education.length > 0) {
+      cleanEducation.push(...cv.education);
     }
 
     const mergedCertifications = [
@@ -651,7 +686,35 @@ export async function POST(request: Request) {
       });
     }
 
-    // Auto-fix: Add more bullets request handler
+    // Auto-fix: Page Fill & Expand Request Handler ("fill the page", "increase content so space gets filled", "no empty space")
+    const isFillPageRequest = /\b(fill\b.*?\b(page|space)|increase\b.*?\bcontent|space\b.*?\b(end|bottom)|empty\s*space)\b/i.test(msgLower);
+    if (isFillPageRequest) {
+      if (safeCv.projects && safeCv.projects.length > 3) {
+        safeCv.projects = safeCv.projects.slice(0, 3);
+      }
+      safeCv.projects = (safeCv.projects ?? []).map((p) => {
+        if (p.content.length > 155) {
+          return { content: p.content.slice(0, 150).replace(/,?\s*$/, '') + '.' };
+        }
+        return p;
+      });
+
+      if (safeCv.workExperience && safeCv.workExperience.length > 0) {
+        const bulletLines = (safeCv.workExperience[0].bullets || '').split('\n').filter((b) => b.trim().length > 0);
+        const top4 = bulletLines.slice(0, 4);
+        const calibratedBullets = top4.map((line) => {
+          if (line.length > 150) {
+            return line.slice(0, 145).replace(/,?\s*$/, '') + '.';
+          }
+          return line;
+        });
+        safeCv.workExperience[0].bullets = calibratedBullets.join('\n');
+      }
+
+      if (safeCv.certifications && safeCv.certifications.length > 4) {
+        safeCv.certifications = safeCv.certifications.slice(0, 4);
+      }
+    }
     if (/\b(add|more)\b.*?\bbullet/i.test(msgLower) || /\bmore\s+points\b/i.test(msgLower)) {
       if (safeCv.workExperience.length > 0) {
         const currentBullets = (safeCv.workExperience[0].bullets || '').split('\n').filter((b) => b.trim().length > 0);
