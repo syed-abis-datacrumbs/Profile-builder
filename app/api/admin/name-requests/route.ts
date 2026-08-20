@@ -41,18 +41,20 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   if (action === 'approve') {
-    // Apply the name to ALL the user's saves
-    const allSaves = await db.resumeSave.findMany({
-      where: { userId: req.userId },
-      select: { id: true, data: true },
-    });
-    await Promise.all(
-      allSaves.map((s) => {
-        const d = s.data as any;
-        const updated = { ...d, personalInfo: { ...d.personalInfo, fullName: req.requestedName } };
-        return db.resumeSave.update({ where: { id: s.id }, data: { data: updated } });
-      })
-    );
+    // Add the requested name to their allowed downloaded names list
+    let profile = await db.resumeProfile.findUnique({ where: { userId: req.userId } });
+    if (!profile) {
+      profile = await db.resumeProfile.create({ data: { userId: req.userId, downloadedNames: [] } });
+    }
+    
+    const downloadedNames = Array.isArray(profile.downloadedNames) ? (profile.downloadedNames as string[]) : [];
+    if (!downloadedNames.some(n => n.toLowerCase() === req.requestedName.toLowerCase())) {
+      downloadedNames.push(req.requestedName);
+      await db.resumeProfile.update({
+        where: { userId: req.userId },
+        data: { downloadedNames },
+      });
+    }
 
     await db.resumeNameChangeRequest.update({
       where: { id: requestId },

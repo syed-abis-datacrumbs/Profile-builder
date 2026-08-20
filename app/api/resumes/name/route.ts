@@ -30,23 +30,20 @@ export async function GET(): Promise<NextResponse> {
 
   const userId = clerk.id;
 
-  // Get the name from the most recent ResumeSave (the locked name lives there)
-  const [profile, pending, latestSave] = await Promise.all([
+  // Get the name from the profile's downloaded names
+  const [profile, pending] = await Promise.all([
     db.resumeProfile.findUnique({ where: { userId } }),
     db.resumeNameChangeRequest.findFirst({
       where: { userId, status: 'PENDING' },
       select: { id: true, requestedName: true, createdAt: true },
     }),
-    db.resumeSave.findFirst({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      select: { data: true },
-    }),
   ]);
 
   const editsUsed = profile?.fullNameEditsUsed ?? 0;
-  // Extract fullName from the latest save's JSON blob
-  const fullName: string = (latestSave?.data as any)?.personalInfo?.fullName?.trim() ?? '';
+  
+  // Use the most recently downloaded name (if any)
+  const downloadedNames = Array.isArray(profile?.downloadedNames) ? profile!.downloadedNames as string[] : [];
+  const fullName: string = downloadedNames.length > 0 ? downloadedNames[downloadedNames.length - 1] : '';
 
   const result: NameStatusResult = {
     fullName,
@@ -93,15 +90,6 @@ export async function POST(request: Request): Promise<NextResponse> {
   const editsUsed = profile?.fullNameEditsUsed ?? 0;
   const currentName: string = (latestSave?.data as any)?.personalInfo?.fullName?.trim() ?? '';
 
-  if (newName === currentName) {
-    return NextResponse.json({
-      status: 'unchanged',
-      fullName: currentName,
-      editsUsed,
-      editsRemaining: Math.max(0, MAX_FREE_RESUME_NAME_EDITS - editsUsed),
-    } satisfies UpdateNameResult);
-  }
-
   // Only one pending request allowed at a time
   if (pending) {
     return NextResponse.json({
@@ -111,37 +99,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     } satisfies UpdateNameResult);
   }
 
-  if (editsUsed < MAX_FREE_RESUME_NAME_EDITS) {
-    // Apply immediately — update the name in ALL saves for this user so the
-    // live preview reflects it everywhere, and increment the counter.
-    const newEditsUsed = editsUsed + 1;
-
-    // Update name in every ResumeSave for this user
-    const allSaves = await db.resumeSave.findMany({ where: { userId }, select: { id: true, data: true } });
-    await Promise.all(
-      allSaves.map((s) => {
-        const d = s.data as any;
-        const updated = { ...d, personalInfo: { ...d.personalInfo, fullName: newName } };
-        return db.resumeSave.update({ where: { id: s.id }, data: { data: updated } });
-      })
-    );
-
-    // Upsert the profile counter
-    await db.resumeProfile.upsert({
-      where: { userId },
-      create: { userId, fullNameEditsUsed: newEditsUsed },
-      update: { fullNameEditsUsed: newEditsUsed },
-    });
-
-    return NextResponse.json({
-      status: 'applied',
-      fullName: newName,
-      editsUsed: newEditsUsed,
-      editsRemaining: Math.max(0, MAX_FREE_RESUME_NAME_EDITS - newEditsUsed),
-    } satisfies UpdateNameResult);
-  }
-
-  // Locked — create a pending request
+  // Create a pending request
   await db.resumeNameChangeRequest.create({
     data: { userId, currentName, requestedName: newName },
   });
