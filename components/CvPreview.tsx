@@ -289,10 +289,20 @@ function CvPreviewBase({
   const certRows: CvData['certifications'][] = [];
   for (let i = 0; i < certList.length; i += 2) certRows.push(certList.slice(i, i + 2));
 
+  const [editingLinkKey, setEditingLinkKey] = React.useState<'linkedin' | 'github' | 'kaggle' | null>(null);
+  const [editingLinkUrl, setEditingLinkUrl] = React.useState('');
+  const [editingLinkLabel, setEditingLinkLabel] = React.useState('');
+
+  const openLinkModal = (key: 'linkedin' | 'github' | 'kaggle', currentLabel: string, currentUrl: string) => {
+    setEditingLinkKey(key);
+    setEditingLinkLabel(currentLabel);
+    setEditingLinkUrl(currentUrl);
+  };
+
   const p = data.personalInfo;
 
   return (
-    <div className="bg-white text-slate-900 p-8 text-[17px] leading-snug font-serif">
+    <div className="bg-white text-slate-900 p-8 text-[17px] leading-snug font-serif relative">
       {/* Header */}
       <div data-cv-block>
         <h1 className="text-[40px] font-bold tracking-wide text-center">
@@ -303,20 +313,44 @@ function CvPreviewBase({
             {editable ? <RichText html={p.phone} placeholder="Phone" onCommit={(v) => setPersonal({ phone: v })} /> : <Html html={p.phone} />}
           </div>
           <div className="flex flex-nowrap justify-center gap-x-3 whitespace-nowrap">
-            {p.linkedin && (
-              <a href={normalizeUrl(p.linkedin)} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">
+            {(editable || p.linkedin) && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openLinkModal('linkedin', p.linkedinLabel || 'Linkedin', p.linkedin || '');
+                }}
+                className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                title="Click to add or change LinkedIn link"
+              >
                 {p.linkedinLabel || 'Linkedin'}
-              </a>
+              </button>
             )}
-            {p.github && (
-              <a href={normalizeUrl(p.github)} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">
+            {(editable || p.github) && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openLinkModal('github', p.githubLabel || 'GitHub', p.github || '');
+                }}
+                className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                title="Click to add or change GitHub link"
+              >
                 {p.githubLabel || 'GitHub'}
-              </a>
+              </button>
             )}
-            {p.kaggle && (
-              <a href={normalizeUrl(p.kaggle)} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">
+            {(editable || p.kaggle) && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openLinkModal('kaggle', p.kaggleLabel || 'Kaggle', p.kaggle || '');
+                }}
+                className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                title="Click to add or change Kaggle link"
+              >
                 {p.kaggleLabel || 'Kaggle'}
-              </a>
+              </button>
             )}
           </div>
           <div className="text-right text-blue-700 underline whitespace-nowrap">
@@ -332,6 +366,91 @@ function CvPreviewBase({
           </div>
         </div>
       </div>
+
+      {/* Social Link Edit Modal */}
+      {editingLinkKey && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs" onClick={() => setEditingLinkKey(null)}>
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-sm w-full shadow-2xl font-sans" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900 mb-1">
+              Edit {editingLinkKey === 'linkedin' ? 'LinkedIn' : editingLinkKey === 'github' ? 'GitHub' : 'Kaggle'} Link
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Enter the URL and optional label text for this link.
+            </p>
+
+            <div className="space-y-3 mb-5 text-left">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Link URL</label>
+                <input
+                  type="text"
+                  value={editingLinkUrl}
+                  onChange={(e) => setEditingLinkUrl(e.target.value)}
+                  placeholder={
+                    editingLinkKey === 'linkedin'
+                      ? 'https://linkedin.com/in/username'
+                      : editingLinkKey === 'github'
+                      ? 'https://github.com/username'
+                      : 'https://kaggle.com/username'
+                  }
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-slate-900"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Button Label Text</label>
+                <input
+                  type="text"
+                  value={editingLinkLabel}
+                  onChange={(e) => setEditingLinkLabel(e.target.value)}
+                  placeholder={
+                    editingLinkKey === 'linkedin'
+                      ? 'Linkedin'
+                      : editingLinkKey === 'github'
+                      ? 'GitHub'
+                      : 'Kaggle'
+                  }
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  if (editingLinkKey === 'linkedin') setPersonal({ linkedin: '', linkedinLabel: '' });
+                  if (editingLinkKey === 'github') setPersonal({ github: '', githubLabel: '' });
+                  if (editingLinkKey === 'kaggle') setPersonal({ kaggle: '', kaggleLabel: '' });
+                  setEditingLinkKey(null);
+                }}
+                className="px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-rose-200 cursor-pointer"
+              >
+                Remove
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingLinkKey(null)}
+                className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (editingLinkKey === 'linkedin') setPersonal({ linkedin: editingLinkUrl, linkedinLabel: editingLinkLabel });
+                  if (editingLinkKey === 'github') setPersonal({ github: editingLinkUrl, githubLabel: editingLinkLabel });
+                  if (editingLinkKey === 'kaggle') setPersonal({ kaggle: editingLinkUrl, kaggleLabel: editingLinkLabel });
+                  setEditingLinkKey(null);
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-xs cursor-pointer"
+              >
+                Save Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {(editable || eduList.length > 0) && (
         <section>
