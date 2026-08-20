@@ -274,8 +274,8 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
 
                 <div className="flex items-center justify-between px-1">
                   <div className="min-w-0">
-                    <div className="font-bold text-xs text-slate-900 truncate">{fullName}</div>
-                    <div className="text-[11px] text-slate-500 truncate">{sample.label}</div>
+                    <div className="font-bold text-xs text-slate-900 truncate">{sample.label}</div>
+                    <div className="text-[11px] text-slate-500 truncate">{fullName}</div>
                   </div>
                   <span className={`text-xs font-semibold shrink-0 ml-2 transition-transform ${
                     isSelected ? 'text-blue-700 font-bold' : 'text-blue-600 group-hover:translate-x-0.5'
