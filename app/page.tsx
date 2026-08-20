@@ -101,12 +101,16 @@ export default function Home() {
   const [assistantPrompt, setAssistantPrompt] = useState('');
   
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  const [lastApprovedAt, setLastApprovedAt] = useState<string | null>(null);
   const [showProCelebrationModal, setShowProCelebrationModal] = useState(false);
 
   const checkUnlockStatus = () => {
     fetch('/api/payment/status')
       .then((r) => r.json())
-      .then((d: { unlocked: boolean }) => setUnlocked(d.unlocked))
+      .then((d: { unlocked: boolean; lastApprovedAt?: string }) => {
+        setUnlocked(d.unlocked);
+        if (d.lastApprovedAt) setLastApprovedAt(d.lastApprovedAt);
+      })
       .catch(() => setUnlocked(false));
   };
 
@@ -122,13 +126,17 @@ export default function Home() {
     }
   }, [isPaymentModalOpen]);
 
-  // Trigger celebration modal + confetti ONLY ONCE per user when Pro status is approved
+  // Trigger celebration modal + confetti ONCE per approval cycle
   useEffect(() => {
     if (unlocked === true && user?.id) {
-      const storageKey = `has_celebrated_pro_unlock_${user.id}`;
-      const alreadyCelebrated = localStorage.getItem(storageKey);
+      const storageKey = `last_celebrated_pro_unlock_${user.id}`;
+      const lastCelebratedTimestamp = localStorage.getItem(storageKey);
 
-      if (!alreadyCelebrated) {
+      const shouldCelebrate = lastApprovedAt
+        ? lastCelebratedTimestamp !== lastApprovedAt
+        : !lastCelebratedTimestamp;
+
+      if (shouldCelebrate) {
         setShowProCelebrationModal(true);
         try {
           confetti({
@@ -140,10 +148,10 @@ export default function Home() {
         } catch (e) {
           console.error('[Confetti] Trigger error:', e);
         }
-        localStorage.setItem(storageKey, 'true');
+        localStorage.setItem(storageKey, lastApprovedAt || 'true');
       }
     }
-  }, [unlocked, user?.id]);
+  }, [unlocked, user?.id, lastApprovedAt]);
 
   // Listen to scrolling on mainContentRef to show/hide Scroll to Top button
   useEffect(() => {
@@ -840,8 +848,8 @@ export default function Home() {
               <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-gradient-to-br from-purple-400/20 to-amber-400/20 rounded-full blur-2xl pointer-events-none" />
 
               {/* Icon Badge */}
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center mx-auto mb-5 shadow-lg shadow-blue-500/25">
-                <Sparkles className="w-8 h-8 animate-pulse" />
+              <div className="w-16 h-16 rounded-2xl bg-slate-900 text-white flex items-center justify-center mx-auto mb-5 shadow-lg shadow-slate-900/20 border border-slate-700/50 p-2.5">
+                <img src="/logo.png" alt="Momentum Logo" className="w-full h-full object-contain rounded-lg" />
               </div>
 
               {/* Title & Description */}

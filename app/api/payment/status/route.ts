@@ -32,23 +32,23 @@ export async function GET() {
   // hasCvDownloadAccess().
   if (PAYMENT_TESTING_MODE) return Response.json({ unlocked: false, aiMessagesUsed });
 
-  const unlock = await db.paymentUnlock.findUnique({ where: { userId } });
-  if (unlock) {
-    return Response.json({ unlocked: true, aiMessagesUsed });
-  }
-
-  // Double check if user has ANY approved PaymentProof
   const approvedProof = await db.paymentProof.findFirst({
     where: { userId, status: 'APPROVED' },
+    orderBy: { createdAt: 'desc' },
   });
 
-  if (approvedProof) {
-    await db.paymentUnlock.upsert({
-      where: { userId },
-      update: {},
-      create: { userId },
-    });
-    return Response.json({ unlocked: true, aiMessagesUsed });
+  const unlock = await db.paymentUnlock.findUnique({ where: { userId } });
+
+  if (unlock || approvedProof) {
+    if (!unlock) {
+      await db.paymentUnlock.upsert({
+        where: { userId },
+        update: {},
+        create: { userId },
+      });
+    }
+    const lastApprovedAt = unlock?.unlockedAt?.toISOString() || approvedProof?.createdAt?.toISOString() || new Date().toISOString();
+    return Response.json({ unlocked: true, aiMessagesUsed, lastApprovedAt });
   }
 
   return Response.json({ unlocked: false, aiMessagesUsed });
