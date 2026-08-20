@@ -200,7 +200,7 @@ export const GITHUB_ROLE_PRESETS: GithubRolePreset[] = [
   },
   {
     id: "full-stack",
-    label: "Full Stack Developer",
+    label: "Software Developer",
     about:
       "I build and ship complete web products — from the database schema and API contracts all the way to the accessible, responsive interface a user actually touches. Most of my work lives in the TypeScript ecosystem: Next.js and React on the front end, Node with Express or NestJS behind it, and Postgres accessed through Prisma. I care about the unglamorous parts that decide whether a product survives contact with real traffic: pagination that doesn't fall over at a million rows, background jobs that retry safely, auth flows that handle the edge cases, and CI that catches regressions before a customer does. I've taken projects from an empty repo to production on AWS and Vercel, and I've also inherited five-year-old codebases and made them fast again.\n\nI believe the fastest way to build something good is to make it observable and reversible. I ship small changes behind feature flags, instrument before I optimize, and let profiler output rather than intuition decide what gets rewritten. I write the tests that would have caught last month's incident instead of chasing a coverage number, and I treat a clear error message or a well-named migration as part of the feature, not as overhead. Code is read far more often than it is written, so I optimize for the engineer who opens the file six months from now — including when that engineer is me.",
     expertise:
