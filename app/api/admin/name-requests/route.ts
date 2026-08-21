@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { db } from '../../../../lib/db';
+import { lookupClerkUsers } from '../../../../lib/clerkUserLookup';
 
 export const runtime = 'nodejs';
 
@@ -18,7 +19,19 @@ export async function GET(): Promise<NextResponse> {
     orderBy: { createdAt: 'desc' },
   });
 
-  return NextResponse.json({ requests: rows });
+  const uniqueUserIds = Array.from(new Set(rows.map((r) => r.userId).filter(Boolean)));
+  const userMap = await lookupClerkUsers(uniqueUserIds);
+
+  const enriched = rows.map((r) => {
+    const u = userMap.get(r.userId);
+    return {
+      ...r,
+      userEmail: u?.email || r.userId,
+      userName: u?.name || u?.email || r.userId,
+    };
+  });
+
+  return NextResponse.json({ requests: enriched });
 }
 
 /** POST /api/admin/name-requests — approve or reject a request */

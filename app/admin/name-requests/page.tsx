@@ -6,6 +6,8 @@ import { Loader2, Check, X, UserCheck, RefreshCw } from 'lucide-react';
 interface NameRequest {
   id: string;
   userId: string;
+  userEmail?: string;
+  userName?: string;
   currentName: string;
   requestedName: string;
   status: string;
@@ -131,7 +133,7 @@ export default function AdminNameRequestsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800">
-                <th className="px-6 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">User ID</th>
+                <th className="px-6 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">User (Email & Name)</th>
                 <th className="px-6 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Current Name</th>
                 <th className="px-6 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Requested Name</th>
                 <th className="px-6 py-3.5 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Submitted</th>
@@ -142,7 +144,17 @@ export default function AdminNameRequestsPage() {
               {requests.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-800/40 transition-colors">
                   <td className="px-6 py-4">
-                    <p className="text-slate-400 text-xs font-mono truncate max-w-[140px]">{r.userId.slice(0, 20)}…</p>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-sm">
+                          {r.userEmail || r.userId}
+                        </span>
+                        {r.userName && r.userName !== r.userEmail && (
+                          <span className="text-xs text-slate-400">({r.userName})</span>
+                        )}
+                      </div>
+                      <span className="font-mono text-[10px] text-slate-500">ID: {r.userId}</span>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-slate-400">{r.currentName || '—'}</span>
