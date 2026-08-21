@@ -7,6 +7,7 @@ type Proof = {
   id: string;
   userId: string;
   userEmail?: string;
+  userName?: string;
   imageUrl: string;
   status: string;
   extractedTitle: string | null;
@@ -99,12 +100,17 @@ export default function PaymentsPage() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-white font-medium text-xs bg-slate-700/80 border border-slate-600/60 px-2.5 py-1 rounded-md flex items-center gap-1.5" title={`User ID: ${p.userId}`}>
-                    <span className="font-semibold text-slate-100">{p.userEmail || p.userId}</span>
-                    {p.userEmail && p.userEmail !== p.userId && (
-                      <span className="text-[10px] text-slate-400 font-mono">({p.userId.slice(0, 10)}…)</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-white text-sm">
+                      {p.userEmail || p.userId}
+                    </span>
+                    {p.userName && p.userName !== p.userEmail && (
+                      <span className="text-xs text-slate-400">({p.userName})</span>
                     )}
-                  </span>
+                    <span className="text-[10px] text-slate-400 font-mono bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/60" title={`Full Clerk User ID: ${p.userId}`}>
+                      ID: {p.userId}
+                    </span>
+                  </div>
                   <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
                     p.status === 'APPROVED' ? 'bg-emerald-500/15 text-emerald-400'
                     : p.status === 'REJECTED' ? 'bg-red-500/15 text-red-400'

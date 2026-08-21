@@ -1,6 +1,6 @@
-import { clerkClient } from '@clerk/nextjs/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { db } from '@/lib/db';
+import { lookupClerkUsers } from '@/lib/clerkUserLookup';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
@@ -16,31 +16,16 @@ export async function GET(req: NextRequest) {
   });
 
   const uniqueUserIds = Array.from(new Set(payments.map((p) => p.userId).filter(Boolean)));
-  const userEmailMap = new Map<string, string>();
+  const userMap = await lookupClerkUsers(uniqueUserIds);
 
-  if (uniqueUserIds.length > 0) {
-    try {
-      const client = await clerkClient();
-      await Promise.all(
-        uniqueUserIds.map(async (uid) => {
-          try {
-            const u = await client.users.getUser(uid);
-            const email = u.primaryEmailAddress?.emailAddress || u.emailAddresses?.[0]?.emailAddress || uid;
-            userEmailMap.set(uid, email);
-          } catch {
-            // fallback to uid if user not found in Clerk
-          }
-        })
-      );
-    } catch (e) {
-      console.error('[Admin Payments] Failed to fetch Clerk emails:', e);
-    }
-  }
-
-  const enrichedPayments = payments.map((p) => ({
-    ...p,
-    userEmail: userEmailMap.get(p.userId) || p.userId,
-  }));
+  const enrichedPayments = payments.map((p) => {
+    const u = userMap.get(p.userId);
+    return {
+      ...p,
+      userEmail: u?.email || p.userId,
+      userName: u?.name || u?.email || p.userId,
+    };
+  });
 
   return NextResponse.json(enrichedPayments);
 }

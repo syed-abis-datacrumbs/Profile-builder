@@ -5,6 +5,7 @@ import { Bug, CheckCircle, ChevronLeft, ChevronRight, ImageIcon } from "lucide-r
 
 interface Issue {
   id: string;
+  userId?: string | null;
   text: string;
   imageUrl: string | null;
   status: string;
@@ -96,11 +97,21 @@ export default function IssuesAdminPage() {
               <div key={issue.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col gap-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-semibold text-slate-200">
-                      {issue.user ? issue.user.name : "Anonymous"}
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      {issue.user ? issue.user.email : "No email"} • {new Date(issue.createdAt).toLocaleString()}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-white text-sm">
+                        {issue.user ? issue.user.email : "Anonymous"}
+                      </span>
+                      {issue.user?.name && issue.user.name !== issue.user.email && (
+                        <span className="text-xs text-slate-400">({issue.user.name})</span>
+                      )}
+                      {issue.userId && (
+                        <span className="font-mono text-[10px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                          ID: {issue.userId}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {new Date(issue.createdAt).toLocaleString()}
                     </p>
                   </div>
                   {statusFilter === "OPEN" && (
