@@ -133,7 +133,7 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
       {/* Title Greeting */}
       <div className="text-center pt-2">
         <h1 className="text-4xl sm:text-5xl font-serif tracking-tight text-slate-900">
-          Plenty of day left{userName ? `, ${userName.split(' ')[0]}` : ''}.
+          Let AI build your next career move{userName ? `, ${userName.split(' ')[0]}` : ''}.
         </h1>
       </div>
 

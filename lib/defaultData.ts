@@ -130,3 +130,54 @@ export const defaultLinkedinData: LinkedinProfileData = {
   featuredPost: "🔥 Thrilled to release ProfileArchitect - AI Career Builder! An open-source workspace to generate ATS-optimized Resumes, custom GitHub Markdown bios, and high-impact LinkedIn profiles in seconds. Check out the live demo below! 👇",
   openToWork: true
 };
+
+export const DEFAULT_PLACEHOLDER_CV = {
+  cvType: 'professional' as const,
+  personalInfo: {
+    fullName: 'Your Name',
+    phone: '+1 (555) 000-0000',
+    email: 'your.email@example.com',
+    linkedin: 'https://linkedin.com/in/your-profile',
+    linkedinLabel: 'LinkedIn',
+    github: 'https://github.com/your-username',
+    githubLabel: 'GitHub',
+    kaggle: '',
+    kaggleLabel: 'Kaggle',
+  },
+  education: [
+    {
+      institution: 'Your University / College Name',
+      degree: 'Degree Program / Field of Study',
+      start: '2020',
+      end: '2024',
+    },
+  ],
+  workExperience: [
+    {
+      company: 'Company / Organization Name',
+      title: 'Job Title / Position',
+      start: 'Jan 2023',
+      end: 'Present',
+      bullets: 'Lead development of key initiatives, collaborating across teams to deliver high-quality outcomes.\nQuantified impact with measurable results (e.g., <strong>improved efficiency by 35%</strong> and reduced operating costs).\nDesigned, built, and deployed scalable solutions following modern industry best practices.',
+    },
+  ],
+  projects: [
+    {
+      content: '<strong>Key Project Title</strong> (Technologies, Tools, Frameworks) – Comprehensive overview of problem solved, technical implementation details, and business outcome.',
+    },
+    {
+      content: '<strong>Secondary Project Title</strong> (Relevant Stack) – Key features engineered, system performance optimizations, and quantifiable impact.',
+    },
+  ],
+  certifications: [
+    {
+      name: 'Industry Certification / Credential',
+      organization: 'Issuing Organization',
+    },
+  ],
+  additional: {
+    skills: 'Technical Skills, Frameworks, Core Tools, Methodologies, Databases, Cloud Services',
+    interests: 'Professional Interests, Specializations, Industry Trends, Continuous Learning',
+  },
+};
+

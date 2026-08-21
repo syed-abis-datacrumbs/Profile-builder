@@ -34,7 +34,7 @@ import BlockScreen from '../components/BlockScreen';
 import { BUILDER_ACCESS_EMAILS } from '../lib/accessConfig';
 
 import { ActiveTab, ResumeData, GithubProfileData, LinkedinProfileData, SavedProfile } from '../types';
-import { defaultResumeData, defaultGithubData, defaultLinkedinData } from '../lib/defaultData';
+import { defaultResumeData, defaultGithubData, defaultLinkedinData, DEFAULT_PLACEHOLDER_CV } from '../lib/defaultData';
 import { applyRolePresetToGithub, GithubRolePreset, GITHUB_ROLE_PRESETS } from '../lib/githubRolePresets';
 import { LmsResumeSample } from '../lib/resumeSamples';
 import { matchResumeSampleToPrompt } from '../lib/resumeHelpers';
@@ -46,44 +46,140 @@ import { GithubIcon, LinkedinIcon } from '../components/icons';
 
 export default function Home() {
   const mainContentRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('resume');
-  const [resumeMode, setResumeMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('profile_builder_active_tab');
+      if (saved && ['resume', 'github', 'linkedin', 'jobhunting', 'freelancing', 'interview', 'assistant'].includes(saved)) {
+        return saved as ActiveTab;
+      }
+    }
+    return 'resume';
+  });
+
+  const [resumeMode, setResumeMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('profile_builder_resume_mode');
+      if (saved && ['landing', 'preview', 'editor', 'studio'].includes(saved)) {
+        return saved as any;
+      }
+    }
+    return 'landing';
+  });
+
   const [resumePreviewSample, setResumePreviewSample] = useState<LmsResumeSample | null>(null);
-  // Set when "Use Template" is clicked in the preview popup — instead of
-  // jumping straight into the Studio, the popup closes back to the landing
-  // page with this attached, so the user can add an instruction (or just
-  // send empty to use it as-is) before entering the Studio.
   const [attachedResumeTemplate, setAttachedResumeTemplate] = useState<LmsResumeSample | null>(null);
-  const [githubMode, setGithubMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
+
+  const [githubMode, setGithubMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('profile_builder_github_mode');
+      if (saved && ['landing', 'preview', 'editor', 'studio'].includes(saved)) {
+        return saved as any;
+      }
+    }
+    return 'landing';
+  });
+
   const [githubPreviewTemplate, setGithubPreviewTemplate] = useState<GithubTemplateCard | null>(null);
   const [attachedGithubTemplate, setAttachedGithubTemplate] = useState<GithubTemplateCard | null>(null);
-  const [linkedinMode, setLinkedinMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
+
+  const [linkedinMode, setLinkedinMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('profile_builder_linkedin_mode');
+      if (saved && ['landing', 'preview', 'editor', 'studio'].includes(saved)) {
+        return saved as any;
+      }
+    }
+    return 'landing';
+  });
+
   const [linkedinPreviewTemplateId, setLinkedinPreviewTemplateId] = useState<string | null>(null);
   const [attachedLinkedinTemplate, setAttachedLinkedinTemplate] = useState<string | null>(null);
-  const [linkedinRichProfile, setLinkedinRichProfile] = useState<LinkedinRichProfile | null>(null);
+
+  const [linkedinRichProfile, setLinkedinRichProfile] = useState<LinkedinRichProfile | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('profile_builder_linkedin_profile');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return null;
+  });
+
   const [selectedModel, setSelectedModel] = useState('Flash');
 
   // Prompt typed on a landing page, sent to the AI once the matching Chat
-  // Studio has mounted. Resume skips template selection entirely; GitHub and
-  // LinkedIn hold the prompt here while the user picks a template first.
+  // Studio has mounted.
   const [resumeInitialPrompt, setResumeInitialPrompt] = useState('');
   const [githubInitialPrompt, setGithubInitialPrompt] = useState('');
   const [linkedinInitialPrompt, setLinkedinInitialPrompt] = useState('');
   const [pendingPrompt, setPendingPrompt] = useState('');
   const [showGithubTemplatePicker, setShowGithubTemplatePicker] = useState(false);
   const [showLinkedinTemplatePicker, setShowLinkedinTemplatePicker] = useState(false);
-  // Mobile nav drawer — the sidebar rail is desktop-only, so on a phone this
-  // is the only way to move between builders.
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   // Profile Data State
   const [resumeData, setResumeData] = useState<ResumeData>(defaultResumeData);
   // Resume Studio (chat + live LMS-format CV) works in the LMS CvData shape.
-  const [studioCv, setStudioCv] = useState<CvData | null>(null);
-  const [studioLabel, setStudioLabel] = useState('');
-  const [githubData, setGithubData] = useState<GithubProfileData>(defaultGithubData);
+  const [studioCv, setStudioCv] = useState<CvData | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('profile_builder_studio_cv');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return null;
+  });
+
+  const [studioLabel, setStudioLabel] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('profile_builder_studio_label') || '';
+    }
+    return '';
+  });
+
+  const [githubData, setGithubData] = useState<GithubProfileData>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('profile_builder_github_data');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return defaultGithubData;
+  });
+
   const [linkedinData, setLinkedinData] = useState<LinkedinProfileData>(defaultLinkedinData);
+
+  // LocalStorage state persistence
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('profile_builder_active_tab', activeTab);
+      localStorage.setItem('profile_builder_resume_mode', resumeMode);
+      localStorage.setItem('profile_builder_github_mode', githubMode);
+      localStorage.setItem('profile_builder_linkedin_mode', linkedinMode);
+    }
+  }, [activeTab, resumeMode, githubMode, linkedinMode]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (studioCv) localStorage.setItem('profile_builder_studio_cv', JSON.stringify(studioCv));
+      else localStorage.removeItem('profile_builder_studio_cv');
+      localStorage.setItem('profile_builder_studio_label', studioLabel);
+    }
+  }, [studioCv, studioLabel]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('profile_builder_github_data', JSON.stringify(githubData));
+    }
+  }, [githubData]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (linkedinRichProfile) localStorage.setItem('profile_builder_linkedin_profile', JSON.stringify(linkedinRichProfile));
+      else localStorage.removeItem('profile_builder_linkedin_profile');
+    }
+  }, [linkedinRichProfile]);
 
   // Modals
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -392,15 +488,27 @@ export default function Home() {
                           attachedTemplate={attachedResumeTemplate}
                           onClearAttachedTemplate={() => setAttachedResumeTemplate(null)}
                           onUsePrompt={(promptText) => {
-                            // If a template was attached via "Use Template"
-                            // in the preview popup, that's the base — an
-                            // explicit user choice beats the closest-match
-                            // guess. Otherwise (typed straight into the
-                            // landing box) auto-pick the closest matching
-                            // field so the AI has a sensible base to work
-                            // from rather than always the same one.
-                            const sample = attachedResumeTemplate ?? matchResumeSampleToPrompt(promptText);
-                            loadResumeField(sample);
+                            if (attachedResumeTemplate) {
+                              loadResumeField(attachedResumeTemplate);
+                              if (typeof window !== 'undefined') {
+                                localStorage.removeItem('profile_builder_resume_chat');
+                              }
+                            } else {
+                              const baseCv: CvData = {
+                                ...DEFAULT_PLACEHOLDER_CV,
+                                personalInfo: {
+                                  ...DEFAULT_PLACEHOLDER_CV.personalInfo,
+                                  fullName: displayFullName || 'Your Name',
+                                },
+                              };
+                              setStudioCv(cvMarkdownToHtml(baseCv));
+                              setStudioLabel('Your Resume');
+                              if (typeof window !== 'undefined') {
+                                localStorage.removeItem('profile_builder_resume_chat');
+                              }
+                              if (promptText.trim()) setResumeInitialPrompt(promptText);
+                              setResumeMode('studio');
+                            }
                             if (promptText.trim()) setResumeInitialPrompt(promptText);
                             setAttachedResumeTemplate(null);
                           }}
@@ -409,7 +517,7 @@ export default function Home() {
                               setIsAuthOpen(true);
                               return;
                             }
-                            setResumeMode('editor');
+                            setResumeMode(studioCv ? 'studio' : 'editor');
                           }}
                         />
                       </>
@@ -461,7 +569,12 @@ export default function Home() {
                       <GithubLandingView
                         userName={firstName || undefined}
                         onOpenRolePicker={() => setShowGithubTemplatePicker(true)}
-                        onSelectPreset={(preset, theme, avatarUrl, bannerUrl) => openGithubStudio(preset, theme, avatarUrl, bannerUrl)}
+                        onSelectPreset={(preset, theme, avatarUrl, bannerUrl) => {
+                          if (typeof window !== 'undefined') {
+                            localStorage.removeItem('profile_builder_github_chat');
+                          }
+                          openGithubStudio(preset, theme, avatarUrl, bannerUrl);
+                        }}
                         attachedTemplate={attachedGithubTemplate}
                         onClearAttachedTemplate={() => setAttachedGithubTemplate(null)}
                         onSelectTemplate={(t) => {
@@ -474,16 +587,20 @@ export default function Home() {
                             const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
                             const preset = { ...basePreset, label: t.name };
                             const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
+                            if (typeof window !== 'undefined') {
+                              localStorage.removeItem('profile_builder_github_chat');
+                            }
                             openGithubStudio(preset, t.theme, t.avatarUrl || randomAvatar, t.bannerUrl);
-                          } else {
-                            // NO template selected: Load default dummy template preset (Full Stack Developer)
-                            // so the user gets a complete, realistic, populated GitHub profile ready to edit.
+                          } else if (!githubData || !githubData.title || githubData.title === 'Minimalist Data Science') {
                             const defaultPreset = GITHUB_ROLE_PRESETS[0];
                             const defaultTemplate = GITHUB_TEMPLATES[0];
                             const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
                             openGithubStudio(defaultPreset, 'dark', randomAvatar, defaultTemplate.bannerUrl);
+                          } else {
+                            if (promptText.trim()) setGithubInitialPrompt(promptText);
+                            setGithubMode('studio');
                           }
-                          setGithubInitialPrompt(promptText);
+                          if (promptText.trim()) setGithubInitialPrompt(promptText);
                           setAttachedGithubTemplate(null);
                         }}
                         onOpenEditorDirectly={() => {
@@ -491,7 +608,7 @@ export default function Home() {
                             setIsAuthOpen(true);
                             return;
                           }
-                          setGithubMode('editor');
+                          setGithubMode('studio');
                         }}
                       />
                     )}
@@ -550,9 +667,15 @@ export default function Home() {
                             setIsAuthOpen(true);
                             return;
                           }
-                          const tid = attachedLinkedinTemplate || 'linkedin-1';
-                          setLinkedinRichProfile(buildInitialRichProfile(tid));
-                          setLinkedinInitialPrompt(promptText);
+                          if (attachedLinkedinTemplate) {
+                            setLinkedinRichProfile(buildInitialRichProfile(attachedLinkedinTemplate));
+                            if (typeof window !== 'undefined') {
+                              localStorage.removeItem('profile_builder_linkedin_chat');
+                            }
+                          } else if (!linkedinRichProfile) {
+                            setLinkedinRichProfile(buildInitialRichProfile('linkedin-1'));
+                          }
+                          if (promptText.trim()) setLinkedinInitialPrompt(promptText);
                           setLinkedinMode('studio');
                           setAttachedLinkedinTemplate(null);
                         }}
@@ -561,7 +684,7 @@ export default function Home() {
                             setIsAuthOpen(true);
                             return;
                           }
-                          setLinkedinMode('editor');
+                          setLinkedinMode(linkedinRichProfile ? 'studio' : 'editor');
                         }}
                       />
                     )}

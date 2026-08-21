@@ -75,6 +75,7 @@ export interface GithubProfileData {
     twitter?: string;
     email?: string;
     website?: string;
+    [key: string]: string | undefined;
   };
   customSections: { title: string; content: string }[];
 }

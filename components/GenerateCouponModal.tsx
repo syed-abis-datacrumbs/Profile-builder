@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Loader2, Ticket, Check } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '@/lib/toast';
 
 export function GenerateCouponModal({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () => void }) {
   const [loading, setLoading] = useState(false);

@@ -87,7 +87,22 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   // consistent everywhere without threading a colour prop around.
   const accent = getResumeAccentColor(fieldLabel ? { label: fieldLabel } : null);
 
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [messages, setMessages] = useState<Msg[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('profile_builder_resume_chat');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('profile_builder_resume_chat', JSON.stringify(messages));
+    }
+  }, [messages]);
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [fontFamily, setFontFamily] = useState('Times New Roman');
@@ -108,6 +123,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasSentInitialPromptRef = useRef(false);
 
   const [revision, setRevision] = useState(0);
 
@@ -758,7 +774,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   };
 
   useEffect(() => {
-    if (initialPrompt && initialPrompt.trim()) send(initialPrompt);
+    if (initialPrompt && initialPrompt.trim() && !hasSentInitialPromptRef.current) {
+      hasSentInitialPromptRef.current = true;
+      send(initialPrompt);
+    }
     // Run once on mount only — this is a one-time "prompt typed before
     // entering the Studio" hand-off, not something to repeat on re-renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps

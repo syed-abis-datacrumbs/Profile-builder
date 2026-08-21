@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2 } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo } from 'lucide-react';
 import { GithubProfileData } from '../types';
 import { GithubIcon } from './icons';
 import { generateGithubMarkdown } from '../lib/githubMarkdown';
@@ -71,7 +71,22 @@ export const GithubChatStudio: React.FC<{
    *  the AI automatically once, on mount. */
   initialPrompt?: string;
 }> = ({ github, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt }) => {
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [messages, setMessages] = useState<Msg[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('profile_builder_github_chat');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('profile_builder_github_chat', JSON.stringify(messages));
+    }
+  }, [messages]);
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -81,6 +96,70 @@ export const GithubChatStudio: React.FC<{
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
+
+  // Undo / Redo history
+  const [past, setPast] = useState<GithubProfileData[]>([]);
+  const [future, setFuture] = useState<GithubProfileData[]>([]);
+
+  const recordChange = useCallback(
+    (next: GithubProfileData) => {
+      setPast((p) => [...p.slice(-99), github]);
+      setFuture([]);
+      onChange(next);
+    },
+    [github, onChange]
+  );
+
+  const handleUndo = useCallback(() => {
+    if (past.length === 0) return;
+    const prev = past[past.length - 1];
+    setPast((p) => p.slice(0, -1));
+    setFuture((f) => [github, ...f]);
+    onChange(prev);
+  }, [past, github, onChange]);
+
+  const handleRedo = useCallback(() => {
+    if (future.length === 0) return;
+    const next = future[0];
+    setFuture((f) => f.slice(1));
+    setPast((p) => [...p, github]);
+    onChange(next);
+  }, [future, github, onChange]);
+
+  const set = useCallback((patch: Partial<GithubProfileData>) => {
+    const updated = { ...github, ...patch };
+    recordChange(updated);
+  }, [github, recordChange]);
+
+  const setSection = useCallback((index: number, patch: Partial<GithubProfileData['customSections'][number]>) => {
+    const next = [...(github.customSections || [])];
+    next[index] = { ...next[index], ...patch };
+    recordChange({ ...github, customSections: next });
+  }, [github, recordChange]);
+
+  // Keyboard shortcut listener (Ctrl+Z / Ctrl+Y / Cmd+Z)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      if (isInput) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
 
   const sessionIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -128,7 +207,7 @@ export const GithubChatStudio: React.FC<{
       const data = await res.json();
       if (data.error) setMessages((m) => [...m, { role: 'assistant', content: `⚠️ ${data.error}` }]);
       else {
-        if (data.github) onChange(data.github as GithubProfileData);
+        if (data.github) recordChange(data.github as GithubProfileData);
         setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Done.' }]);
       }
     } catch {
@@ -138,8 +217,13 @@ export const GithubChatStudio: React.FC<{
     }
   };
 
+  const hasSentInitialPromptRef = useRef(false);
+
   useEffect(() => {
-    if (initialPrompt && initialPrompt.trim()) send(initialPrompt);
+    if (initialPrompt && initialPrompt.trim() && !hasSentInitialPromptRef.current) {
+      hasSentInitialPromptRef.current = true;
+      send(initialPrompt);
+    }
     // Run once on mount only — one-time hand-off from the template picker.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -168,10 +252,6 @@ export const GithubChatStudio: React.FC<{
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   };
-
-  const set = (patch: Partial<GithubProfileData>) => onChange({ ...github, ...patch });
-  const setSection = (i: number, patch: Partial<GithubProfileData['customSections'][number]>) =>
-    set({ customSections: github.customSections.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
 
   interface SavedProfileMeta { id: string; name: string; createdAt: string }
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -671,6 +751,28 @@ export const GithubChatStudio: React.FC<{
                 </>
               )}
             </div>
+            {/* Undo / Redo */}
+            <div className="flex items-center gap-0.5 border border-slate-200 rounded-lg p-0.5 bg-slate-50">
+              <button
+                type="button"
+                title="Undo (Ctrl+Z)"
+                onMouseDown={(e) => { e.preventDefault(); handleUndo(); }}
+                disabled={past.length === 0}
+                className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${past.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+              >
+                <Undo className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                title="Redo (Ctrl+Y)"
+                onMouseDown={(e) => { e.preventDefault(); handleRedo(); }}
+                disabled={future.length === 0}
+                className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${future.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+              >
+                <Redo className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             <button
               onClick={copyReadme}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors"

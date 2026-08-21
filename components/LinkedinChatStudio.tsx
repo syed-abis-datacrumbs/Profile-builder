@@ -133,13 +133,28 @@ export const LinkedinChatStudio: React.FC<{
    *  the AI automatically once, on mount. */
   initialPrompt?: string;
 }> = ({ profile, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt }) => {
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      role: 'assistant',
-      content:
-        'Loaded your profile from the template. Click any text on the right to edit it directly, or ask me — e.g. "make my headline more keyword-rich", "add a bullet about leading a team", or "add Python to skills".',
-    },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('profile_builder_linkedin_chat');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [
+      {
+        role: 'assistant',
+        content:
+          'Loaded your profile from the template. Click any text on the right to edit it directly, or ask me — e.g. "make my headline more keyword-rich", "add a bullet about leading a team", or "add Python to skills".',
+      },
+    ];
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('profile_builder_linkedin_chat', JSON.stringify(messages));
+    }
+  }, [messages]);
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [mobileTab, setMobileTab] = useState<'chat' | 'preview'>('chat');
@@ -204,8 +219,13 @@ export const LinkedinChatStudio: React.FC<{
     }
   };
 
+  const hasSentInitialPromptRef = useRef(false);
+
   useEffect(() => {
-    if (initialPrompt && initialPrompt.trim()) send(initialPrompt);
+    if (initialPrompt && initialPrompt.trim() && !hasSentInitialPromptRef.current) {
+      hasSentInitialPromptRef.current = true;
+      send(initialPrompt);
+    }
     // Run once on mount only — one-time hand-off from the template picker.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

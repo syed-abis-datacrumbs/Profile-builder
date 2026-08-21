@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Users, Loader2, Plus, ShieldCheck, Ticket, User, MoreVertical, ShieldX } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '@/lib/toast';
 import { CouponsTab, type Coupon } from './CouponsTab';
 
 type UserData = {

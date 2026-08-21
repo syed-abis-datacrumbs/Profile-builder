@@ -50,14 +50,18 @@ Rules:
   2. "skills" MUST be a comma-separated list of relevant technical skills, programming languages, frameworks, and tools inferred from the user's projects, education, and work experience (e.g., "JavaScript, Node.js, React, Python, C++, HTML/CSS, Git, REST APIs, Arduino, dlib").
   3. "interests" MUST be a short comma-separated list of professional/tech interests inferred from their projects and field (e.g., "Web Development, Artificial Intelligence, Open Source, System Architecture, Mobile App Development").
   4. If the user asks to "add skills", "fill skills", "add content to skills/interests", or if "skills" or "interests" are empty/blank, YOU MUST IMMEDIATELY POPULATE BOTH FIELDS with relevant, concrete technical content inferred from their resume items! NEVER return empty strings or blank placeholders for "skills" or "interests".
-- CRITICAL — Universal Total Role Transformation ("Create CV for [Role]", "Transform CV for [Role]", "Make CV for [Role]"): When the user requests to transform or tailor the CV for ANY target role (e.g. Sizing Specialist in Textile, Email Marketer, Software Engineer, Digital Marketer, Graphic Designer, Data Analyst, Upwork Bidder, Product Manager, Cyber Security Analyst, Industrial Engineer, etc.):
+- CRITICAL — PLACEHOLDER OVERWRITE RULE: If ANY field in the current resume contains placeholder text (such as "Your University", "College Name", "Degree Program", "Field of Study", "Company / Organization Name", "Company Name", "Job Title / Position", "Your Job Title", "Key Project Title", "Secondary Project Title", "Project Title", "Industry Certification", "Credential Name", "Issuing Organization", or similar generic templates):
+  1. YOU MUST COMPLETELY OVERWRITE AND REPLACE THEM with realistic, domain-specific, professional entities (e.g. real company names, prestigious universities, real degrees, real technical/business project titles with metrics, and real recognized certifications) tailored to the requested role or domain!
+  2. NEVER preserve or return raw placeholder strings like "Company / Organization Name", "Your University / College Name", or "Key Project Title" in the returned JSON!
+- CRITICAL — Universal Total Role & Starter Prompt Transformation ("Create CV for [Role]", "Build [Role] resume", "New grad resume", "ATS-optimized [Role] resume", "Executive resume for [Role]", "Career switch to [Role]"): When the user requests to create, build, generate, switch, or transform the CV for ANY target role or experience level (e.g. Entry-level Software Engineer, Marketing Manager, VP of Sales, Product Manager, Data Scientist, Cybersecurity, etc.):
   1. YOU MUST DYNAMICALLY REWRITE AND ALIGN 100% OF ALL SECTIONS TO MATCH THAT SPECIFIC TARGET ROLE WITH FULL, HIGH-DENSITY CONTENT THAT FILLS PAGE 1 TOP-TO-BOTTOM!
-  2. "education": Update degree to align with the target field.
-  3. "workExperience": Generate 4 RICH, COMPREHENSIVE BULLET POINTS featuring industry-standard practices, tools, methodologies, and bolded quantified metrics (percentages or numbers). Provide full, detailed 2-line bullet sentences that thoroughly cover achievements, technical execution, and business results.
-  4. "projects": REPLACE ALL outdated or mismatched projects with 3 detailed, high-impact role-aligned projects describing technical execution, tools/frameworks, and quantifiable business outcomes. Each project description MUST be rich and detailed (140-160 characters) so that each project occupies 2 full visual lines.
-  5. "certifications": REPLACE outdated certifications with 4 industry-recognized credentials for that specific field in a 2x2 grid.
-  6. "additional": Update both 'skills' (8-10 technical skills) and 'interests' (5-6 professional interests) to fill 2 lines each.
-  7. MANDATORY PAGE FILL RULE: The output generated for all 5 sections MUST be rich and substantial enough to fill 100% of Page 1 from top to bottom, leaving ZERO empty white gap at the bottom while fitting cleanly on Page 1!
+  2. NEVER preserve outdated or mismatched text from previous roles or generic placeholder text. Replace all companies, job titles, universities, degrees, projects, and certifications with real names in that industry.
+  3. "education": Update degree, university, relevant coursework, or honors to align with the target field.
+  4. "workExperience": Set title and company name to real industry equivalents (e.g. for VP of Sales: title "Vice President of Enterprise Sales", company "Apex Enterprise Cloud"). Generate 4 RICH, COMPREHENSIVE BULLET POINTS featuring industry-standard practices, tools, methodologies, and bolded quantified metrics (percentages or numbers). For executive roles, highlight team leadership and multi-million ARR growth; for marketing/sales, highlight campaign ROI and conversion rates; for entry-level/new grad, highlight strong internship/academic execution.
+  5. "projects": REPLACE ALL outdated or mismatched projects with 3 detailed, high-impact role-aligned projects describing technical execution, tools/frameworks, and quantifiable business outcomes. Each project description MUST be rich and detailed (140-160 characters) so that each project occupies 2 full visual lines.
+  6. "certifications": REPLACE outdated certifications with 4 industry-recognized credentials for that specific field in a 2x2 grid.
+  7. "additional": Update both 'skills' (8-10 technical skills) and 'interests' (5-6 professional interests) tailored specifically to the target role.
+  8. MANDATORY PAGE FILL RULE: The output generated for all sections MUST be rich and substantial enough to fill 100% of Page 1 from top to bottom, leaving ZERO empty white gap at the bottom while fitting cleanly on Page 1!
 - CRITICAL — Filling Page 1 White Space ("fill the page", "fill remaining space", "increase content so space gets filled", "no empty space at end", "page has space at the end"):
   1. ALL CONTENT MUST RESIDE 100% ON PAGE 1! NEVER OVERFLOW OR SPILL ANY SECTION (SUCH AS ADDITIONAL) ONTO PAGE 2!
   2. To eliminate empty white space at the bottom of Page 1:
@@ -800,6 +804,76 @@ export async function POST(request: Request) {
       });
       return { ...w, bullets: enrichedLines.join('\n') };
     });
+
+    // Auto-fix: Sanitize any leftover raw placeholder tokens in safeCv
+    const isPlaceholderToken = (str?: string) => {
+      if (!str) return false;
+      const l = str.toLowerCase();
+      return (
+        l.includes('your university') ||
+        l.includes('college name') ||
+        l.includes('degree program') ||
+        l.includes('field of study') ||
+        l.includes('company / organization') ||
+        l.includes('job title / position') ||
+        l.includes('key project title') ||
+        l.includes('secondary project title') ||
+        l.includes('industry certification') ||
+        l.includes('issuing organization')
+      );
+    };
+
+    if (safeCv.education) {
+      safeCv.education = safeCv.education.map((edu) => ({
+        ...edu,
+        institution: isPlaceholderToken(edu.institution) ? 'University of California, Berkeley' : edu.institution,
+        degree: isPlaceholderToken(edu.degree) ? 'B.S. in Business Administration & Management' : edu.degree,
+      }));
+    }
+
+    if (safeCv.workExperience) {
+      safeCv.workExperience = safeCv.workExperience.map((exp) => ({
+        ...exp,
+        company: isPlaceholderToken(exp.company) ? 'Apex Enterprise Solutions' : exp.company,
+        title: isPlaceholderToken(exp.title) ? (msgLower.includes('sales') ? 'Vice President of Enterprise Sales' : msgLower.includes('marketing') ? 'Senior Marketing Director' : msgLower.includes('product') ? 'Senior Product Manager' : 'Senior Software Engineer') : exp.title,
+      }));
+    }
+
+    if (safeCv.projects) {
+      safeCv.projects = safeCv.projects.map((proj) => {
+        if (isPlaceholderToken(proj.content)) {
+          if (msgLower.includes('sales')) {
+            return { content: '<strong>Enterprise Pipeline Scaling Architecture</strong> (Salesforce, Clari, HubSpot) – Engineered outbound sales engine closing $12M in enterprise ARR and expanding account retention by 35%.' };
+          }
+          if (msgLower.includes('marketing')) {
+            return { content: '<strong>Omnichannel Growth & Lead Gen Campaign</strong> (Marketo, Google Ads, GA4) – Executed multi-channel acquisition strategy generating 45,000 qualified MQLs with a 38% conversion rate.' };
+          }
+          if (msgLower.includes('product')) {
+            return { content: '<strong>Autonomous Workflow Engine</strong> (React, Python, Jira) – Directed product roadmap and cross-functional teams to launch core automation suite adopted by 80,000 active users.' };
+          }
+          return { content: '<strong>High-Performance Distributed Microservices</strong> (Next.js, Python, PostgreSQL, Docker) – Architected scalable cloud infrastructure serving 50,000 daily active requests with sub-100ms latency.' };
+        }
+        return proj;
+      });
+    }
+
+    if (safeCv.certifications) {
+      safeCv.certifications = safeCv.certifications.map((cert) => {
+        if (isPlaceholderToken(cert.name) || isPlaceholderToken(cert.organization)) {
+          if (msgLower.includes('sales')) {
+            return { name: 'Certified Sales Executive (CSE)', organization: 'Sales & Marketing Executives International' };
+          }
+          if (msgLower.includes('marketing')) {
+            return { name: 'Certified Digital Marketing Professional', organization: 'Digital Marketing Institute' };
+          }
+          if (msgLower.includes('product')) {
+            return { name: 'Certified Scrum Product Owner (CSPO)', organization: 'Scrum Alliance' };
+          }
+          return { name: 'AWS Certified Solutions Architect', organization: 'Amazon Web Services' };
+        }
+        return cert;
+      });
+    }
 
     // Log the turn
     if (sessionId !== 'unknown') {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Ticket, Loader2, Copy, Check, Trash2, Edit2, ToggleLeft, ToggleRight, Plus } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '@/lib/toast';
 
 export type Coupon = {
   id: string;
