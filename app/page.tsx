@@ -145,7 +145,7 @@ export default function Home() {
   const checkUnlockStatus = () => {
     fetch('/api/payment/status')
       .then((r) => r.json())
-      .then((d: { unlocked: boolean; lastApprovedAt?: string }) => {
+      .then((d: { unlocked: boolean; lastApprovedAt?: string; shouldCelebrate?: boolean }) => {
         setUnlocked(d.unlocked);
         if (typeof window !== 'undefined') {
           localStorage.setItem('cached_pro_user', d.unlocked ? 'true' : 'false');
@@ -153,31 +153,23 @@ export default function Home() {
             localStorage.setItem(`cached_pro_${user.id}`, d.unlocked ? 'true' : 'false');
           }
         }
-        if (d.unlocked && d.lastApprovedAt) {
-          setLastApprovedAt(d.lastApprovedAt);
-          if (user?.id) {
-            const storageKey = `last_celebrated_pro_unlock_${user.id}`;
-            const lastCelebrated = localStorage.getItem(storageKey);
-            // Only trigger celebration ONCE when status was newly updated/approved
-            if (lastCelebrated !== d.lastApprovedAt) {
-              setShowProCelebrationModal(true);
-              localStorage.setItem(storageKey, d.lastApprovedAt);
-              try {
-                confetti({
-                  particleCount: 120,
-                  spread: 80,
-                  origin: { y: 0.5 },
-                  colors: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'],
-                });
-              } catch (e) {
-                console.error('[Confetti] Trigger error:', e);
-              }
-            }
+        if (d.lastApprovedAt) setLastApprovedAt(d.lastApprovedAt);
+
+        // Database-backed celebration check across all browsers
+        if (d.unlocked && d.shouldCelebrate) {
+          setShowProCelebrationModal(true);
+          // Persist celebrated status to PostgreSQL so no other browser/device ever shows it again
+          fetch('/api/payment/celebrate', { method: 'POST' }).catch(() => {});
+          try {
+            confetti({
+              particleCount: 120,
+              spread: 80,
+              origin: { y: 0.5 },
+              colors: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'],
+            });
+          } catch (e) {
+            console.error('[Confetti] Trigger error:', e);
           }
-        } else if (!d.unlocked && user?.id) {
-          // User is currently free — clear celebration record so re-approval in the future triggers fresh celebration
-          const storageKey = `last_celebrated_pro_unlock_${user.id}`;
-          localStorage.removeItem(storageKey);
         }
       })
       .catch(() => setUnlocked(false));

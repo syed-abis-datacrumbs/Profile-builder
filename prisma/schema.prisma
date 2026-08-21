@@ -54,9 +54,10 @@ model LinkedinSave {
 // kept as its own table rather than reusing that field since paying for
 // Profile-builder shouldn't be conflated with paying for LMS's CV Builder.
 model PaymentUnlock {
-  id         String   @id @default(cuid())
-  userId     String   @unique
-  unlockedAt DateTime @default(now())
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  unlockedAt   DateTime  @default(now())
+  celebratedAt DateTime?
 
   @@map("profile_builder_payment_unlocks")
 }

@@ -24,11 +24,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     data: { status: newStatus, decisionReason: body.reason || null },
   });
 
-  // If approved, ensure user is unlocked with fresh timestamp
+  // If approved, ensure user is unlocked with fresh timestamp and fresh celebration state
   if (action === 'approve') {
     await db.paymentUnlock.upsert({
       where: { userId: proof.userId },
-      update: { unlockedAt: new Date() },
+      update: { unlockedAt: new Date(), celebratedAt: null } as any,
       create: { userId: proof.userId },
     });
   } else {

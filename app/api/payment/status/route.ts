@@ -24,14 +24,15 @@ export async function GET() {
       unlock = await db.paymentUnlock.create({ data: { userId } });
     }
     const lastApprovedAt = unlock.unlockedAt ? unlock.unlockedAt.toISOString() : 'team_access_permanent';
-    return Response.json({ unlocked: true, aiMessagesUsed, lastApprovedAt });
+    const shouldCelebrate = !(unlock as any)?.celebratedAt;
+    return Response.json({ unlocked: true, aiMessagesUsed, lastApprovedAt, shouldCelebrate });
   }
 
   // Testing: always report "not unlocked" so the watermark/download-block
   // and payment prompt stay available on every load, letting the flow be
   // re-tested repeatedly without cleaning up rows. Mirrors LMS's
   // hasCvDownloadAccess().
-  if (PAYMENT_TESTING_MODE) return Response.json({ unlocked: false, aiMessagesUsed });
+  if (PAYMENT_TESTING_MODE) return Response.json({ unlocked: false, aiMessagesUsed, shouldCelebrate: false });
 
   const approvedProof = await db.paymentProof.findFirst({
     where: { userId, status: 'APPROVED' },
@@ -50,8 +51,9 @@ export async function GET() {
     const lastApprovedAt = resolvedUnlock.unlockedAt
       ? resolvedUnlock.unlockedAt.toISOString()
       : (approvedProof?.createdAt ? approvedProof.createdAt.toISOString() : 'unlocked_permanent');
-    return Response.json({ unlocked: true, aiMessagesUsed, lastApprovedAt });
+    const shouldCelebrate = !(resolvedUnlock as any)?.celebratedAt;
+    return Response.json({ unlocked: true, aiMessagesUsed, lastApprovedAt, shouldCelebrate });
   }
 
-  return Response.json({ unlocked: false, aiMessagesUsed });
+  return Response.json({ unlocked: false, aiMessagesUsed, shouldCelebrate: false });
 }
