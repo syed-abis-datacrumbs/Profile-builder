@@ -146,10 +146,16 @@ export const DEFAULT_PLACEHOLDER_CV = {
   },
   education: [
     {
-      institution: 'Your University / College Name',
-      degree: 'Degree Program / Field of Study',
+      institution: 'Your University / Graduate School',
+      degree: 'Degree Program / Major (e.g. Master / B.S. in Computer Science)',
       start: '2020',
       end: '2024',
+    },
+    {
+      institution: 'Your College / Pre-University Institution',
+      degree: 'Intermediate / High School Diploma / Pre-Engineering',
+      start: '2018',
+      end: '2020',
     },
   ],
   workExperience: [
@@ -163,7 +169,7 @@ export const DEFAULT_PLACEHOLDER_CV = {
   ],
   projects: [
     {
-      content: '<strong>Key Project Title</strong> (Technologies, Tools, Frameworks) – Comprehensive overview of problem solved, technical implementation details, and business outcome.',
+      content: '<strong>Primary Project Title</strong> (Technologies, Tools, Frameworks) – Comprehensive overview of problem solved, technical implementation details, and business outcome.',
     },
     {
       content: '<strong>Secondary Project Title</strong> (Relevant Stack) – Key features engineered, system performance optimizations, and quantifiable impact.',
@@ -171,7 +177,11 @@ export const DEFAULT_PLACEHOLDER_CV = {
   ],
   certifications: [
     {
-      name: 'Industry Certification / Credential',
+      name: 'Professional Credential / Certification 1',
+      organization: 'Issuing Organization',
+    },
+    {
+      name: 'Professional Credential / Certification 2',
       organization: 'Issuing Organization',
     },
   ],

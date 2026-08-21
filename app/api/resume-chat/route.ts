@@ -829,50 +829,114 @@ export async function POST(request: Request) {
         institution: isPlaceholderToken(edu.institution) ? 'University of California, Berkeley' : edu.institution,
         degree: isPlaceholderToken(edu.degree) ? 'B.S. in Business Administration & Management' : edu.degree,
       }));
+
+      // Ensure 2 education entries are always present
+      if (safeCv.education.length < 2) {
+        const edu1 = safeCv.education[0] || {
+          institution: 'University of California, Berkeley',
+          degree: 'B.S. in Business Administration & Management',
+          start: '2020',
+          end: '2024',
+        };
+        const edu2 = {
+          institution: 'State College Preparatory',
+          degree: 'Intermediate / Pre-University Diploma (Honors)',
+          start: '2018',
+          end: '2020',
+        };
+        safeCv.education = [edu1, edu2];
+      }
     }
 
     if (safeCv.workExperience) {
       safeCv.workExperience = safeCv.workExperience.map((exp) => ({
         ...exp,
-        company: isPlaceholderToken(exp.company) ? 'Apex Enterprise Solutions' : exp.company,
+        company: isPlaceholderToken(exp.company) ? (msgLower.includes('sales') ? 'Apex Enterprise Solutions' : msgLower.includes('marketing') ? 'Vanguard Growth Media' : msgLower.includes('product') ? 'Nexus Tech Innovations' : 'CloudScale Technologies') : exp.company,
         title: isPlaceholderToken(exp.title) ? (msgLower.includes('sales') ? 'Vice President of Enterprise Sales' : msgLower.includes('marketing') ? 'Senior Marketing Director' : msgLower.includes('product') ? 'Senior Product Manager' : 'Senior Software Engineer') : exp.title,
       }));
     }
 
     if (safeCv.projects) {
-      safeCv.projects = safeCv.projects.map((proj) => {
+      const salesProjs = [
+        '<strong>Enterprise Pipeline Scaling Architecture</strong> (Salesforce, Clari, HubSpot) – Engineered outbound sales engine closing $12M in enterprise ARR and expanding account retention by 35%.',
+        '<strong>Strategic Account Penetration Framework</strong> (Gong.io, ZoomInfo, LinkedIn Sales Navigator) – Led targeted enterprise campaigns converting 42 Fortune 500 accounts.',
+        '<strong>Global Revenue Optimization Engine</strong> (Tableau, Stripe, PowerBI) – Unified global sales analytics to accelerate deal cycle time by 28% and boost average contract value.'
+      ];
+      const marketingProjs = [
+        '<strong>Omnichannel Growth & Acquisition Funnel</strong> (Google Ads, Meta Ads, GA4) – Executed multi-channel acquisition generating 65,000 qualified MQLs with a 34% conversion rate.',
+        '<strong>Lifecycle Email & Retention Engine</strong> (Klaviyo, Marketo, HubSpot) – Automated behavioral segmentation campaigns driving $4.2M in recurring customer revenue.',
+        '<strong>Brand Performance & SEO Authority Campaign</strong> (Ahrefs, Semrush, WordPress) – Scaled organic inbound search traffic by 180% and lowered blended CAC by 40%.'
+      ];
+      const productProjs = [
+        '<strong>Autonomous Workflow & Integration Engine</strong> (React, Python, Jira, Mixpanel) – Spearheaded core automation suite adopted by 85,000 daily active users.',
+        '<strong>Real-Time Analytics & User Journey Tracker</strong> (Next.js, PostgreSQL, Amplitude) – Architected real-time event pipeline increasing 30-day user retention by 25%.',
+        '<strong>Enterprise API & Webhook Infrastructure</strong> (Node.js, Docker, AWS) – Led developer platform roadmap reducing partner integration time from weeks to 2 days.'
+      ];
+      const generalProjs = [
+        '<strong>High-Performance Distributed Microservices</strong> (Next.js, Python, PostgreSQL, Docker) – Architected scalable cloud infrastructure serving 50,000 daily active requests with sub-100ms latency.',
+        '<strong>Real-Time Collaboration & Data Pipeline</strong> (TypeScript, WebSockets, Redis) – Developed live multi-user synchronization layer handling 10,000 concurrent socket connections.',
+        '<strong>Automated CI/CD & Security Compliance Suite</strong> (GitHub Actions, Terraform, AWS) – Built zero-downtime deployment pipeline cutting release cycle time by 60%.'
+      ];
+
+      const pool = msgLower.includes('sales') ? salesProjs : msgLower.includes('marketing') ? marketingProjs : msgLower.includes('product') ? productProjs : generalProjs;
+
+      safeCv.projects = safeCv.projects.map((proj, idx) => {
         if (isPlaceholderToken(proj.content)) {
-          if (msgLower.includes('sales')) {
-            return { content: '<strong>Enterprise Pipeline Scaling Architecture</strong> (Salesforce, Clari, HubSpot) – Engineered outbound sales engine closing $12M in enterprise ARR and expanding account retention by 35%.' };
-          }
-          if (msgLower.includes('marketing')) {
-            return { content: '<strong>Omnichannel Growth & Lead Gen Campaign</strong> (Marketo, Google Ads, GA4) – Executed multi-channel acquisition strategy generating 45,000 qualified MQLs with a 38% conversion rate.' };
-          }
-          if (msgLower.includes('product')) {
-            return { content: '<strong>Autonomous Workflow Engine</strong> (React, Python, Jira) – Directed product roadmap and cross-functional teams to launch core automation suite adopted by 80,000 active users.' };
-          }
-          return { content: '<strong>High-Performance Distributed Microservices</strong> (Next.js, Python, PostgreSQL, Docker) – Architected scalable cloud infrastructure serving 50,000 daily active requests with sub-100ms latency.' };
+          return { content: pool[idx % pool.length] };
         }
+        return proj;
+      });
+
+      // Ensure distinct projects if any duplicate contents exist
+      const seen = new Set<string>();
+      safeCv.projects = safeCv.projects.map((proj, idx) => {
+        if (seen.has(proj.content)) {
+          return { content: pool[(idx + 1) % pool.length] };
+        }
+        seen.add(proj.content);
         return proj;
       });
     }
 
     if (safeCv.certifications) {
-      safeCv.certifications = safeCv.certifications.map((cert) => {
+      const salesCerts = [
+        { name: 'Certified Sales Executive (CSE)', organization: 'Sales & Marketing Executives International' },
+        { name: 'Enterprise Sales Strategy & Negotiation', organization: 'Harvard Division of Continuing Education' },
+        { name: 'Salesforce Certified Administrator', organization: 'Salesforce' },
+        { name: 'HubSpot Inbound Sales Certified', organization: 'HubSpot Academy' },
+      ];
+      const marketingCerts = [
+        { name: 'Certified Digital Marketing Professional', organization: 'Digital Marketing Institute' },
+        { name: 'Google Analytics & Ads Search Certification', organization: 'Google Skillshop' },
+        { name: 'HubSpot Inbound Marketing Certified', organization: 'HubSpot Academy' },
+        { name: 'Meta Certified Digital Marketing Associate', organization: 'Meta Blueprint' },
+      ];
+      const productCerts = [
+        { name: 'Certified Scrum Product Owner (CSPO)', organization: 'Scrum Alliance' },
+        { name: 'Product Management Certificate', organization: 'General Assembly' },
+        { name: 'Agile Certified Practitioner (PMI-ACP)', organization: 'Project Management Institute' },
+        { name: 'Google Analytics Certification', organization: 'Google' },
+      ];
+      const generalCerts = [
+        { name: 'AWS Certified Solutions Architect', organization: 'Amazon Web Services' },
+        { name: 'Professional Scrum Master (PSM I)', organization: 'Scrum.org' },
+        { name: 'Google Cloud Professional Cloud Architect', organization: 'Google Cloud' },
+        { name: 'HashiCorp Certified Terraform Associate', organization: 'HashiCorp' },
+      ];
+
+      const certPool = msgLower.includes('sales') ? salesCerts : msgLower.includes('marketing') ? marketingCerts : msgLower.includes('product') ? productCerts : generalCerts;
+
+      safeCv.certifications = safeCv.certifications.map((cert, idx) => {
         if (isPlaceholderToken(cert.name) || isPlaceholderToken(cert.organization)) {
-          if (msgLower.includes('sales')) {
-            return { name: 'Certified Sales Executive (CSE)', organization: 'Sales & Marketing Executives International' };
-          }
-          if (msgLower.includes('marketing')) {
-            return { name: 'Certified Digital Marketing Professional', organization: 'Digital Marketing Institute' };
-          }
-          if (msgLower.includes('product')) {
-            return { name: 'Certified Scrum Product Owner (CSPO)', organization: 'Scrum Alliance' };
-          }
-          return { name: 'AWS Certified Solutions Architect', organization: 'Amazon Web Services' };
+          return certPool[idx % certPool.length];
         }
         return cert;
       });
+
+      // Ensure 2 or 4 certifications for balanced grid fill
+      if (safeCv.certifications.length < 2) {
+        safeCv.certifications = certPool.slice(0, 2);
+      }
     }
 
     // Log the turn
