@@ -104,11 +104,6 @@ export default function IssuesAdminPage() {
                       {issue.user?.name && issue.user.name !== issue.user.email && (
                         <span className="text-xs text-slate-400">({issue.user.name})</span>
                       )}
-                      {issue.userId && (
-                        <span className="font-mono text-[10px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                          ID: {issue.userId}
-                        </span>
-                      )}
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
                       {new Date(issue.createdAt).toLocaleString()}

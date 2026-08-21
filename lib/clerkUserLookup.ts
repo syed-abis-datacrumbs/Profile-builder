@@ -24,7 +24,7 @@ export async function lookupClerkUsers(userIds: string[]): Promise<Map<string, U
           const name = `${u.firstName || ''} ${u.lastName || ''}`.trim() || email;
           map.set(uid, { id: uid, name, email });
         } catch {
-          map.set(uid, { id: uid, name: uid, email: uid });
+          map.set(uid, { id: uid, name: 'Unknown User', email: '(Not found in Clerk)' });
         }
       })
     );

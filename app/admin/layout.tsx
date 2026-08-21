@@ -1,7 +1,8 @@
 import { isAdmin } from '@/lib/adminAuth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Ticket, CreditCard, Users, LogOut, ShieldCheck, MessageSquare, UserCheck, Bug } from 'lucide-react';
+import { ShieldCheck, LogOut } from 'lucide-react';
+import { AdminSidebarNav } from '@/components/AdminSidebarNav';
 import { currentUser } from '@clerk/nextjs/server';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -13,15 +14,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect('/');
   }
 
-  const navItems = [
-    { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/chats', label: 'AI Chats', icon: MessageSquare },
-    { href: '/admin/issues', label: 'Issues', icon: Bug },
-    { href: '/admin/coupons', label: 'Coupons', icon: Ticket },
-    { href: '/admin/payments', label: 'Payments', icon: CreditCard },
-    { href: '/admin/unlocked', label: 'Unlocked Users', icon: Users },
-    { href: '/admin/name-requests', label: 'Name Requests', icon: UserCheck },
-  ];
 
   return (
     <div className="min-h-screen flex bg-slate-950 font-sans">
@@ -41,18 +33,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-3 space-y-0.5">
-          {navItems.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors group"
-            >
-              <Icon className="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition-colors" />
-              {label}
-            </Link>
-          ))}
-        </nav>
+        <AdminSidebarNav />
 
         {/* Bottom */}
         <div className="p-3 border-t border-slate-800">

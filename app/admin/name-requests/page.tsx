@@ -153,7 +153,6 @@ export default function AdminNameRequestsPage() {
                           <span className="text-xs text-slate-400">({r.userName})</span>
                         )}
                       </div>
-                      <span className="font-mono text-[10px] text-slate-500">ID: {r.userId}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">

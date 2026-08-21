@@ -107,9 +107,6 @@ export default function PaymentsPage() {
                     {p.userName && p.userName !== p.userEmail && (
                       <span className="text-xs text-slate-400">({p.userName})</span>
                     )}
-                    <span className="text-[10px] text-slate-400 font-mono bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/60" title={`Full Clerk User ID: ${p.userId}`}>
-                      ID: {p.userId}
-                    </span>
                   </div>
                   <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
                     p.status === 'APPROVED' ? 'bg-emerald-500/15 text-emerald-400'
