@@ -39,6 +39,13 @@ CRITICAL CONTENT QUALITY RULES:
   • [Vulnerability Assessment Tool](https://github.com/yourname/vuln-tool): Developed a comprehensive vulnerability assessment tool...
 - If the user asks to add projects or custom sections, append or update the entry in 'customSections' with full, rich plain-text content.
 - ALWAYS generate "💡 Expertise" and "🚀 Featured Projects" custom sections by default when creating a profile from scratch.
+- ALWAYS assign a 'bannerUrl' by randomly selecting ONE of the following exact URLs when creating a profile from scratch (do NOT use any other URLs):
+  1. "https://media2.dev.to/dynamic/image/width=800,height=200,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Farticles%2F4e0d816kuzyu700pdbjn.png"
+  2. "https://github.blog/wp-content/uploads/2023/10/Security-DarkMode-4.png?fit=800%2C200"
+  3. "https://github.blog/wp-content/uploads/2024/04/Enterprise-DarkMode-2-3.png?fit=800%2C200"
+  4. "https://github.blog/wp-content/uploads/2024/01/Productivity-DarkMode-3.png?fit=800%2C200"
+  5. "https://res.cloudinary.com/dnqk2jlds/image/upload/f_auto,q_auto,w_800,h_200,c_fill/v1784892308/lms-assets/github-builder-banner.png"
+  6. "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRx3gQYfcsXGDOlHkID72zyJVRqRDFFgDVrBu362KeYVQ&s=10"
 
 General Rules:
 - Return the WHOLE github object every time; preserve every field the user did not ask to change.
