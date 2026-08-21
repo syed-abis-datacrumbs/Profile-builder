@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useClerk, useUser } from '@clerk/nextjs';
 import {
   ChevronRight,
@@ -84,6 +84,21 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
 }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { signOut } = useClerk();
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setIsSettingsOpen(false);
+      }
+    }
+    if (isSettingsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSettingsOpen]);
 
   return (
     <>
@@ -182,7 +197,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
         </div> */}
 
         {/* User Profile Bar & Popover */}
-        <div className="relative w-full">
+        <div className="relative w-full" ref={popoverRef}>
 
           {/* Settings Popover Dropdown (Width set to w-full matching sidebar padding) */}
           {isSettingsOpen && (
@@ -212,28 +227,19 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
               </div>
 
               {/* Action Buttons Row */}
-              <div className="flex items-center gap-2 pt-0.5">
-                {!unlocked && (
+              {!unlocked && (
+                <div className="flex items-center gap-2 pt-0.5">
                   <button
                     onClick={() => {
                       setIsSettingsOpen(false);
                       if (onOpenUpgrade) onOpenUpgrade();
                     }}
-                    className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs transition-colors text-center"
+                    className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs transition-colors text-center cursor-pointer"
                   >
                     Upgrade
                   </button>
-                )}
-                <button
-                  onClick={() => {
-                    setIsSettingsOpen(false);
-                    window.open('https://wa.me/923292020497', '_blank');
-                  }}
-                  className="flex-1 py-2 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-900 font-semibold text-xs transition-colors text-center truncate"
-                >
-                  Support
-                </button>
-              </div>
+                </div>
+              )}
 
               {/* Menu List: Remove Watermark, Theme, Help Center, Log out */}
               <div className="pt-2 border-t border-slate-200 space-y-0.5 text-xs font-semibold text-slate-700">
@@ -284,6 +290,17 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button> */}
+
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(false);
+                    window.open('https://wa.me/923292020497', '_blank');
+                  }}
+                  className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-slate-100/80 text-slate-700 transition-colors text-left cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4 shrink-0" />
+                  <span>Support</span>
+                </button>
 
                 {isLoggedIn && (
                   <button
