@@ -14,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   try {
-    const updated = await db.profileBuilderIssue.update({
+    const updated = await (db as any).profileBuilderIssue.update({
       where: { id },
       data: { status: data.status },
     });

@@ -107,7 +107,14 @@ export default function Home() {
   const isAuthorized = isLoggedIn && BUILDER_ACCESS_EMAILS.has(userEmail || '');
   const [assistantPrompt, setAssistantPrompt] = useState('');
 
-  const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  const [unlocked, setUnlocked] = useState<boolean | null>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('cached_pro_user');
+      if (cached === 'true') return true;
+      if (cached === 'false') return false;
+    }
+    return null;
+  });
   const [lastApprovedAt, setLastApprovedAt] = useState<string | null>(null);
   const [showProCelebrationModal, setShowProCelebrationModal] = useState(false);
   const [lockedResumeName, setLockedResumeName] = useState('');
@@ -115,7 +122,11 @@ export default function Home() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (isLoggedIn) {
+    if (isLoggedIn && user?.id) {
+      const userCached = localStorage.getItem(`cached_pro_${user.id}`);
+      if (userCached === 'true') setUnlocked(true);
+      else if (userCached === 'false' && unlocked === null) setUnlocked(false);
+
       setHasFetchedName(false);
       fetch('/api/resumes/name')
         .then((r) => r.json())
@@ -127,7 +138,7 @@ export default function Home() {
     } else {
       setHasFetchedName(true);
     }
-  }, [isLoggedIn, isLoaded]);
+  }, [isLoggedIn, isLoaded, user?.id]);
 
   const displayFullName = lockedResumeName || clerkFullName || undefined;
 
@@ -136,7 +147,38 @@ export default function Home() {
       .then((r) => r.json())
       .then((d: { unlocked: boolean; lastApprovedAt?: string }) => {
         setUnlocked(d.unlocked);
-        if (d.lastApprovedAt) setLastApprovedAt(d.lastApprovedAt);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('cached_pro_user', d.unlocked ? 'true' : 'false');
+          if (user?.id) {
+            localStorage.setItem(`cached_pro_${user.id}`, d.unlocked ? 'true' : 'false');
+          }
+        }
+        if (d.unlocked && d.lastApprovedAt) {
+          setLastApprovedAt(d.lastApprovedAt);
+          if (user?.id) {
+            const storageKey = `last_celebrated_pro_unlock_${user.id}`;
+            const lastCelebrated = localStorage.getItem(storageKey);
+            // Only trigger celebration ONCE when status was newly updated/approved
+            if (lastCelebrated !== d.lastApprovedAt) {
+              setShowProCelebrationModal(true);
+              localStorage.setItem(storageKey, d.lastApprovedAt);
+              try {
+                confetti({
+                  particleCount: 120,
+                  spread: 80,
+                  origin: { y: 0.5 },
+                  colors: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'],
+                });
+              } catch (e) {
+                console.error('[Confetti] Trigger error:', e);
+              }
+            }
+          }
+        } else if (!d.unlocked && user?.id) {
+          // User is currently free — clear celebration record so re-approval in the future triggers fresh celebration
+          const storageKey = `last_celebrated_pro_unlock_${user.id}`;
+          localStorage.removeItem(storageKey);
+        }
       })
       .catch(() => setUnlocked(false));
   };
@@ -145,40 +187,13 @@ export default function Home() {
     checkUnlockStatus();
     window.addEventListener('focus', checkUnlockStatus);
     return () => window.removeEventListener('focus', checkUnlockStatus);
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!isPaymentModalOpen) {
       checkUnlockStatus();
     }
-  }, [isPaymentModalOpen]);
-
-  // Trigger celebration modal + confetti ONCE per approval cycle
-  useEffect(() => {
-    if (unlocked === true && user?.id) {
-      const storageKey = `last_celebrated_pro_unlock_${user.id}`;
-      const lastCelebratedTimestamp = localStorage.getItem(storageKey);
-
-      const shouldCelebrate = lastApprovedAt
-        ? lastCelebratedTimestamp !== lastApprovedAt
-        : !lastCelebratedTimestamp;
-
-      if (shouldCelebrate) {
-        setShowProCelebrationModal(true);
-        try {
-          confetti({
-            particleCount: 120,
-            spread: 80,
-            origin: { y: 0.5 },
-            colors: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'],
-          });
-        } catch (e) {
-          console.error('[Confetti] Trigger error:', e);
-        }
-        localStorage.setItem(storageKey, lastApprovedAt || 'true');
-      }
-    }
-  }, [unlocked, user?.id, lastApprovedAt]);
+  }, [isPaymentModalOpen, user?.id]);
 
   // Listen to scrolling on mainContentRef to show/hide Scroll to Top button
   useEffect(() => {

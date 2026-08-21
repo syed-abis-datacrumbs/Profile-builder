@@ -16,17 +16,17 @@ export async function GET(req: NextRequest) {
   const where = { status };
 
   const [issues, total] = await Promise.all([
-    db.profileBuilderIssue.findMany({
+    (db as any).profileBuilderIssue.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
-    db.profileBuilderIssue.count({ where }),
+    (db as any).profileBuilderIssue.count({ where }),
   ]);
 
   const client = await clerkClient();
-  const uniqueUserIds = Array.from(new Set(issues.map(i => i.userId).filter(Boolean))) as string[];
+  const uniqueUserIds = Array.from(new Set(issues.map((i: any) => i.userId).filter(Boolean))) as string[];
   const clerkUsers = await Promise.all(
     uniqueUserIds.map(async (id) => {
       try { return await client.users.getUser(id); } catch { return null; }
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     }
   });
 
-  const enrichedIssues = issues.map(i => ({
+  const enrichedIssues = issues.map((i: any) => ({
     ...i,
     user: i.userId ? userMap.get(i.userId) : null,
   }));

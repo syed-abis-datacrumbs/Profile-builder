@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       imageUrl = upload.url;
     }
 
-    const issue = await db.profileBuilderIssue.create({
+    const issue = await (db as any).profileBuilderIssue.create({
       data: {
         userId,
         text: data.text,

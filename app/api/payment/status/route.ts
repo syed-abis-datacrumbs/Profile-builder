@@ -19,11 +19,12 @@ export async function GET() {
   // (like AI chat limiters) natively see this user as fully unlocked.
   const primaryEmail = user.primaryEmailAddress?.emailAddress;
   if (primaryEmail && BUILDER_ACCESS_EMAILS.has(primaryEmail)) {
-    const unlock = await db.paymentUnlock.findUnique({ where: { userId } });
+    let unlock = await db.paymentUnlock.findUnique({ where: { userId } });
     if (!unlock) {
-      await db.paymentUnlock.create({ data: { userId } });
+      unlock = await db.paymentUnlock.create({ data: { userId } });
     }
-    return Response.json({ unlocked: true, aiMessagesUsed });
+    const lastApprovedAt = unlock.unlockedAt ? unlock.unlockedAt.toISOString() : 'team_access_permanent';
+    return Response.json({ unlocked: true, aiMessagesUsed, lastApprovedAt });
   }
 
   // Testing: always report "not unlocked" so the watermark/download-block
@@ -40,14 +41,15 @@ export async function GET() {
   const unlock = await db.paymentUnlock.findUnique({ where: { userId } });
 
   if (unlock || approvedProof) {
-    if (!unlock) {
-      await db.paymentUnlock.upsert({
-        where: { userId },
-        update: {},
-        create: { userId },
+    let resolvedUnlock = unlock;
+    if (!resolvedUnlock) {
+      resolvedUnlock = await db.paymentUnlock.create({
+        data: { userId, unlockedAt: approvedProof?.createdAt || new Date() },
       });
     }
-    const lastApprovedAt = unlock?.unlockedAt?.toISOString() || approvedProof?.createdAt?.toISOString() || new Date().toISOString();
+    const lastApprovedAt = resolvedUnlock.unlockedAt
+      ? resolvedUnlock.unlockedAt.toISOString()
+      : (approvedProof?.createdAt ? approvedProof.createdAt.toISOString() : 'unlocked_permanent');
     return Response.json({ unlocked: true, aiMessagesUsed, lastApprovedAt });
   }
 
