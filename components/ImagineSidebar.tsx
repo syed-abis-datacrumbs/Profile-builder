@@ -260,7 +260,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                   >
                     <div className="flex items-center gap-3">
                       <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
-                      <span>Remove Watermark</span>
+                      <span>Free Plan</span>
                     </div>
                   </button>
                 )}
