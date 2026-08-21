@@ -100,6 +100,13 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const [issueImage, setIssueImage] = useState<string | null>(null);
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
 
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  
+  const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [revision, setRevision] = useState(0);
@@ -160,12 +167,12 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         body: JSON.stringify({ text: issueText, imageBase64: issueImage }),
       });
       if (!res.ok) throw new Error('Failed to submit issue');
-      alert('Issue reported successfully. Thank you!');
+      showToast('Issue reported successfully. Thank you!');
       setReportIssueModalOpen(false);
       setIssueText('');
       setIssueImage(null);
     } catch (e: any) {
-      alert('Failed to submit issue: ' + e.message);
+      showToast('Failed to submit issue: ' + e.message, 'error');
     } finally {
       setIsSubmittingIssue(false);
     }
@@ -617,7 +624,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     } catch (e) {
       console.error('Download check failed:', e);
       // Fail safe:
-      alert('Could not verify download limits. Please check your connection.');
+      showToast('Could not verify download limits. Please check your connection.', 'error');
       return;
     }
 
@@ -703,7 +710,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       }
     } catch (err: any) {
       console.error('Resume download failed', err);
-      alert(`Download failed: ${err.message || 'Please try again.'}`);
+      showToast(`Download failed: ${err.message || 'Please try again.'}`, 'error');
     } finally {
       removeWatermarks(watermarkNodes);
       setDownloading(null);
@@ -1522,6 +1529,16 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-6 right-6 sm:top-8 sm:right-8 z-[9999] animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className={`px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-bold text-white max-w-sm border ${toast.type === 'success' ? 'bg-emerald-600 border-emerald-500' : 'bg-rose-600 border-rose-500'}`}>
+            {toast.type === 'success' ? <Check className="w-5 h-5 shrink-0 text-white" /> : <X className="w-5 h-5 shrink-0 text-white" />}
+            <p className="leading-snug">{toast.msg}</p>
           </div>
         </div>
       )}
