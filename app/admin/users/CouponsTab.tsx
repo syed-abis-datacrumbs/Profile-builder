@@ -1,9 +1,8 @@
-'use client';
+import { useState } from 'react';
+import { Ticket, Loader2, Copy, Check, Trash2, Edit2, ToggleLeft, ToggleRight, Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-import { useEffect, useState } from 'react';
-import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Copy, Check, Ticket, Edit2 } from 'lucide-react';
-
-type Coupon = {
+export type Coupon = {
   id: string;
   code: string;
   label: string | null;
@@ -15,7 +14,7 @@ type Coupon = {
   _count: { redemptions: number };
 };
 
-export function CouponsClient({ initialCoupons }: { initialCoupons: Coupon[] }) {
+export function CouponsTab({ initialCoupons }: { initialCoupons: Coupon[] }) {
   const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -28,125 +27,141 @@ export function CouponsClient({ initialCoupons }: { initialCoupons: Coupon[] }) 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const load = () => {
+  const fetchCoupons = async () => {
     setLoading(true);
-    fetch('/api/admin/coupons')
-      .then((r) => r.json())
-      .then(setCoupons)
-      .finally(() => setLoading(false));
+    try {
+      const r = await fetch('/api/admin/coupons');
+      const data = await r.json();
+      setCoupons(data);
+    } catch {
+      toast.error('Failed to load coupons');
+    } finally {
+      setLoading(false);
+    }
   };
-
-  // Initial load uses SSR, so this is commented out
-  // useEffect(load, []);
 
   const openCreateForm = () => {
     setForm({ code: '', label: '', maxUses: '1', expiresAt: '' });
+    setFormError('');
     setEditingId(null);
-    setFormError('');
-    setShowForm(true);
-  };
-
-  const openEditForm = (c: Coupon) => {
-    setForm({
-      code: c.code,
-      label: c.label || '',
-      maxUses: String(c.maxUses),
-      expiresAt: c.expiresAt ? new Date(c.expiresAt).toISOString().split('T')[0] : '',
-    });
-    setEditingId(c.id);
-    setFormError('');
     setShowForm(true);
   };
 
   const handleSave = async () => {
+    if (!form.code.trim()) {
+      setFormError('Code is required');
+      return;
+    }
     setFormError('');
-    if (!form.code.trim()) { setFormError('Code is required'); return; }
     setCreating(true);
 
-    const isEdit = !!editingId;
-    const url = isEdit ? `/api/admin/coupons/${editingId}` : '/api/admin/coupons';
-    const method = isEdit ? 'PATCH' : 'POST';
+    try {
+      const url = editingId ? `/api/admin/coupons/${editingId}` : '/api/admin/coupons';
+      const method = editingId ? 'PATCH' : 'POST';
 
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code: form.code.trim().toUpperCase(),
-        label: form.label || null,
-        maxUses: Number(form.maxUses) || 1,
-        expiresAt: form.expiresAt || null,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setFormError(data.error || 'Failed'); setCreating(false); return; }
-    setForm({ code: '', label: '', maxUses: '1', expiresAt: '' });
-    setShowForm(false);
-    setEditingId(null);
-    setCreating(false);
-    load();
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to save coupon');
+      }
+
+      toast.success(editingId ? 'Coupon updated' : 'Coupon created');
+      setShowForm(false);
+      fetchCoupons();
+    } catch (err: any) {
+      setFormError(err.message);
+    } finally {
+      setCreating(false);
+    }
   };
 
-  const toggleActive = async (c: Coupon) => {
-    setTogglingId(c.id);
-    await fetch(`/api/admin/coupons/${c.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive: !c.isActive }),
-    });
-    setTogglingId(null);
-    load();
+  const toggleStatus = async (id: string, currentStatus: boolean) => {
+    setTogglingId(id);
+    try {
+      const res = await fetch(`/api/admin/coupons/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !currentStatus }),
+      });
+      if (res.ok) {
+        setCoupons((prev) =>
+          prev.map((c) => (c.id === id ? { ...c, isActive: !currentStatus } : c))
+        );
+        toast.success(`Coupon ${currentStatus ? 'disabled' : 'enabled'}`);
+      } else {
+        throw new Error('Failed');
+      }
+    } catch {
+      toast.error('Failed to update status');
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   const deleteCoupon = async (id: string) => {
-    if (!confirm('Delete this coupon?')) return;
+    if (!confirm('Are you sure you want to delete this coupon? This cannot be undone.')) return;
     setDeletingId(id);
-    await fetch(`/api/admin/coupons/${id}`, { method: 'DELETE' });
-    setDeletingId(null);
-    load();
+    try {
+      const res = await fetch(`/api/admin/coupons/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setCoupons((prev) => prev.filter((c) => c.id !== id));
+        toast.success('Coupon deleted');
+      } else {
+        throw new Error('Failed');
+      }
+    } catch {
+      toast.error('Failed to delete coupon');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const copyCode = (code: string, id: string) => {
     navigator.clipboard.writeText(code);
     setCopiedId(id);
+    toast.success('Code copied to clipboard');
     setTimeout(() => setCopiedId(null), 2000);
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Coupon Management</h1>
-          <p className="text-slate-400 text-sm mt-1">{coupons.length} coupons total</p>
+          <h2 className="text-xl font-bold text-white">Coupons</h2>
+          <p className="text-sm text-slate-400">Manage all generated coupons.</p>
         </div>
-        <button
-          onClick={openCreateForm}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New Coupon
-        </button>
+        {!showForm && (
+          <button
+            onClick={openCreateForm}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" /> New Coupon
+          </button>
+        )}
       </div>
 
-      {/* Create Form */}
       {showForm && (
-        <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6 mb-6">
-          <h2 className="text-white font-bold text-sm mb-4 flex items-center gap-2">
-            <Ticket className="w-4 h-4 text-blue-400" />
+        <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-5 mb-6 animate-in slide-in-from-top-4 fade-in duration-200">
+          <h2 className="text-lg font-bold text-white mb-4">
             {editingId ? 'Edit Coupon' : 'Create New Coupon'}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Code *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Coupon Code (e.g. FREE2024)</label>
               <input
                 value={form.code}
                 onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                placeholder="e.g. AUG-FREE"
-                className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm font-mono focus:outline-none focus:border-blue-500"
+                placeholder="FREE2024"
+                className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white text-sm focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Label (optional)</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Label / Note (optional)</label>
               <input
                 value={form.label}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
@@ -194,13 +209,12 @@ export function CouponsClient({ initialCoupons }: { initialCoupons: Coupon[] }) 
         </div>
       )}
 
-      {/* Table */}
       {loading ? (
         <div className="flex items-center justify-center py-20 text-slate-400">
           <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading…
         </div>
       ) : coupons.length === 0 ? (
-        <div className="text-center py-20 text-slate-500">
+        <div className="text-center py-20 text-slate-500 bg-slate-800/50 rounded-xl border border-slate-700">
           <Ticket className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="font-semibold">No coupons yet</p>
           <p className="text-xs mt-1">Click "New Coupon" to create one</p>
@@ -248,29 +262,18 @@ export function CouponsClient({ initialCoupons }: { initialCoupons: Coupon[] }) 
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
                       <button
-                        onClick={() => toggleActive(c)}
+                        onClick={() => toggleStatus(c.id, c.isActive)}
                         disabled={togglingId === c.id}
-                        className="text-slate-400 hover:text-white transition-colors"
-                        title={c.isActive ? 'Disable' : 'Enable'}
+                        className={`p-1.5 rounded hover:bg-slate-700 transition-colors ${c.isActive ? 'text-amber-400' : 'text-emerald-400'}`}
+                        title={c.isActive ? 'Disable coupon' : 'Enable coupon'}
                       >
-                        {togglingId === c.id
-                          ? <Loader2 className="w-4 h-4 animate-spin" />
-                          : c.isActive
-                          ? <ToggleRight className="w-5 h-5 text-emerald-400" />
-                          : <ToggleLeft className="w-5 h-5" />}
-                      </button>
-                      <button
-                        onClick={() => openEditForm(c)}
-                        className="text-slate-500 hover:text-blue-400 transition-colors"
-                        title="Edit"
-                      >
-                        <Edit2 className="w-4 h-4" />
+                        {togglingId === c.id ? <Loader2 className="w-4 h-4 animate-spin" /> : c.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
                       </button>
                       <button
                         onClick={() => deleteCoupon(c.id)}
                         disabled={deletingId === c.id}
-                        className="text-slate-500 hover:text-red-400 transition-colors"
-                        title="Delete"
+                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
+                        title="Delete coupon"
                       >
                         {deletingId === c.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                       </button>

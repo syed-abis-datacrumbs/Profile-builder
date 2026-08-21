@@ -9,7 +9,6 @@ const navItems = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/chats', label: 'AI Chats', icon: MessageSquare },
   { href: '/admin/issues', label: 'Issues', icon: Bug },
-  { href: '/admin/coupons', label: 'Coupons', icon: Ticket },
   { href: '/admin/payments', label: 'Payments', icon: CreditCard },
   { href: '/admin/name-requests', label: 'Name Requests', icon: UserCheck },
 ];

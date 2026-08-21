@@ -2,22 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { Users, Loader2, Plus, ShieldCheck, Ticket, User, MoreVertical, ShieldX } from 'lucide-react';
-import { GenerateCouponModal } from '@/components/GenerateCouponModal';
 import toast from 'react-hot-toast';
+import { CouponsTab, type Coupon } from './CouponsTab';
 
 type UserData = {
   userId: string;
   email: string;
   name: string;
-  planStatus: 'Free' | 'Paid' | 'Coupon';
+  planStatus: 'Free' | 'Paid';
+  couponStatus: 'Active' | 'Deactive' | null;
   unlockedAt: string | null;
 };
 
-export function UsersClient({ initialUsers }: { initialUsers: UserData[] }) {
+export function UsersClient({ initialUsers, initialCoupons }: { initialUsers: UserData[], initialCoupons: Coupon[] }) {
   const [users, setUsers] = useState<UserData[]>(initialUsers);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'All' | 'Free' | 'Paid' | 'Coupon'>('All');
-  const [showGenerateCoupon, setShowGenerateCoupon] = useState(false);
+  const [activeTab, setActiveTab] = useState<'All' | 'Free' | 'Paid' | 'Coupons'>('All');
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
@@ -61,30 +61,16 @@ export function UsersClient({ initialUsers }: { initialUsers: UserData[] }) {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">Users</h1>
+          <h1 className="text-2xl font-bold text-white">Users & Coupons</h1>
           <p className="text-slate-400 text-sm mt-1">
-            {loading ? '…' : `${users.length} total users`} across all tools
+            Manage users and profile builder coupons
           </p>
         </div>
-        <button
-          onClick={() => setShowGenerateCoupon(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-medium transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Generate Coupon
-        </button>
       </div>
-
-      {showGenerateCoupon && (
-        <GenerateCouponModal
-          onClose={() => setShowGenerateCoupon(false)}
-          onSuccess={() => fetchUsers()}
-        />
-      )}
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
-        {['All', 'Free', 'Paid', 'Coupon'].map((tab) => (
+        {['All', 'Free', 'Paid', 'Coupons'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
@@ -99,7 +85,7 @@ export function UsersClient({ initialUsers }: { initialUsers: UserData[] }) {
         ))}
       </div>
 
-      {loading ? (
+      {activeTab !== 'Coupons' ? loading ? (
         <div className="flex items-center justify-center py-20 text-slate-400">
           <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading…
         </div>
@@ -134,7 +120,7 @@ export function UsersClient({ initialUsers }: { initialUsers: UserData[] }) {
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    {user.planStatus === 'Free' && (
+                    {user.planStatus === 'Free' && !user.couponStatus && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 text-xs font-medium border border-slate-700">
                         <User className="w-3.5 h-3.5" />
                         Free Plan
@@ -146,10 +132,16 @@ export function UsersClient({ initialUsers }: { initialUsers: UserData[] }) {
                         Paid Unlock
                       </span>
                     )}
-                    {user.planStatus === 'Coupon' && (
+                    {user.planStatus === 'Free' && user.couponStatus === 'Active' && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 text-xs font-medium border border-blue-500/20">
                         <Ticket className="w-3.5 h-3.5" />
-                        Coupon
+                        Active Coupon
+                      </span>
+                    )}
+                    {user.planStatus === 'Free' && user.couponStatus === 'Deactive' && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/10 text-rose-400 text-xs font-medium border border-rose-500/20">
+                        <Ticket className="w-3.5 h-3.5" />
+                        Deactivated Coupon
                       </span>
                     )}
                   </td>
@@ -175,13 +167,13 @@ export function UsersClient({ initialUsers }: { initialUsers: UserData[] }) {
                           onClick={() => setOpenDropdownId(null)}
                         />
                         <div className="absolute right-6 top-10 z-50 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-xl overflow-hidden py-1">
-                          {user.planStatus !== 'Free' ? (
+                          {user.planStatus !== 'Free' || user.couponStatus ? (
                             <button
                               onClick={() => changeStatus(user.userId, 'Free')}
                               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-slate-700 transition-colors text-left"
                             >
                               <ShieldX className="w-4 h-4" />
-                              Revoke Access
+                              {user.couponStatus ? 'Deactivate Coupon' : 'Revoke Access'}
                             </button>
                           ) : (
                             <button
@@ -201,6 +193,8 @@ export function UsersClient({ initialUsers }: { initialUsers: UserData[] }) {
             </tbody>
           </table>
         </div>
+      ) : (
+        <CouponsTab initialCoupons={initialCoupons} />
       )}
     </div>
   );

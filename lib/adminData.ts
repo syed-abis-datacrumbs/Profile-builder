@@ -11,7 +11,7 @@ export async function getAdminUsers() {
     linkedins
   ] = await Promise.all([
     db.paymentUnlock.findMany({ select: { userId: true, unlockedAt: true } }),
-    db.profileBuilderCouponRedemption.findMany({ select: { userId: true } }),
+    db.profileBuilderCouponRedemption.findMany({ select: { userId: true, coupon: { select: { isActive: true } } } }),
     db.profileBuilderAiUsage.findMany({ select: { userId: true } }),
     db.resumeSave.findMany({ select: { userId: true } }),
     db.githubSave.findMany({ select: { userId: true } }),
@@ -20,7 +20,7 @@ export async function getAdminUsers() {
 
   const allIds = new Set<string>();
   const unlockedMap = new Map<string, Date>();
-  const couponUserIds = new Set<string>();
+  const couponStatusMap = new Map<string, 'Active' | 'Deactive'>();
 
   unlocks.forEach((u) => {
     allIds.add(u.userId);
@@ -29,7 +29,11 @@ export async function getAdminUsers() {
   
   couponRedemptions.forEach((c) => {
     allIds.add(c.userId);
-    couponUserIds.add(c.userId);
+    if (c.coupon?.isActive || couponStatusMap.get(c.userId) === 'Active') {
+      couponStatusMap.set(c.userId, 'Active');
+    } else {
+      couponStatusMap.set(c.userId, 'Deactive');
+    }
   });
   
   aiUsage.forEach((u) => allIds.add(u.userId));
@@ -43,17 +47,17 @@ export async function getAdminUsers() {
   return uniqueUserIds.map((userId) => {
     const clerkData = userMap.get(userId);
     const hasUnlock = unlockedMap.has(userId);
-    const hasCoupon = couponUserIds.has(userId);
+    const couponStatus = couponStatusMap.get(userId) || null;
 
-    let planStatus: 'Free' | 'Paid' | 'Coupon' = 'Free';
-    if (hasCoupon) planStatus = 'Coupon';
-    else if (hasUnlock) planStatus = 'Paid';
+    // If a user has a coupon, they are considered 'Free' (with a coupon badge) even though they have a PaymentUnlock.
+    let planStatus: 'Free' | 'Paid' = (hasUnlock && !couponStatus) ? 'Paid' : 'Free';
 
     return {
       userId,
       email: clerkData?.email || '(Not found in Clerk)',
       name: clerkData?.name || clerkData?.email || 'Unknown User',
       planStatus,
+      couponStatus,
       unlockedAt: unlockedMap.get(userId)?.toISOString() || null,
     };
   });
@@ -116,12 +120,12 @@ export async function getAdminNameRequests() {
 
   return rows.map((r) => {
     const u = userMap.get(r.userId);
-    return {
+      return {
       ...r,
       userEmail: u?.email || '(Not found in Clerk)',
       userName: u?.name || u?.email || 'Unknown User',
       createdAt: r.createdAt.toISOString(),
-      updatedAt: r.updatedAt.toISOString(),
+      decidedAt: r.decidedAt?.toISOString() || null,
     };
   });
 }
@@ -265,7 +269,7 @@ export async function getAdminChats(search: string = '', type: string = 'resume'
         student: student || { id: 'unknown', name: 'Anonymous', email: 'N/A' },
       };
     })
-    .filter(Boolean);
+    .filter((s): s is NonNullable<typeof s> => s !== null);
 
   return {
     sessions,

@@ -1,4 +1,4 @@
-import { getAdminUsers } from '@/lib/adminData';
+import { getAdminUsers, getAdminCoupons } from '@/lib/adminData';
 import { requireAdmin } from '@/lib/adminAuth';
 import { NextResponse } from 'next/server';
 import { redirect } from 'next/navigation';
@@ -13,6 +13,7 @@ export default async function AdminUsersPage() {
   }
 
   const initialUsers = await getAdminUsers();
+  const initialCoupons = await getAdminCoupons();
 
-  return <UsersClient initialUsers={initialUsers} />;
+  return <UsersClient initialUsers={initialUsers} initialCoupons={initialCoupons} />;
 }

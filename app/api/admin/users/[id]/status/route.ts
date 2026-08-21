@@ -2,11 +2,14 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const auth = await requireAdmin();
   if (auth instanceof NextResponse) return auth;
 
-  const userId = params.id;
+  const { id: userId } = await params;
   const { status } = await req.json();
 
   if (!status || !['Free', 'Paid'].includes(status)) {
