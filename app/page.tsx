@@ -117,6 +117,7 @@ export default function Home() {
   const [showLinkedinTemplatePicker, setShowLinkedinTemplatePicker] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
 
   // Profile Data State
   const [resumeData, setResumeData] = useState<ResumeData>(defaultResumeData);
@@ -428,11 +429,35 @@ export default function Home() {
                 : 'p-4 sm:p-6 gap-4 max-w-7xl'
               }`}
           >
-            {activeTab !== 'resume' && !isAuthorized && (
-              <BlockScreen onOpenAuth={() => setIsAuthOpen(true)} onClose={() => setActiveTab('resume')} />
+            {(showBlockModal || (!isAuthorized && (
+              (activeTab === 'github' && (githubMode === 'studio' || githubMode === 'editor' || githubMode === 'preview')) ||
+              (activeTab === 'linkedin' && (linkedinMode === 'studio' || linkedinMode === 'editor' || linkedinMode === 'preview')) ||
+              (activeTab === 'assistant')
+            ))) && (
+              <BlockScreen 
+                onOpenAuth={() => {
+                  setShowBlockModal(false);
+                  setIsAuthOpen(true);
+                }} 
+                onClose={() => {
+                  setShowBlockModal(false);
+                  if (githubMode !== 'landing') setGithubMode('landing');
+                  if (linkedinMode !== 'landing') setLinkedinMode('landing');
+                  if (activeTab === 'assistant') setActiveTab('resume');
+                }} 
+              />
             )}
             {/* Active Editor Component */}
-            <div className="flex-1 min-h-0 flex flex-col">
+            <div 
+              className="flex-1 min-h-0 flex flex-col"
+              onClickCapture={(e) => {
+                if (!isAuthorized && activeTab !== 'resume') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowBlockModal(true);
+                }
+              }}
+            >
               <AnimatePresence mode="wait">
                 {activeTab === 'resume' && (
                   <motion.div
@@ -568,8 +593,18 @@ export default function Home() {
                     ) : (
                       <GithubLandingView
                         userName={firstName || undefined}
-                        onOpenRolePicker={() => setShowGithubTemplatePicker(true)}
+                        onOpenRolePicker={() => {
+                          if (!isAuthorized) {
+                            setShowBlockModal(true);
+                            return;
+                          }
+                          setShowGithubTemplatePicker(true);
+                        }}
                         onSelectPreset={(preset, theme, avatarUrl, bannerUrl) => {
+                          if (!isAuthorized) {
+                            setShowBlockModal(true);
+                            return;
+                          }
                           if (typeof window !== 'undefined') {
                             localStorage.removeItem('profile_builder_github_chat');
                           }
@@ -578,10 +613,18 @@ export default function Home() {
                         attachedTemplate={attachedGithubTemplate}
                         onClearAttachedTemplate={() => setAttachedGithubTemplate(null)}
                         onSelectTemplate={(t) => {
+                          if (!isAuthorized) {
+                            setShowBlockModal(true);
+                            return;
+                          }
                           setGithubPreviewTemplate(t);
                           setGithubMode('preview');
                         }}
                         onUsePrompt={(promptText) => {
+                          if (!isAuthorized) {
+                            setShowBlockModal(true);
+                            return;
+                          }
                           if (attachedGithubTemplate) {
                             const t = attachedGithubTemplate;
                             const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
@@ -604,8 +647,8 @@ export default function Home() {
                           setAttachedGithubTemplate(null);
                         }}
                         onOpenEditorDirectly={() => {
-                          if (!isLoggedIn) {
-                            setIsAuthOpen(true);
+                          if (!isAuthorized) {
+                            setShowBlockModal(true);
                             return;
                           }
                           setGithubMode('studio');
@@ -659,12 +702,16 @@ export default function Home() {
                         attachedTemplate={attachedLinkedinTemplate}
                         onClearAttachedTemplate={() => setAttachedLinkedinTemplate(null)}
                         onSelectTemplate={(tid) => {
+                          if (!isAuthorized) {
+                            setShowBlockModal(true);
+                            return;
+                          }
                           setLinkedinPreviewTemplateId(tid);
                           setLinkedinMode('preview');
                         }}
                         onUsePrompt={(promptText) => {
-                          if (!isLoggedIn) {
-                            setIsAuthOpen(true);
+                          if (!isAuthorized) {
+                            setShowBlockModal(true);
                             return;
                           }
                           if (attachedLinkedinTemplate) {
@@ -680,8 +727,8 @@ export default function Home() {
                           setAttachedLinkedinTemplate(null);
                         }}
                         onOpenEditorDirectly={() => {
-                          if (!isLoggedIn) {
-                            setIsAuthOpen(true);
+                          if (!isAuthorized) {
+                            setShowBlockModal(true);
                             return;
                           }
                           setLinkedinMode(linkedinRichProfile ? 'studio' : 'editor');
@@ -702,10 +749,18 @@ export default function Home() {
                     <JobHuntingLandingView
                       userName={firstName}
                       onUsePrompt={(promptText) => {
+                        if (!isAuthorized) {
+                          setShowBlockModal(true);
+                          return;
+                        }
                         setAssistantPrompt(promptText);
                         setActiveTab('assistant');
                       }}
                       onOpenEditorDirectly={() => {
+                        if (!isAuthorized) {
+                          setShowBlockModal(true);
+                          return;
+                        }
                         setActiveTab('assistant');
                         setAssistantPrompt("Find top tech jobs & auto-apply");
                       }}
@@ -725,12 +780,20 @@ export default function Home() {
                     <FreelancingLandingView
                       userName={firstName}
                       onUsePrompt={(promptText) => {
+                        if (!isAuthorized) {
+                          setShowBlockModal(true);
+                          return;
+                        }
                         setAssistantPrompt(promptText);
                         setActiveTab('assistant');
                       }}
                       onOpenEditorDirectly={() => {
+                        if (!isAuthorized) {
+                          setShowBlockModal(true);
+                          return;
+                        }
                         setActiveTab('assistant');
-                        setAssistantPrompt("Generate client proposal contract");
+                        setAssistantPrompt("Generate winning Upwork proposals");
                       }}
                       onNavigateToTab={(tab) => setActiveTab(tab)}
                     />
@@ -748,10 +811,18 @@ export default function Home() {
                     <InterviewPrepView
                       userName={firstName}
                       onUsePrompt={(promptText) => {
+                        if (!isAuthorized) {
+                          setShowBlockModal(true);
+                          return;
+                        }
                         setAssistantPrompt(promptText);
                         setActiveTab('assistant');
                       }}
                       onLaunchMockInterview={(role, jdText) => {
+                        if (!isAuthorized) {
+                          setShowBlockModal(true);
+                          return;
+                        }
                         setActiveTab('assistant');
                         setAssistantPrompt(`Act as a Hiring Manager at a top tech company interviewing me for the ${role} position. Here is the job context: ${jdText}. Start by asking me the first technical or behavioral question.`);
                       }}
