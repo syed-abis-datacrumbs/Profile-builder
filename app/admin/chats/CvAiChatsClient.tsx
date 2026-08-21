@@ -30,14 +30,24 @@ function formatDateTime(iso: string) {
   });
 }
 
-export function CvAiChatsClient() {
-  const [sessions, setSessions] = useState<CvAiChatSession[]>([]);
-  const [total, setTotal] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<'resume' | 'linkedin' | 'github'>('resume');
-  const [loading, setLoading] = useState(true);
+export function CvAiChatsClient({
+  initialData,
+  initialSearch,
+  initialType,
+  initialPage,
+}: {
+  initialData: { sessions: CvAiChatSession[]; total: number; pageSize: number };
+  initialSearch: string;
+  initialType: string;
+  initialPage: number;
+}) {
+  const [sessions, setSessions] = useState<CvAiChatSession[]>(initialData.sessions);
+  const [total, setTotal] = useState(initialData.total);
+  const [pageSize, setPageSize] = useState(initialData.pageSize);
+  const [page, setPage] = useState(initialPage);
+  const [search, setSearch] = useState(initialSearch);
+  const [activeTab, setActiveTab] = useState<'resume' | 'linkedin' | 'github'>(initialType as any);
+  const [loading, setLoading] = useState(false);
 
   // The open transcript (fetched on demand, cached per session).
   const [openSession, setOpenSession] = useState<CvAiChatSession | null>(null);
@@ -60,10 +70,27 @@ export function CvAiChatsClient() {
     }
   };
 
+  // We track previous parameters to debounce search slightly or skip initial SSR load
   useEffect(() => {
-    const timer = setTimeout(() => fetchSessions(search, 1, activeTab), 300);
-    return () => clearTimeout(timer);
-  }, [search, activeTab]);
+    if (page === initialPage && search === initialSearch && activeTab === initialType) {
+      setSessions(initialData.sessions);
+      setTotal(initialData.total);
+      setPageSize(initialData.pageSize);
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      fetchSessions(search, page, activeTab);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [page, search, activeTab, initialPage, initialSearch, initialType, initialData]);
+
+  // Reset page to 1 when search or tab changes
+  useEffect(() => {
+    if (search !== initialSearch || activeTab !== initialType) {
+      setPage(1);
+    }
+  }, [search, activeTab, initialSearch, initialType]);
 
   const openTranscript = async (session: CvAiChatSession) => {
     setOpenSession(session);

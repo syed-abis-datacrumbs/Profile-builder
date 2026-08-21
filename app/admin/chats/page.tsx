@@ -1,15 +1,19 @@
 import { CvAiChatsClient } from "./CvAiChatsClient";
+import { getAdminChats } from "@/lib/adminData";
 
 // Force dynamic rendering since we are fetching from the DB on load
 export const dynamic = 'force-dynamic';
 
-export default async function CvAiChatsPage() {
-  const host = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  
-  // We can't easily fetch on server side securely without passing cookies, 
-  // so we'll let the client component do the initial fetch if we prefer,
-  // OR we can just pass initial empty data and let the client mount and fetch.
-  // We'll just pass empty initial data and let it load.
+export default async function CvAiChatsPage({
+  searchParams,
+}: {
+  searchParams: { search?: string; type?: string; page?: string };
+}) {
+  const initialSearch = searchParams.search || '';
+  const initialType = searchParams.type || 'resume';
+  const initialPage = parseInt(searchParams.page || '1', 10);
+
+  const initialData = await getAdminChats(initialSearch, initialType, initialPage);
 
   return (
     <div className="p-6 lg:p-8">
@@ -19,7 +23,12 @@ export default async function CvAiChatsPage() {
           Conversations students have had across the Resume, LinkedIn, and GitHub AI builders.
         </p>
       </div>
-      <CvAiChatsClient />
+      <CvAiChatsClient 
+        initialData={initialData}
+        initialSearch={initialSearch}
+        initialType={initialType}
+        initialPage={initialPage}
+      />
     </div>
   );
 }

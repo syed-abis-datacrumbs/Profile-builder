@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { db } from '../../../../lib/db';
-import { lookupClerkUsers } from '../../../../lib/clerkUserLookup';
+import { getAdminNameRequests } from '@/lib/adminData';
 
 export const runtime = 'nodejs';
 
@@ -14,22 +14,7 @@ export async function GET(): Promise<NextResponse> {
   const role = (clerk.publicMetadata as any)?.role;
   if (role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const rows = await db.resumeNameChangeRequest.findMany({
-    where: { status: 'PENDING' },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  const uniqueUserIds = Array.from(new Set(rows.map((r) => r.userId).filter(Boolean)));
-  const userMap = await lookupClerkUsers(uniqueUserIds);
-
-  const enriched = rows.map((r) => {
-    const u = userMap.get(r.userId);
-    return {
-      ...r,
-      userEmail: u?.email || r.userId,
-      userName: u?.name || u?.email || r.userId,
-    };
-  });
+  const enriched = await getAdminNameRequests();
 
   return NextResponse.json({ requests: enriched });
 }

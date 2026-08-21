@@ -1,15 +1,13 @@
 import { requireAdmin } from '@/lib/adminAuth';
 import { db } from '@/lib/db';
+import { getAdminCoupons } from '@/lib/adminData';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET() {
   const auth = await requireAdmin();
   if (auth instanceof NextResponse) return auth;
 
-  const coupons = await db.profileBuilderCoupon.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: { _count: { select: { redemptions: true } } },
-  });
+  const coupons = await getAdminCoupons();
   return NextResponse.json(coupons);
 }
 
