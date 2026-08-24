@@ -1300,18 +1300,18 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             onChange={recordChange}
           />
 
-          {/* Floating Target Job Pill + Circular ATS Badge Widget on Desktop / Web View (Bottom-Right) */}
-          <div className="hidden md:flex fixed bottom-8 right-8 z-40 flex-col items-end gap-3 select-none">
+          {/* Floating Support Button & ATS Badge Widget (Bottom-Right) */}
+          <div className="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 z-40 flex flex-col items-end gap-3 select-none">
             {/* Report Issue Circle */}
             <button
               onClick={() => setReportIssueModalOpen(true)}
-              className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 shadow-xl flex items-center justify-center hover:bg-rose-200 transition-colors mr-2 cursor-pointer"
+              className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-rose-100 text-rose-600 shadow-xl flex items-center justify-center hover:bg-rose-200 transition-all cursor-pointer hover:scale-105 active:scale-95 mr-0 md:mr-2"
               title="Report an Issue"
             >
               <Bug className="w-5 h-5" />
             </button>
             
-            <div className="flex items-center">
+            <div className="hidden md:flex items-center">
               {/* Left Pill: Clicking opens Target Job Modal */}
             <button
               onClick={() => setTargetJobModalOpen(true)}

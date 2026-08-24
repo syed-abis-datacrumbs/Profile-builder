@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo, Bug } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo, Bug, Copy } from 'lucide-react';
 import toast from '@/lib/toast';
 import { GithubProfileData } from '../types';
 import { GithubIcon } from './icons';
@@ -583,17 +583,17 @@ export const GithubChatStudio: React.FC<{
       {/* COLUMN 1 (PREVIEW - RIGHT) */}
       <div className={`flex-1 flex flex-col bg-slate-100 min-w-0 h-full overflow-hidden`}>
         {/* Top Header of Preview Column */}
-        <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
-          <div className="flex items-center min-w-0">
+        <div className="shrink-0 flex items-center justify-between px-2 sm:px-4 py-2.5 border-b border-slate-200 bg-white">
+          <div className="flex items-center gap-1.5 min-w-0">
             <button
               onClick={onBack}
-              className="lg:hidden p-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors mr-2"
+              className="lg:hidden p-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors mr-1 cursor-pointer"
               title="Back"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            {/* MacOS Traffic Light Dots */}
-            <div className="flex items-center gap-1.5 pr-2">
+            {/* MacOS Traffic Light Dots (Hidden on mobile) */}
+            <div className="hidden sm:flex items-center gap-1.5 pr-2">
               <div className="w-3 h-3 rounded-full bg-red-500" />
               <div className="w-3 h-3 rounded-full bg-amber-400" />
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
@@ -604,9 +604,9 @@ export const GithubChatStudio: React.FC<{
               <button
                 type="button"
                 onClick={toggleProfileMenu}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-sm font-bold text-slate-800 border border-slate-200/80"
+                className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs sm:text-sm font-bold text-slate-800 border border-slate-200/80 cursor-pointer"
               >
-                <GithubIcon className="w-4 h-4 text-slate-800" />
+                <GithubIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-800" />
                 <span>Profiles</span>
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -614,7 +614,7 @@ export const GithubChatStudio: React.FC<{
               {profileMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
-                  <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col">
+                  <div className="fixed top-12 left-3 sm:left-auto sm:absolute sm:top-full sm:left-0 mt-1 w-[285px] max-w-[90vw] bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col">
                     <div className="p-3 border-b border-slate-100 bg-slate-50/50 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="font-extrabold text-[10px] text-slate-500 uppercase tracking-wider">
@@ -827,6 +827,10 @@ export const GithubChatStudio: React.FC<{
                 </>
               )}
             </div>
+          </div>
+
+          {/* Right Action Buttons */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {/* Undo / Redo */}
             <div className="flex items-center gap-0.5 border border-slate-200 rounded-lg p-0.5 bg-slate-50">
               <button
@@ -834,27 +838,28 @@ export const GithubChatStudio: React.FC<{
                 title="Undo (Ctrl+Z)"
                 onMouseDown={(e) => { e.preventDefault(); handleUndo(); }}
                 disabled={past.length === 0}
-                className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${past.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${past.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
               >
-                <Undo className="w-3.5 h-3.5" />
+                <Undo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
               <button
                 type="button"
                 title="Redo (Ctrl+Y)"
                 onMouseDown={(e) => { e.preventDefault(); handleRedo(); }}
                 disabled={future.length === 0}
-                className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${future.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${future.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
               >
-                <Redo className="w-3.5 h-3.5" />
+                <Redo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
             </div>
 
             <button
               onClick={copyReadme}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors"
+              title="Copy Markdown"
+              className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : null}
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
             </button>
             <button
               onClick={() => {
@@ -862,10 +867,11 @@ export const GithubChatStudio: React.FC<{
                 if (unlocked === false) { setShowPaymentModal(true); return; }
                 downloadReadme();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
+              title="Download README.md"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm"
             >
               {unlocked === false ? <Sparkles className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
-              {unlocked === false ? 'Unlock Download' : 'README.md'}
+              <span className="hidden sm:inline">{unlocked === false ? 'Unlock Download' : 'README.md'}</span>
             </button>
           </div>
         </div>
@@ -893,10 +899,10 @@ export const GithubChatStudio: React.FC<{
         </div>
 
         {/* Floating Report Issue Button */}
-        <div className="hidden md:flex fixed bottom-8 right-8 z-40 flex-col items-end gap-3 select-none">
+        <div className="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 z-40 flex flex-col items-end gap-3 select-none">
           <button
             onClick={() => setReportIssueModalOpen(true)}
-            className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 shadow-xl flex items-center justify-center hover:bg-rose-200 transition-colors mr-2 cursor-pointer"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-rose-100 text-rose-600 shadow-xl flex items-center justify-center hover:bg-rose-200 transition-all cursor-pointer hover:scale-105 active:scale-95"
             title="Report an Issue"
           >
             <Bug className="w-5 h-5" />

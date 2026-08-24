@@ -449,7 +449,7 @@ export const LinkedinChatStudio: React.FC<{
               {profileMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
-                  <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col">
+                  <div className="fixed top-12 left-3 sm:left-auto sm:absolute sm:top-full sm:left-0 mt-1 w-[285px] max-w-[90vw] bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col">
                     <div className="p-3 border-b border-slate-100 bg-slate-50/50">
                       <div className="flex gap-2">
                         <input
@@ -1206,10 +1206,10 @@ export const LinkedinChatStudio: React.FC<{
       )}
 
       {/* Floating Report Issue Button */}
-      <div className="hidden md:flex fixed bottom-8 right-8 z-40 flex-col items-end gap-3 select-none">
+      <div className="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 z-40 flex flex-col items-end gap-3 select-none">
         <button
           onClick={() => setReportIssueModalOpen(true)}
-          className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 shadow-xl flex items-center justify-center hover:bg-rose-200 transition-colors mr-2 cursor-pointer"
+          className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-rose-100 text-rose-600 shadow-xl flex items-center justify-center hover:bg-rose-200 transition-all cursor-pointer hover:scale-105 active:scale-95"
           title="Report an Issue"
         >
           <Bug className="w-5 h-5" />
