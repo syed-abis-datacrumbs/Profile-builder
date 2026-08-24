@@ -21,20 +21,19 @@ export interface LinkedinCoverTemplate {
 //   Gradient 7 "Aun Ali / Graphic Designer" (yellow wave) -> yellow-wave
 //   Gradient 8 "AI Engineer / Datacrumbs" -> ai-engineer-badge
 const COVER_INDEX_TO_PFP_GRADIENT = [
-  'gradient-4', // index 0: ideas-inspire
-  'gradient-1', // index 1: lets-work-together
-  'gradient-2', // index 2: helping-businesses
-  'gradient-3', // index 3: stunning-websites
-  'gradient-5', // index 4: purple-geometric
-  'gradient-6', // index 5: blue-blocks
-  'gradient-7', // index 6: yellow-wave
-  'gradient-8', // index 7: ai-engineer-badge
+  'gradient-4', // index 0: banner-1
+  'gradient-1', // index 1: banner-2
+  'gradient-2', // index 2: banner-3
+  'gradient-3', // index 3: banner-4
+  'gradient-5', // index 4: banner-5
+  'gradient-6', // index 5: banner-6
+  'gradient-7', // index 6: banner-7
 ];
 
 /** Helper function returning the exact matching default PFP gradient template ID for each cover template */
 export function getDefaultPfpGradientId(index: number): string {
   const safeIndex = Math.max(0, index);
-  return COVER_INDEX_TO_PFP_GRADIENT[safeIndex % 8];
+  return COVER_INDEX_TO_PFP_GRADIENT[safeIndex % COVER_INDEX_TO_PFP_GRADIENT.length];
 }
 
 // The LinkedIn COVER (banner) templates the DataCrumbs (LMS) builder actually

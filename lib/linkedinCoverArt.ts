@@ -130,18 +130,15 @@ export function computeFitScale(length: number, max: number | undefined): number
   return Math.max(MIN_FONT_SCALE, max / length);
 }
 
-// The order the LMS's 8 real templates cycle onto the 28 career-track cards
-// (see lib/linkedinCovers.ts) — index % 8 into this array picks which art +
-// field layout a given card's preview renders.
+// The 7 clean banner artworks from the user's Linkedin Banners collection
 export const COVER_ART_ORDER = [
-  'ideas-inspire',
-  'lets-work-together',
-  'helping-businesses',
-  'stunning-websites',
-  'purple-geometric',
-  'blue-blocks',
-  'yellow-wave',
-  'ai-engineer-badge',
+  'banner-1',
+  'banner-2',
+  'banner-3',
+  'banner-4',
+  'banner-5',
+  'banner-6',
+  'banner-7',
 ] as const;
 
 export function getCoverArtId(index: number): string {
@@ -150,289 +147,62 @@ export function getCoverArtId(index: number): string {
 }
 
 export const COVER_ART: Record<string, CoverArtTemplate> = {
-  'ideas-inspire': {
-    id: 'ideas-inspire',
-    backgroundUrl: '/images/linkedin-templates/cover/ideas-inspire/background.png',
+  'banner-1': {
+    id: 'banner-1',
+    backgroundUrl: '/images/linkedin-banners/banner-1.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [
-      {
-        id: 'tagline',
-        kind: 'text',
-        placeholder: 'Ideas that inspire.\nSolutions that last.',
-        maxLength: 80,
-        geometry: { xPct: 0.615, yPct: 0.26, maxWidthPct: 0.37, align: 'left', fontSizePx: 46, fontWeight: 600, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 62, maxLines: 2 },
-      },
-      {
-        id: 'caption',
-        kind: 'text',
-        placeholder: 'DATACRUMBS.ORG',
-        maxLength: 40,
-        geometry: { xPct: 0.615, yPct: 0.68, maxWidthPct: 0.37, align: 'left', fontSizePx: 15, fontWeight: 700, color: '#e5e7eb', maxLines: 1 },
-      },
-    ],
+    fields: [],
   },
-  'lets-work-together': {
-    id: 'lets-work-together',
-    backgroundUrl: '/images/linkedin-templates/cover/lets-work-together/background.png',
+  'banner-2': {
+    id: 'banner-2',
+    backgroundUrl: '/images/linkedin-banners/banner-2.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [
-      {
-        id: 'heading',
-        kind: 'text',
-        placeholder: "Let's Work Together",
-        maxLength: 22,
-        geometry: { xPct: 0.02, yPct: 0.29, maxWidthPct: 0.24, align: 'left', fontSizePx: 33, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
-      },
-      {
-        id: 'phone',
-        kind: 'text',
-        staticLabel: 'Phone Number:',
-        staticLabelFontSizePx: 12.6,
-        staticLabelFontFamily: FONT_POPPINS,
-        placeholder: '+123-456-7890',
-        maxLength: 30,
-        geometry: { xPct: 0.075, yPct: 0.44, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
-      },
-      {
-        id: 'email',
-        kind: 'text',
-        staticLabel: 'Email Address:',
-        staticLabelFontSizePx: 12.6,
-        staticLabelFontFamily: FONT_POPPINS,
-        placeholder: 'support@datacrumbs.org',
-        maxLength: 40,
-        geometry: { xPct: 0.075, yPct: 0.565, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
-      },
-      {
-        id: 'website',
-        kind: 'text',
-        staticLabel: 'Website:',
-        staticLabelFontSizePx: 12.6,
-        staticLabelFontFamily: FONT_POPPINS,
-        placeholder: 'www.datacrumbs.org',
-        maxLength: 40,
-        geometry: { xPct: 0.075, yPct: 0.69, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
-      },
-      {
-        id: 'name',
-        kind: 'text',
-        defaultFrom: 'fullName',
-        placeholder: 'Your Name',
-        maxLength: 13,
-        geometry: { xPct: 0.685, yPct: 0.22, maxWidthPct: 0.22, align: 'left', fontSizePx: 79, fontWeight: 400, color: '#ffffff', fontFamily: FONT_BRICOLAGE, lineHeightPx: 70, maxLines: 2 },
-      },
-      {
-        id: 'title',
-        kind: 'text',
-        defaultFrom: 'currentPosition',
-        placeholder: 'Your Title',
-        maxLength: 18,
-        geometry: { xPct: 0.685, yPct: 0.58, maxWidthPct: 0.22, align: 'left', fontSizePx: 38, fontWeight: 400, color: '#ffffff', maxLines: 1 },
-      },
-    ],
+    fields: [],
   },
-  'helping-businesses': {
-    id: 'helping-businesses',
-    backgroundUrl: '/images/linkedin-templates/cover/helping-businesses/background.png',
+  'banner-3': {
+    id: 'banner-3',
+    backgroundUrl: '/images/linkedin-banners/banner-3.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [
-      {
-        id: 'headline',
-        kind: 'text',
-        placeholder: 'Helping Businesses Scale\nThrough Paid Marketing',
-        maxLength: 55,
-        geometry: { xPct: 0.395, yPct: 0.18, maxWidthPct: 0.56, align: 'left', fontSizePx: 53, fontWeight: 800, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 50, maxLines: 2 },
-      },
-      {
-        id: 'pills',
-        kind: 'pills',
-        placeholder: ['Email Lead Generation', 'Social Media Ads', 'SEO'],
-        maxPills: 5,
-        pillMaxLengths: [30, 16, 4],
-        geometry: { xPct: 0.595, yPct: 0.6, maxWidthPct: 0.44, align: 'center', fontSizePx: 16, fontWeight: 500, color: '#ffffff', fontFamily: FONT_POPPINS, pillBg: 'rgba(0,0,0,0.35)', pillGapPx: 14 },
-      },
-      {
-        id: 'caption',
-        kind: 'text',
-        placeholder: 'DATACRUMBS.ORG',
-        maxLength: 27,
-        geometry: { xPct: 0.83, yPct: 0.82, maxWidthPct: 0.15, align: 'right', fontSizePx: 13, fontWeight: 700, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
-      },
-    ],
+    fields: [],
   },
-  'stunning-websites': {
-    id: 'stunning-websites',
-    backgroundUrl: '/images/linkedin-templates/cover/stunning-websites/background.png',
+  'banner-4': {
+    id: 'banner-4',
+    backgroundUrl: '/images/linkedin-banners/banner-4.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [
-      {
-        id: 'headline',
-        kind: 'text',
-        placeholder: 'Helping Brands Build\nStunning Websites',
-        maxLength: 52,
-        geometry: { xPct: 0.395, yPct: 0.16, maxWidthPct: 0.56, align: 'left', fontSizePx: 50, fontWeight: 800, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 52, maxLines: 2 },
-      },
-      {
-        id: 'pills',
-        kind: 'pills',
-        placeholder: ['WordPress Website Development', 'Website Design', 'Web Services', 'Website Strategy', 'Web SEO Optimization'],
-        maxPills: 6,
-        // Chips 4 & 5 sit on the same trailing row together, so their combined
-        // budget (~90 chars) matters more than either alone — split evenly.
-        pillMaxLengths: [47, 20, 22, 45, 45],
-        geometry: { xPct: 0.395, yPct: 0.5, maxWidthPct: 0.56, align: 'left', fontSizePx: 14, fontWeight: 600, color: '#ffffff', fontFamily: FONT_POPPINS, pillBg: '#0e7490', pillGapPx: 12 },
-      },
-      {
-        id: 'banner',
-        kind: 'pills',
-        placeholder: ['Trusted by 200+ Satisfied Clients Worldwide'],
-        maxPills: 1,
-        pillMaxLengths: [50],
-        geometry: { xPct: 0.395, yPct: 0.78, maxWidthPct: 0.56, align: 'left', fontSizePx: 15, fontWeight: 700, color: '#ffffff', fontFamily: FONT_POPPINS, pillBg: '#06b6d4' },
-      },
-    ],
+    fields: [],
   },
-  'purple-geometric': {
-    id: 'purple-geometric',
-    backgroundUrl: '/images/linkedin-templates/cover/purple-geometric/background.png',
+  'banner-5': {
+    id: 'banner-5',
+    backgroundUrl: '/images/linkedin-banners/banner-5.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [
-      {
-        id: 'name',
-        kind: 'text',
-        defaultFrom: 'fullName',
-        placeholder: 'Mahnoor Khan',
-        maxLength: 21,
-        geometry: { xPct: 0.685, yPct: 0.3, maxWidthPct: 0.28, align: 'left', fontSizePx: 46, fontWeight: 550, color: '#ffffff', fontFamily: FONT_DANCING_SCRIPT, lineHeightPx: 52, maxLines: 1 },
-      },
-      {
-        id: 'title',
-        kind: 'text',
-        defaultFrom: 'currentPosition',
-        placeholder: 'Graphic Designer',
-        maxLength: 32,
-        geometry: { xPct: 0.685, yPct: 0.43, maxWidthPct: 0.28, align: 'left', fontSizePx: 24, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
-      },
-      {
-        id: 'phone',
-        kind: 'text',
-        placeholder: '123-456-7890',
-        maxLength: 30,
-        geometry: { xPct: 0.685, yPct: 0.57, maxWidthPct: 0.28, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
-      },
-      {
-        id: 'email',
-        kind: 'text',
-        placeholder: 'support@datacrumbs.org',
-        maxLength: 40,
-        geometry: { xPct: 0.685, yPct: 0.65, maxWidthPct: 0.28, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
-      },
-      {
-        id: 'website',
-        kind: 'text',
-        placeholder: 'datacrumbs.org',
-        maxLength: 40,
-        geometry: { xPct: 0.685, yPct: 0.73, maxWidthPct: 0.28, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
-      },
-    ],
+    fields: [],
   },
-  'blue-blocks': {
-    id: 'blue-blocks',
-    backgroundUrl: '/images/linkedin-templates/cover/blue-blocks/background.png',
+  'banner-6': {
+    id: 'banner-6',
+    backgroundUrl: '/images/linkedin-banners/banner-6.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [
-      {
-        id: 'headline',
-        kind: 'text',
-        placeholder: 'Helping brands\nspeak, sell, and\nscale with words.',
-        maxLength: 51,
-        geometry: { xPct: 0.565, yPct: 0.2, maxWidthPct: 0.3, align: 'left', fontSizePx: 50, fontWeight: 900, color: '#16215c', fontFamily: FONT_PLAYFAIR, lineHeightPx: 50, maxLines: 3 },
-      },
-      {
-        id: 'phone',
-        kind: 'text',
-        placeholder: '123-456-7890',
-        maxLength: 30,
-        geometry: { xPct: 0.63, yPct: 0.643, maxWidthPct: 0.38, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#16215c', maxLines: 1 },
-      },
-      {
-        id: 'email',
-        kind: 'text',
-        placeholder: 'support@datacrumbs.org',
-        maxLength: 40,
-        geometry: { xPct: 0.63, yPct: 0.74, maxWidthPct: 0.38, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#16215c', maxLines: 1 },
-      },
-      {
-        id: 'website',
-        kind: 'text',
-        placeholder: 'lms.datacrumbs.org',
-        maxLength: 40,
-        geometry: { xPct: 0.63, yPct: 0.843, maxWidthPct: 0.38, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#16215c', maxLines: 1 },
-      },
-    ],
+    fields: [],
   },
-  'yellow-wave': {
-    id: 'yellow-wave',
-    backgroundUrl: '/images/linkedin-templates/cover/yellow-wave/background.png',
+  'banner-7': {
+    id: 'banner-7',
+    backgroundUrl: '/images/linkedin-banners/banner-7.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [
-      {
-        id: 'name',
-        kind: 'text',
-        defaultFrom: 'fullName',
-        placeholder: 'Aun Ali',
-        maxLength: 12,
-        geometry: { xPct: 0.685, yPct: 0.28, maxWidthPct: 0.28, align: 'left', fontSizePx: 68, fontWeight: 700, color: '#1a1a2e', fontFamily: FONT_POPPINS, maxLines: 1 },
-      },
-      {
-        id: 'title',
-        kind: 'text',
-        defaultFrom: 'currentPosition',
-        placeholder: 'Graphic Designer',
-        maxLength: 30,
-        geometry: { xPct: 0.685, yPct: 0.49, maxWidthPct: 0.28, align: 'left', fontSizePx: 22, fontWeight: 400, color: '#1a1a2e', fontFamily: FONT_POPPINS, maxLines: 1 },
-      },
-      {
-        id: 'website',
-        kind: 'text',
-        placeholder: 'datacrumbs.org',
-        maxLength: 40,
-        geometry: { xPct: 0.685, yPct: 0.6, maxWidthPct: 0.28, align: 'left', fontSizePx: 18, fontWeight: 400, color: '#1a1a2e', maxLines: 1 },
-      },
-    ],
+    fields: [],
   },
-  'ai-engineer-badge': {
-    id: 'ai-engineer-badge',
-    backgroundUrl: '/images/linkedin-templates/cover/ai-engineer-badge/background.png',
-    canvasWidthPx: 1584,
-    canvasHeightPx: 396,
-    fields: [
-      {
-        id: 'title',
-        kind: 'text',
-        defaultFrom: 'currentPosition',
-        placeholder: 'AI Engineer',
-        maxLength: 16,
-        geometry: { xPct: 0.58, yPct: 0.3, maxWidthPct: 0.39, align: 'left', fontSizePx: 72, fontWeight: 800, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 64, maxLines: 2 },
-      },
-      {
-        id: 'company',
-        kind: 'text',
-        defaultFrom: 'currentCompany',
-        placeholder: 'DATACRUMBS',
-        maxLength: 30,
-        // Repositioned up (yPct 0.7 -> 0.51) now that `title` is capped short
-        // enough to rarely wrap to 2 lines, so company sits closer beneath it
-        // instead of leaving a large gap — recalibrated via the DevTools tool.
-        geometry: { xPct: 0.58, yPct: 0.51, maxWidthPct: 0.39, align: 'left', fontSizePx: 32, fontWeight: 600, color: '#dbb3d2', fontFamily: FONT_POPPINS, maxLines: 1 },
-      },
-    ],
-  },
+  // Legacy / track template aliases mapping into the 7 new banner assets
+  'ideas-inspire': { id: 'ideas-inspire', backgroundUrl: '/images/linkedin-banners/banner-1.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'lets-work-together': { id: 'lets-work-together', backgroundUrl: '/images/linkedin-banners/banner-2.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'helping-businesses': { id: 'helping-businesses', backgroundUrl: '/images/linkedin-banners/banner-3.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'stunning-websites': { id: 'stunning-websites', backgroundUrl: '/images/linkedin-banners/banner-4.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'purple-geometric': { id: 'purple-geometric', backgroundUrl: '/images/linkedin-banners/banner-5.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'blue-blocks': { id: 'blue-blocks', backgroundUrl: '/images/linkedin-banners/banner-6.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'yellow-wave': { id: 'yellow-wave', backgroundUrl: '/images/linkedin-banners/banner-7.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'ai-engineer-badge': { id: 'ai-engineer-badge', backgroundUrl: '/images/linkedin-banners/banner-1.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
 };

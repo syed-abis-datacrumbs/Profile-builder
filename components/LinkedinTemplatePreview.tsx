@@ -120,15 +120,11 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={art.backgroundUrl} alt={`${template.name} cover`} className="absolute inset-0 w-full h-full object-cover" />
 
+              {/* Text fields commented out for now as requested */}
+              {/*
               {art.fields.map((field) => {
                 const value = resolveFieldValue(field, sample);
                 const align = field.geometry.align;
-                // xPct is always the box's LEFT edge, for every alignment —
-                // matches the LMS's own canvas renderer (drawTextField/
-                // drawPillsField: `x = g.xPct * W` used as-is, with centering
-                // computed as an anchor WITHIN [x, x+maxWidth], never by
-                // shifting the box itself). text-align/justify-content below
-                // do that centering for us.
                 const left = field.geometry.xPct;
 
                 if (field.kind === 'pills') {
@@ -212,6 +208,7 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
                   </div>
                 );
               })}
+              */}
             </div>
 
             {/* Profile Card Body */}
