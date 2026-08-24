@@ -48,8 +48,16 @@ export default function Home() {
   const mainContentRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
     if (typeof window !== 'undefined') {
+      // Check ?tool= URL param first — this is used when linking from the LMS
+      // e.g. momentum.datacrumbs.org/?tool=github
+      const urlTool = new URLSearchParams(window.location.search).get('tool');
+      const validTabs: ActiveTab[] = ['resume', 'github', 'linkedin', 'jobhunting', 'freelancing', 'interview', 'assistant'];
+      if (urlTool && validTabs.includes(urlTool as ActiveTab)) {
+        return urlTool as ActiveTab;
+      }
+      // Fall back to last saved tab in localStorage
       const saved = localStorage.getItem('profile_builder_active_tab');
-      if (saved && ['resume', 'github', 'linkedin', 'jobhunting', 'freelancing', 'interview', 'assistant'].includes(saved)) {
+      if (saved && validTabs.includes(saved as ActiveTab)) {
         return saved as ActiveTab;
       }
     }
@@ -150,6 +158,20 @@ export default function Home() {
   });
 
   const [linkedinData, setLinkedinData] = useState<LinkedinProfileData>(defaultLinkedinData);
+
+  // Handle ?tool= URL param — overrides localStorage on load.
+  // This runs after mount to guarantee it works in all rendering modes (SSR/SSG).
+  useEffect(() => {
+    const urlTool = new URLSearchParams(window.location.search).get('tool');
+    const validTabs: ActiveTab[] = ['resume', 'github', 'linkedin', 'jobhunting', 'freelancing', 'interview', 'assistant'];
+    if (urlTool && validTabs.includes(urlTool as ActiveTab)) {
+      setActiveTab(urlTool as ActiveTab);
+      // Clean the URL param so sharing the URL doesn't lock the tab permanently
+      const url = new URL(window.location.href);
+      url.searchParams.delete('tool');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
 
   // LocalStorage state persistence
   useEffect(() => {
