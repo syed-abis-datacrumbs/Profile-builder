@@ -536,33 +536,52 @@ export const LinkedinChatStudio: React.FC<{
 
         {/* Bottom Input Area */}
         <div className="shrink-0 p-3.5 bg-white border-t border-slate-200">
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
-            <textarea
-              rows={1}
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                e.target.style.height = 'auto';
-                e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  send();
-                }
-              }}
-              placeholder={aiMessagesUsed >= 5 && !unlocked ? "AI Limit Reached. Upgrade to Pro." : "Ask anything..."}
-              disabled={aiMessagesUsed >= 5 && !unlocked}
-              className="flex-1 min-w-0 bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal disabled:opacity-50 disabled:cursor-not-allowed max-h-32 leading-snug py-0.5"
-            />
+          {aiMessagesUsed >= 5 && !unlocked ? (
             <button
-              onClick={() => send()}
-              disabled={!input.trim() || loading || (aiMessagesUsed >= 5 && !unlocked)}
-              className="w-8 h-8 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-xs cursor-pointer"
+              onClick={() => {
+                if (!isLoggedIn) { onRequireAuth(); return; }
+                setShowPaymentModal(true);
+              }}
+              className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 hover:border-blue-300 rounded-2xl px-4 py-2.5 flex items-center justify-between gap-2 transition-all shadow-2xs group cursor-pointer text-left"
             >
-              <Send className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2 min-w-0">
+                <Sparkles className="w-4 h-4 text-blue-600 shrink-0 animate-pulse" />
+                <span className="text-xs sm:text-sm font-semibold text-slate-700 truncate">
+                  AI Limit Reached (5/5 Free Prompts Used)
+                </span>
+              </div>
+              <span className="shrink-0 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-full shadow-xs transition-colors">
+                Upgrade to Pro →
+              </span>
             </button>
-          </div>
+          ) : (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
+              <textarea
+                rows={1}
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    send();
+                  }
+                }}
+                placeholder="Ask anything..."
+                className="flex-1 min-w-0 bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal max-h-32 leading-snug py-0.5"
+              />
+              <button
+                onClick={() => send()}
+                disabled={!input.trim() || loading}
+                className="w-8 h-8 rounded-full bg-black text-white hover:bg-slate-800 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-xs cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
