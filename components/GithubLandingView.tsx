@@ -72,22 +72,22 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     avatarUrl: '/images/github-profile/git-profile-1.png',
   },
   {
-    id: 'cyberpunk-ai',
+    id: 'ai-ml-engineer',
     presetId: 'ai-ml-engineer',
     category: 'data-ai',
-    name: 'Cyberpunk Neon AI',
-    tagline: 'Futuristic terminal & neon badges',
+    name: 'AI & Machine Learning Lead',
+    tagline: 'Deep Learning, PyTorch & LLM Architectures',
     badge: 'Trending',
-    theme: 'cyberpunk',
+    theme: 'dark',
     bannerUrl: 'https://github.blog/wp-content/uploads/2023/10/Security-DarkMode-4.png?fit=800%2C200',
-    bgClass: 'bg-gradient-to-br from-yellow-950/60 via-slate-950 to-cyan-950/60',
-    borderClass: 'border-cyan-500/40 shadow-cyan-500/10',
-    accentText: 'text-cyan-400',
+    bgClass: 'bg-gradient-to-br from-indigo-950/70 via-slate-950 to-blue-950/70',
+    borderClass: 'border-blue-500/40 shadow-blue-500/10',
+    accentText: 'text-blue-400',
     badges: ['PyTorch', 'TensorFlow', 'FastAPI', 'CUDA'],
-    features: ['⚡ Neon Badges', '🤖 LLM Benchmarks', '🔥 Cyber Streak'],
-    headline: '> root@cyber-dev:~$ bio',
-    subhead: 'AI/ML Engineer · Quantized models & Triton serving',
-    avatarUrl: '/images/github-profile/git-profile-2.png',
+    features: ['⚡ AI Tech Badges', '🤖 LLM Benchmarks', '🔥 GitHub Streak'],
+    headline: 'AI & Machine Learning Engineer 🤖',
+    subhead: 'Designing LLM pipelines, neural models & real-time inference systems',
+    avatarUrl: '/images/github-profile/git-profile-1.png',
   },
   {
     id: 'fullstack-showcase',
@@ -105,7 +105,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['🛠️ Tech Badges', '🚀 Featured Projects', '📈 Top Languages'],
     headline: 'Full-Stack Software Engineer 🚀',
     subhead: 'Building scalable web products & distributed services',
-    avatarUrl: '/images/github-profile/git-profile-3.png',
+    avatarUrl: '/images/github-profile/git-profile-1.png',
   },
   {
     id: 'cloud-devops',
@@ -141,7 +141,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['💖 Sponsor Button', '📦 Package Stats', '📊 Contributor Graph'],
     headline: 'Backend Developer 💖',
     subhead: 'Building high-throughput backend services & tools',
-    avatarUrl: '/images/github-profile/git-profile-2.png',
+    avatarUrl: '/images/github-profile/git-profile-1.png',
   },
   {
     id: 'vision-edge-ai',
@@ -159,7 +159,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['👁️ Vision Demos', '⚡ Edge FPS Benchmarks', '📊 Live Stats'],
     headline: 'Computer Vision Engineer 👁️',
     subhead: 'Edge model optimization & 3D camera geometry',
-    avatarUrl: '/images/github-profile/git-profile-3.png',
+    avatarUrl: '/images/github-profile/git-profile-1.png',
   },
   {
     id: 'mobile-app-dev',
@@ -195,7 +195,7 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     features: ['🏛️ System Architecture', '📈 Impact Metrics', '🌐 Connect Badges'],
     headline: 'Software Developer 🏛️',
     subhead: 'Architecting resilient cloud systems & leading dev teams',
-    avatarUrl: '/images/github-profile/git-profile-2.png'
+    avatarUrl: '/images/github-profile/git-profile-1.png'
   }
 ];
 
@@ -220,10 +220,10 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
   const [charIndex, setCharIndex] = useState(0);
 
   const placeholders = [
-    "Generate a developer bio for my GitHub README...",
-    "Add dynamic tech stack badges & live GitHub stats...",
-    "Create a dark cyberpunk README theme for my profile...",
-    "Showcase my top open-source projects & contributions..."
+    "Create a Full-Stack developer bio with tech stack badges...",
+    "Create an AI & ML Systems Engineer GitHub README...",
+    "Create a Cloud & DevOps Architect profile with CI/CD workflows...",
+    "Create a Data Science & Analytics portfolio with live stats..."
   ];
 
   useEffect(() => {
@@ -250,20 +250,20 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
 
   const starterPrompts = [
     {
-      title: "Full-stack engineer README with live stats",
-      prompt: "Generate a full-stack engineer GitHub README with tech badges, active streak counter, and pinned projects."
+      title: "Create Full-Stack Engineer README with live stats",
+      prompt: "Create a high-impact Full-Stack Software Engineer GitHub README with tech stack badges, live stats, and featured projects."
     },
     {
-      title: "Cyberpunk aesthetic dev profile",
-      prompt: "Create a cyberpunk neon themed GitHub bio with glowing skill badges and terminal banner style."
+      title: "Create AI & ML Systems Engineer Profile",
+      prompt: "Create an AI & Machine Learning Engineer GitHub README with PyTorch, LLM benchmarks, dynamic badges, and streak stats."
     },
     {
-      title: "Minimalist open-source maintainer README",
-      prompt: "Draft a clean minimalist README for an open-source maintainer focusing on repo metrics and sponsor links."
+      title: "Create Cloud & DevOps Architect README",
+      prompt: "Create a Cloud & DevOps Architect GitHub README with Docker, Kubernetes, CI/CD pipelines, and cloud infrastructure metrics."
     },
     {
-      title: "Data Science & Machine Learning portfolio",
-      prompt: "Build an ML engineer GitHub profile featuring PyTorch badges, Kaggle accomplishments, and paper citations."
+      title: "Create Data Science & Analytics Portfolio",
+      prompt: "Create a Data Scientist GitHub README with Python skill badges, Kaggle highlights, and data visualization project showcases."
     }
   ];
 

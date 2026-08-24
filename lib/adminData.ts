@@ -83,11 +83,14 @@ export async function getAdminPayments(status?: string) {
   });
 }
 
-export async function getAdminIssues(status: string = 'OPEN', page: number = 1) {
+export async function getAdminIssues(status: string = 'OPEN', category: string = 'ALL', page: number = 1) {
   const PAGE_SIZE = 20;
-  const where = { status };
+  const where: any = { status };
+  if (category && category !== 'ALL') {
+    where.category = category;
+  }
 
-  const [issues, total] = await Promise.all([
+  const [issues, total, openCount, resolvedCount, resumeCount, githubCount, linkedinCount] = await Promise.all([
     (db as any).profileBuilderIssue.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -95,6 +98,11 @@ export async function getAdminIssues(status: string = 'OPEN', page: number = 1) 
       take: PAGE_SIZE,
     }),
     (db as any).profileBuilderIssue.count({ where }),
+    (db as any).profileBuilderIssue.count({ where: category && category !== 'ALL' ? { status: 'OPEN', category } : { status: 'OPEN' } }),
+    (db as any).profileBuilderIssue.count({ where: category && category !== 'ALL' ? { status: 'RESOLVED', category } : { status: 'RESOLVED' } }),
+    (db as any).profileBuilderIssue.count({ where: { category: 'resume', status } }),
+    (db as any).profileBuilderIssue.count({ where: { category: 'github', status } }),
+    (db as any).profileBuilderIssue.count({ where: { category: 'linkedin', status } }),
   ]);
 
   const uniqueUserIds = Array.from(new Set(issues.map((i: any) => i.userId).filter(Boolean))) as string[];
@@ -102,11 +110,24 @@ export async function getAdminIssues(status: string = 'OPEN', page: number = 1) 
 
   const enrichedIssues = issues.map((i: any) => ({
     ...i,
+    category: i.category || 'resume',
     user: i.userId ? userMap.get(i.userId) || { id: i.userId, name: 'Unknown User', email: '(Not found in Clerk)' } : null,
     createdAt: i.createdAt.toISOString(),
   }));
 
-  return { issues: enrichedIssues, total, page, pageSize: PAGE_SIZE };
+  return {
+    issues: enrichedIssues,
+    total,
+    page,
+    pageSize: PAGE_SIZE,
+    counts: {
+      open: openCount,
+      resolved: resolvedCount,
+      resume: resumeCount,
+      github: githubCount,
+      linkedin: linkedinCount,
+    },
+  };
 }
 
 export async function getAdminNameRequests() {

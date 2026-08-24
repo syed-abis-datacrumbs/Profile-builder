@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     const issue = await (db as any).profileBuilderIssue.create({
       data: {
         userId,
+        category: data.category || 'resume',
         text: data.text,
         imageUrl,
       },

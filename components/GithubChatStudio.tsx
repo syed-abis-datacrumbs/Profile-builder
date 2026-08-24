@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo, Bug } from 'lucide-react';
+import toast from '@/lib/toast';
 import { GithubProfileData } from '../types';
 import { GithubIcon } from './icons';
 import { generateGithubMarkdown } from '../lib/githubMarkdown';
@@ -96,6 +97,33 @@ export const GithubChatStudio: React.FC<{
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
+
+  // Report Issue State
+  const [reportIssueModalOpen, setReportIssueModalOpen] = useState(false);
+  const [issueText, setIssueText] = useState('');
+  const [issueImage, setIssueImage] = useState<string | null>(null);
+  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
+
+  const handleReportIssue = async () => {
+    if (!issueText.trim()) return;
+    setIsSubmittingIssue(true);
+    try {
+      const res = await fetch('/api/issues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: issueText, imageBase64: issueImage, category: 'github' }),
+      });
+      if (!res.ok) throw new Error('Failed to submit issue');
+      toast.success('Issue reported successfully. Thank you!');
+      setReportIssueModalOpen(false);
+      setIssueText('');
+      setIssueImage(null);
+    } catch (e: any) {
+      toast.error('Failed to submit issue: ' + e.message);
+    } finally {
+      setIsSubmittingIssue(false);
+    }
+  };
 
   // Undo / Redo history
   const [past, setPast] = useState<GithubProfileData[]>([]);
@@ -816,7 +844,101 @@ export const GithubChatStudio: React.FC<{
           />
         </div>
 
+        {/* Floating Report Issue Button */}
+        <div className="hidden md:flex fixed bottom-8 right-8 z-40 flex-col items-end gap-3 select-none">
+          <button
+            onClick={() => setReportIssueModalOpen(true)}
+            className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 shadow-xl flex items-center justify-center hover:bg-rose-200 transition-colors mr-2 cursor-pointer"
+            title="Report an Issue"
+          >
+            <Bug className="w-5 h-5" />
+          </button>
+        </div>
+
       </div>
+
+      {/* Report Issue Modal */}
+      {reportIssueModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs">
+          <div className="fixed inset-0" onClick={() => setReportIssueModalOpen(false)} />
+          <div className="relative w-full max-w-[420px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <Bug className="w-4 h-4 text-rose-500" />
+                Report an Issue
+              </h3>
+              <button onClick={() => setReportIssueModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-4 flex-1 flex flex-col gap-3 min-h-0 overflow-y-auto">
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Found a bug or have feedback on the GitHub README generator? Describe it below and optionally attach a screenshot.
+              </p>
+              
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Issue Description</label>
+                <textarea
+                  value={issueText}
+                  onChange={(e) => setIssueText(e.target.value)}
+                  placeholder="E.g., The tech stack badges don't render..."
+                  rows={4}
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 resize-none font-sans text-slate-900 transition-all"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Attach Image (Optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => setIssueImage(ev.target?.result as string);
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer"
+                />
+                {issueImage && (
+                  <div className="mt-3 relative rounded-lg overflow-hidden border border-slate-200">
+                    <img src={issueImage} alt="Issue screenshot" className="w-full max-h-32 object-cover bg-slate-50" />
+                    <button 
+                      onClick={() => setIssueImage(null)}
+                      className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full hover:bg-black/75 cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setReportIssueModalOpen(false)}
+                className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!issueText.trim() || isSubmittingIssue}
+                onClick={handleReportIssue}
+                className="px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm cursor-pointer flex items-center gap-2"
+              >
+                {isSubmittingIssue && <Loader2 className="w-3 h-3 animate-spin" />}
+                {isSubmittingIssue ? 'Submitting...' : 'Submit Issue'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Floating Chat Widget */}
       <MobileChatWidget

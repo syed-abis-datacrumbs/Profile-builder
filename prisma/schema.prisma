@@ -200,10 +200,11 @@ model ResumeNameChangeRequest {
   @@map("profile_builder_resume_name_requests")
 }
 
-// User-submitted issues or bug reports from the Resume Builder
+// User-submitted issues or bug reports from the Profile Builder tools
 model ProfileBuilderIssue {
   id        String   @id @default(cuid())
   userId    String?
+  category  String   @default("resume") // "resume", "github", "linkedin"
   text      String
   imageUrl  String?
   status    String   @default("OPEN") // OPEN, RESOLVED
@@ -211,5 +212,6 @@ model ProfileBuilderIssue {
 
   @@index([userId])
   @@index([status])
+  @@index([category])
   @@map("profile_builder_issues")
 }

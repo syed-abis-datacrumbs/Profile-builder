@@ -584,7 +584,7 @@ export default function Home() {
                           onChange={setGithubData}
                           onAIRefine={() => {
                             setActiveTab('assistant');
-                            setAssistantPrompt("Generate a cyberpunk GitHub README bio");
+                            setAssistantPrompt("Optimize and enhance my GitHub README bio with dynamic stats");
                           }}
                           isLoggedIn={isLoggedIn}
                           onRequireAuth={() => setIsAuthOpen(true)}
@@ -629,16 +629,14 @@ export default function Home() {
                             const t = attachedGithubTemplate;
                             const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
                             const preset = { ...basePreset, label: t.name };
-                            const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
                             if (typeof window !== 'undefined') {
                               localStorage.removeItem('profile_builder_github_chat');
                             }
-                            openGithubStudio(preset, t.theme, t.avatarUrl || randomAvatar, t.bannerUrl);
-                          } else if (!githubData || !githubData.title || githubData.title === 'Minimalist Data Science') {
+                            openGithubStudio(preset, t.theme, t.avatarUrl || '/images/github-profile/git-profile-1.png', t.bannerUrl);
+                          } else if (!githubData || !githubData.title || githubData.title === 'Minimalist Data Science' || !githubData.avatarUrl) {
                             const defaultPreset = GITHUB_ROLE_PRESETS[0];
                             const defaultTemplate = GITHUB_TEMPLATES[0];
-                            const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
-                            openGithubStudio(defaultPreset, 'dark', randomAvatar, defaultTemplate.bannerUrl);
+                            openGithubStudio(defaultPreset, 'dark', '/images/github-profile/git-profile-1.png', defaultTemplate.bannerUrl);
                           } else {
                             if (promptText.trim()) setGithubInitialPrompt(promptText);
                             setGithubMode('studio');
@@ -935,8 +933,7 @@ export default function Home() {
                   setShowGithubTemplatePicker(false);
                   const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
                   const preset = { ...basePreset, label: t.name };
-                  const randomAvatar = `/images/github-profile/git-profile-${Math.floor(Math.random() * 3) + 1}.png`;
-                  openGithubStudio(preset, t.theme, t.avatarUrl || randomAvatar);
+                  openGithubStudio(preset, t.theme, t.avatarUrl || '/images/github-profile/git-profile-1.png');
                   setGithubInitialPrompt(pendingPrompt);
                 }}
                 className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer space-y-3 group flex flex-col justify-between"

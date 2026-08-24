@@ -91,17 +91,17 @@ export const AIChatStudio: React.FC<AIChatStudioProps> = ({
         aiResponseText = "✨ Successfully generated a specialized Healthcare & ICU Nurse Resume kit! Updated professional summary, ICU experience metrics, and ACLS skills in your Resume Workspace.";
         actionLabel = "Updated Resume Workspace to ICU Nurse Profile";
 
-      } else if (lower.includes("github") || lower.includes("readme") || lower.includes("cyberpunk")) {
+      } else if (lower.includes("github") || lower.includes("readme")) {
         setGithubData({
           ...githubData,
-          title: "⚡ Cyberpunk & AI Systems Architect",
-          about: "👾 Crafting autonomous AI tools, reactive web applications, and vector neural engines. Powered by Next.js, Python, and PyTorch.",
-          theme: "cyberpunk",
+          title: "⚡ Senior AI & Systems Architect",
+          about: "Crafting autonomous AI tools, reactive web applications, and high-performance distributed systems. Powered by Next.js, Python, and PyTorch.",
+          theme: "dark",
           showStreakCard: true,
           showStatsCard: true
         });
-        aiResponseText = "🚀 Generated a Cyberpunk Cyber-themed GitHub README bio! Added dynamic shields, streak stats, and tech stack badges in your GitHub Workspace.";
-        actionLabel = "Updated GitHub README to Cyberpunk Theme";
+        aiResponseText = "🚀 Generated a modern AI & Full-Stack GitHub README bio! Added dynamic shields, streak stats, and tech stack badges in your GitHub Workspace.";
+        actionLabel = "Updated GitHub README";
 
       } else if (lower.includes("linkedin") || lower.includes("executive")) {
         setLinkedinData({

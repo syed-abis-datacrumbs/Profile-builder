@@ -110,7 +110,7 @@ export async function POST(request: Request) {
 
     const body = (await request.json()) as { messages?: ChatMessage[]; github?: GithubProfileData; sessionId?: string; builderType?: string };
     const messages = Array.isArray(body.messages) ? body.messages : [];
-    const github = body.github ?? {};
+    const github: Partial<GithubProfileData> = body.github ?? {};
     const sessionId = body.sessionId || 'unknown';
     const builderType = body.builderType || 'github';
     const userMessage = messages[messages.length - 1]?.content || '';
@@ -143,9 +143,14 @@ export async function POST(request: Request) {
       });
     }
 
+    const updatedGithub: GithubProfileData = (parsed.github && typeof parsed.github === 'object') ? parsed.github : github;
+    if (updatedGithub && !updatedGithub.avatarUrl) {
+      updatedGithub.avatarUrl = github?.avatarUrl || '/images/github-profile/git-profile-1.png';
+    }
+
     return Response.json({
       reply,
-      github: parsed.github ?? github,
+      github: updatedGithub,
     });
   } catch (err) {
     return Response.json({ error: 'The AI request failed. Check your API key / connection and try again.' });

@@ -180,7 +180,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       const res = await fetch('/api/issues', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: issueText, imageBase64: issueImage }),
+        body: JSON.stringify({ text: issueText, imageBase64: issueImage, category: 'resume' }),
       });
       if (!res.ok) throw new Error('Failed to submit issue');
       showToast('Issue reported successfully. Thank you!');

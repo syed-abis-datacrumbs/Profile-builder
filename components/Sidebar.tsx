@@ -47,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       case 'github':
         return [
           { text: "Minimalist Dev Portfolio README with dynamic stats card", label: "Minimalist" },
-          { text: "Dark Cyberpunk themed GitHub Bio with tech stack badges", label: "Cyberpunk" },
+          { text: "Create an AI & Machine Learning GitHub Bio with badges", label: "AI & ML" },
           { text: "Open Source Contributor README with streak metrics", label: "Open Source" },
           { text: "Full-Stack Dev README with social badges & repo showcase", label: "Full Stack" }
         ];

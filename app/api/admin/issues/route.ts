@@ -8,9 +8,10 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status') || 'OPEN';
+  const category = searchParams.get('category') || 'ALL';
   const page = parseInt(searchParams.get('page') || '1', 10);
 
-  const data = await getAdminIssues(status, page);
+  const data = await getAdminIssues(status, category, page);
 
   return NextResponse.json(data);
 }

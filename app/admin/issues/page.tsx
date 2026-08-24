@@ -9,21 +9,24 @@ export const dynamic = 'force-dynamic';
 export default async function AdminIssuesPage({
   searchParams,
 }: {
-  searchParams: { status?: string; page?: string };
+  searchParams: Promise<{ status?: string; category?: string; page?: string }>;
 }) {
   const auth = await requireAdmin();
   if (auth instanceof NextResponse) {
     redirect('/');
   }
 
-  const initialStatus = searchParams.status || 'OPEN';
-  const initialPage = parseInt(searchParams.page || '1', 10);
-  const initialData = await getAdminIssues(initialStatus, initialPage);
+  const params = await searchParams;
+  const initialStatus = params.status || 'OPEN';
+  const initialCategory = params.category || 'ALL';
+  const initialPage = parseInt(params.page || '1', 10);
+  const initialData = await getAdminIssues(initialStatus, initialCategory, initialPage);
 
   return (
     <IssuesClient
       initialData={initialData}
       initialStatus={initialStatus}
+      initialCategory={initialCategory}
       initialPage={initialPage}
     />
   );
