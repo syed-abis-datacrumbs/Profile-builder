@@ -217,6 +217,10 @@ export const GithubChatStudio: React.FC<{
     const text = (overrideText ?? input).trim();
     if (!text || loading) return;
     if (!isLoggedIn) { onRequireAuth(); return; }
+    if (aiMessagesUsed >= 5 && !unlocked) {
+      setShowPaymentModal(true);
+      return;
+    }
     const next: Msg[] = [...messages, { role: 'user', content: text }];
     setMessages(next);
     if (overrideText === undefined) setInput('');
@@ -235,6 +239,7 @@ export const GithubChatStudio: React.FC<{
       const data = await res.json();
       if (data.error) setMessages((m) => [...m, { role: 'assistant', content: `⚠️ ${data.error}` }]);
       else {
+        if (!unlocked) setAiMessagesUsed((prev) => prev + 1);
         if (data.github) recordChange(data.github as GithubProfileData);
         setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Done.' }]);
       }
@@ -271,7 +276,9 @@ export const GithubChatStudio: React.FC<{
     a.click();
     document.body.removeChild(a);
   };
+
   const copyReadme = async () => {
+    if (!isLoggedIn) { onRequireAuth(); return; }
     if (unlocked === false) {
       setShowPaymentModal(true);
       return;

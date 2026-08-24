@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ArrowLeft, SquarePen } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { GithubTemplateCard } from './GithubLandingView';
 import { GITHUB_ROLE_PRESETS } from '../lib/githubRolePresets';
 import { applyRolePresetToGithub } from '../lib/githubRolePresets';
@@ -34,10 +35,28 @@ export const GithubTemplatePreview: React.FC<GithubTemplatePreviewProps> = ({
   mockupData.customSections = mockupData.customSections.map((s) => ({ ...s, content: s.content.replace(/\*\*/g, '') }));
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 font-sans">
-      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onBack} />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.22, ease: 'easeOut' }}
+      className="fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 font-sans"
+    >
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"
+        onClick={onBack}
+      />
 
-      <div className="relative w-full max-w-[820px] flex flex-col min-h-0 h-full max-h-[92vh]">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-[820px] flex flex-col min-h-0 h-full max-h-[92vh]"
+      >
         {/* Top toolbar */}
         <div className="shrink-0 bg-white rounded-2xl shadow-xl px-4 sm:px-5 py-3 sm:py-3.5 flex flex-wrap items-center justify-between gap-2 sm:gap-4 mb-3">
           <button
@@ -52,9 +71,6 @@ export const GithubTemplatePreview: React.FC<GithubTemplatePreviewProps> = ({
             <span className="text-sm text-slate-500 hidden sm:inline">
               Template: <span className="font-bold text-slate-900">{template.name}</span>
             </span>
-            {/* <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200 uppercase tracking-wider">
-              {template.theme}
-            </span> */}
             <button
               onClick={onEdit}
               className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold transition-colors shadow-sm whitespace-nowrap"
@@ -69,7 +85,7 @@ export const GithubTemplatePreview: React.FC<GithubTemplatePreviewProps> = ({
         <div className="flex-1 min-h-0 overflow-y-auto w-full pt-4 hide-scrollbar">
           <GithubReadmePreview github={mockupData} editable={false} />
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft, SquarePen } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { LmsResumeSample } from '../lib/resumeSamples';
 import { getResumeAccentColor } from '../lib/resumeHelpers';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
@@ -60,10 +61,28 @@ export const ResumeTemplatePreview: React.FC<ResumeTemplatePreviewProps> = ({ sa
   }, [measure]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6">
-      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onClose} />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.22, ease: 'easeOut' }}
+      className="fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6"
+    >
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
-      <div className="relative w-full max-w-4xl flex flex-col min-h-0 h-full max-h-[92vh]">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-4xl flex flex-col min-h-0 h-full max-h-[92vh]"
+      >
         {/* Top toolbar */}
         <div className="shrink-0 bg-white rounded-2xl shadow-xl px-4 sm:px-5 py-3 sm:py-3.5 flex flex-wrap items-center justify-between gap-2 sm:gap-4 mb-3">
           <button
@@ -106,7 +125,7 @@ export const ResumeTemplatePreview: React.FC<ResumeTemplatePreviewProps> = ({ sa
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

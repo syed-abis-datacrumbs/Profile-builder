@@ -594,17 +594,9 @@ export default function Home() {
                       <GithubLandingView
                         userName={firstName || undefined}
                         onOpenRolePicker={() => {
-                          if (!isAuthorized) {
-                            setShowBlockModal(true);
-                            return;
-                          }
                           setShowGithubTemplatePicker(true);
                         }}
                         onSelectPreset={(preset, theme, avatarUrl, bannerUrl) => {
-                          if (!isAuthorized) {
-                            setShowBlockModal(true);
-                            return;
-                          }
                           if (typeof window !== 'undefined') {
                             localStorage.removeItem('profile_builder_github_chat');
                           }
@@ -613,18 +605,10 @@ export default function Home() {
                         attachedTemplate={attachedGithubTemplate}
                         onClearAttachedTemplate={() => setAttachedGithubTemplate(null)}
                         onSelectTemplate={(t) => {
-                          if (!isAuthorized) {
-                            setShowBlockModal(true);
-                            return;
-                          }
                           setGithubPreviewTemplate(t);
                           setGithubMode('preview');
                         }}
                         onUsePrompt={(promptText) => {
-                          if (!isAuthorized) {
-                            setShowBlockModal(true);
-                            return;
-                          }
                           if (attachedGithubTemplate) {
                             const t = attachedGithubTemplate;
                             const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
@@ -645,8 +629,8 @@ export default function Home() {
                           setAttachedGithubTemplate(null);
                         }}
                         onOpenEditorDirectly={() => {
-                          if (!isAuthorized) {
-                            setShowBlockModal(true);
+                          if (!isLoggedIn) {
+                            setIsAuthOpen(true);
                             return;
                           }
                           setGithubMode('studio');
@@ -871,51 +855,51 @@ export default function Home() {
           block for any `position: fixed` descendant, so the backdrop was
           boxed into just the tab content's area and only "caught up" to
           cover the full screen once that transform settled a beat later. */}
-      {resumeMode === 'preview' && resumePreviewSample && (
-        <ResumeTemplatePreview
-          sample={resumePreviewSample}
-          clerkFullName={displayFullName}
-          onUse={() => {
-            // Doesn't jump into the Studio directly — closes back to the
-            // landing page with this attached, so the user can add an
-            // instruction (or just send empty to use it as-is) first.
-            // Scrolls back to the top so the attached-template chip above
-            // the prompt box is immediately visible — the user clicked this
-            // from a template card that can be scrolled well below it.
-            setAttachedResumeTemplate(resumePreviewSample);
-            setResumeMode('landing');
-            mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          onClose={() => setResumeMode('landing')}
-        />
-      )}
+      <AnimatePresence>
+        {resumeMode === 'preview' && resumePreviewSample && (
+          <ResumeTemplatePreview
+            key="preview-modal-resume"
+            sample={resumePreviewSample}
+            clerkFullName={displayFullName}
+            onUse={() => {
+              setAttachedResumeTemplate(resumePreviewSample);
+              setResumeMode('landing');
+              mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onClose={() => setResumeMode('landing')}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* Same as Resume, place Github and Linkedin preview modals at the root 
-          so they are not nested inside Framer Motion transforms that might trap
-          their fixed positioning. */}
-      {githubMode === 'preview' && githubPreviewTemplate && (
-        <GithubTemplatePreview
-          template={githubPreviewTemplate}
-          onBack={() => setGithubMode('landing')}
-          onEdit={() => {
-            setAttachedGithubTemplate(githubPreviewTemplate);
-            setGithubMode('landing');
-            mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {githubMode === 'preview' && githubPreviewTemplate && (
+          <GithubTemplatePreview
+            key="preview-modal-github"
+            template={githubPreviewTemplate}
+            onBack={() => setGithubMode('landing')}
+            onEdit={() => {
+              setAttachedGithubTemplate(githubPreviewTemplate);
+              setGithubMode('landing');
+              mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+      </AnimatePresence>
 
-      {linkedinMode === 'preview' && linkedinPreviewTemplateId && (
-        <LinkedinTemplatePreview
-          templateId={linkedinPreviewTemplateId}
-          onBack={() => setLinkedinMode('landing')}
-          onEdit={() => {
-            setAttachedLinkedinTemplate(linkedinPreviewTemplateId);
-            setLinkedinMode('landing');
-            mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {linkedinMode === 'preview' && linkedinPreviewTemplateId && (
+          <LinkedinTemplatePreview
+            key="preview-modal-linkedin"
+            templateId={linkedinPreviewTemplateId}
+            onBack={() => setLinkedinMode('landing')}
+            onEdit={() => {
+              setAttachedLinkedinTemplate(linkedinPreviewTemplateId);
+              setLinkedinMode('landing');
+              mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Prompt was typed on the GitHub landing page — pick a template, then
           the AI runs the prompt on top of it inside the Chat Studio. */}

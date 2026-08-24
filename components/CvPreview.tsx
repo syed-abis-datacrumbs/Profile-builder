@@ -1,11 +1,48 @@
 'use client';
 
 import React from 'react';
-import { CvData, CvPersonalInfo } from '../lib/cvTypes';
+import { CvData, CvPersonalInfo, CvProject } from '../lib/cvTypes';
 
 function normalizeUrl(url: string): string {
   const trimmed = url.trim();
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+function applyLinkToProjectContent(content: string, link?: string): string {
+  // First strip any existing <a> tags inside content to prevent nested anchors
+  const stripped = (content || '').replace(/<a\b[^>]*>(.*?)<\/a>/gi, '$1');
+  if (!link || !link.trim()) return stripped;
+  const url = normalizeUrl(link);
+
+  // If content has <strong>...</strong>, wrap the first strong inner content in <a>
+  if (/<strong\b[^>]*>(.*?)<\/strong>/i.test(stripped)) {
+    return stripped.replace(/<strong\b[^>]*>(.*?)<\/strong>/i, (_, inner) => {
+      return `<strong><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline hover:text-blue-900 cursor-pointer font-bold">${inner}</a></strong>`;
+    });
+  }
+
+  // If content has <b>...</b>
+  if (/<b\b[^>]*>(.*?)<\/b>/i.test(stripped)) {
+    return stripped.replace(/<b\b[^>]*>(.*?)<\/b>/i, (_, inner) => {
+      return `<b><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline hover:text-blue-900 cursor-pointer font-bold">${inner}</a></b>`;
+    });
+  }
+
+  // If no bold tag, find title before '(' or '–' or '-' or ':'
+  const match = stripped.match(/^([^(\-–:]+)(.*)$/);
+  if (match && match[1].trim()) {
+    const title = match[1].trim();
+    const rest = match[2];
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline hover:text-blue-900 cursor-pointer font-bold">${title}</a>${rest}`;
+  }
+
+  return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline hover:text-blue-900 cursor-pointer font-bold">${stripped}</a>`;
+}
+
+function extractLinkFromProject(proj: CvProject): string {
+  if (proj.link) return proj.link;
+  const match = (proj.content || '').match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/i);
+  return match ? match[1] : '';
 }
 
 /** True if an HTML field has no real text left in it. A plain `!html` check
@@ -193,13 +230,15 @@ function CvPreviewBase({
         : data.workExperience.map((w, j) => (j === i ? next : w)),
     });
   };
-  const setProj = (i: number, content: string) => {
-    const isEmpty = isBlank(content);
+  const setProj = (i: number, patch: Partial<CvProject> | string) => {
+    const current = data.projects[i] || { content: '' };
+    const next = typeof patch === 'string' ? { ...current, content: patch } : { ...current, ...patch };
+    const isEmpty = isBlank(next.content);
     commit({
       ...data,
       projects: isEmpty
         ? data.projects.filter((_, j) => j !== i)
-        : data.projects.map((p, j) => (j === i ? { content } : p)),
+        : data.projects.map((p, j) => (j === i ? next : p)),
     });
   };
   const setWs = (i: number, content: string) => {
@@ -354,6 +393,20 @@ function CvPreviewBase({
     setEditingLinkKey(key);
     setEditingLinkLabel(currentLabel);
     setEditingLinkUrl(currentUrl);
+  };
+
+  const [editingProjectIndex, setEditingProjectIndex] = React.useState<number | null>(null);
+  const [editingProjectUrl, setEditingProjectUrl] = React.useState('');
+  const [hoveredProjectIndex, setHoveredProjectIndex] = React.useState<number | null>(null);
+  const [focusedProjectIndex, setFocusedProjectIndex] = React.useState<number | null>(null);
+
+  const activeProjectIndex = focusedProjectIndex !== null ? focusedProjectIndex : hoveredProjectIndex;
+
+  const openProjectLinkModal = (index: number) => {
+    const proj = data.projects[index];
+    const currentUrl = proj ? extractLinkFromProject(proj) : '';
+    setEditingProjectIndex(index);
+    setEditingProjectUrl(currentUrl);
   };
 
   const p = data.personalInfo;
@@ -556,6 +609,91 @@ function CvPreviewBase({
         </div>
       )}
 
+      {/* Project Link Edit Modal */}
+      {editingProjectIndex !== null && (
+        <div className="fixed inset-0 z-[110] flex items-start justify-center pt-24 p-3 sm:p-4 bg-black/50">
+          <div className="fixed inset-0" onClick={() => setEditingProjectIndex(null)} />
+          <div className="relative w-full max-w-[420px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[85vh]">
+            
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <span className="text-base">🔗</span> {data.projects[editingProjectIndex] && extractLinkFromProject(data.projects[editingProjectIndex]) ? 'Edit Project Link' : 'Attach Project Link'}
+              </h3>
+              <button onClick={() => setEditingProjectIndex(null)} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-4 flex-1 flex flex-col gap-3 min-h-0 text-left">
+              <p className="text-[12px] text-slate-600 leading-relaxed">
+                Enter the project repository or live app URL. The project heading itself will become a clickable link.
+              </p>
+              
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Project URL</label>
+                <input
+                  type="text"
+                  value={editingProjectUrl}
+                  onChange={(e) => setEditingProjectUrl(e.target.value)}
+                  placeholder="https://github.com/username/project or https://app.com"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 font-mono text-slate-900 transition-all"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2 shrink-0">
+              {editingProjectIndex !== null && extractLinkFromProject(data.projects[editingProjectIndex]) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (editingProjectIndex !== null) {
+                      const cur = data.projects[editingProjectIndex];
+                      const newContent = applyLinkToProjectContent(cur.content, '');
+                      setProj(editingProjectIndex, { content: newContent, link: undefined, linkLabel: undefined });
+                    }
+                    setEditingProjectIndex(null);
+                  }}
+                  className="px-4 py-2 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors border border-rose-200 cursor-pointer mr-auto"
+                >
+                  Clear Link
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setEditingProjectIndex(null)}
+                className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (editingProjectIndex !== null) {
+                    const cur = data.projects[editingProjectIndex];
+                    const trimmedUrl = editingProjectUrl.trim();
+                    const newContent = applyLinkToProjectContent(cur.content, trimmedUrl);
+                    setProj(editingProjectIndex, {
+                      content: newContent,
+                      link: trimmedUrl || undefined,
+                      linkLabel: undefined,
+                    });
+                  }
+                  setEditingProjectIndex(null);
+                }}
+                className="px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
+              >
+                Save Link
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {(editable || eduList.length > 0) && (
         <section>
           {eduList.map((edu, pos) => {
@@ -565,20 +703,50 @@ function CvPreviewBase({
                 {pos === 0 && <SectionHeading>Education</SectionHeading>}
                 <div className="flex justify-between items-baseline gap-3">
                   <span className="font-bold">
-                    {editable ? <RichText html={edu.institution} placeholder="Institution" onCommit={(v) => setEdu(i, { institution: v })} onEmptyBackspace={() => eduEmptyBackspace(i)} /> : <Html html={edu.institution} />}
+                    {editable ? (
+                      <RichText
+                        html={edu.institution}
+                        placeholder="Institution"
+                        onCommit={(v) => setEdu(i, { institution: v })}
+                        onEmptyBackspace={() => eduEmptyBackspace(i)}
+                      />
+                    ) : (
+                      <Html html={edu.institution} />
+                    )}
                   </span>
                   <span className="text-slate-600 text-[16px] shrink-0 whitespace-nowrap">
                     {editable ? (
                       <>
-                        <RichText html={edu.start} placeholder="Start" onCommit={(v) => setEdu(i, { start: v })} /> -{' '}
+                        <RichText html={edu.start} placeholder="Start" onCommit={(v) => setEdu(i, { start: v })} />
+                        {' - '}
                         <RichText html={edu.end} placeholder="End" onCommit={(v) => setEdu(i, { end: v })} />
                       </>
                     ) : (
-                      (edu.start || edu.end) && <>{edu.start} - {edu.end}</>
+                      (edu.start || edu.end) && (
+                        <>
+                          {edu.start}
+                          {edu.start && edu.end ? ' - ' : ''}
+                          {edu.end}
+                        </>
+                      )
                     )}
                   </span>
                 </div>
-                {editable ? <RichText block html={edu.degree} placeholder="Degree" onCommit={(v) => setEdu(i, { degree: v })} onEmptyBackspace={() => eduEmptyBackspace(i)} /> : edu.degree && <div><Html html={edu.degree} /></div>}
+                {editable ? (
+                  <RichText
+                    block
+                    html={edu.degree}
+                    placeholder="Degree"
+                    onCommit={(v) => setEdu(i, { degree: v })}
+                    onEmptyBackspace={() => eduEmptyBackspace(i)}
+                  />
+                ) : (
+                  edu.degree && (
+                    <div>
+                      <Html html={edu.degree} />
+                    </div>
+                  )
+                )}
               </div>
             );
           })}
@@ -639,24 +807,69 @@ function CvPreviewBase({
 
       {(editable || projectList.length > 0) && (
         <section data-bullet-group="projects">
+          <SectionHeading>Projects</SectionHeading>
           {projectList.map((proj, pos) => {
             const i = data.projects.indexOf(proj);
+            const hasLink = !!extractLinkFromProject(proj);
+            const isTargeted = editable && activeProjectIndex === i;
             return (
-              <div key={i} data-cv-block className="mb-1">
-                {pos === 0 && <SectionHeading>Projects</SectionHeading>}
+              <div
+                key={i}
+                data-cv-block
+                className="mb-1.5 relative group/proj-item"
+                onMouseEnter={() => setHoveredProjectIndex(i)}
+                onMouseLeave={() => setHoveredProjectIndex((prev) => (prev === i ? null : prev))}
+                onFocus={() => setFocusedProjectIndex(i)}
+                onBlur={() => setFocusedProjectIndex((prev) => (prev === i ? null : prev))}
+              >
+                {/* Floating "Add Link" / "Edit Link" pill above the project - ONLY for the targeted project */}
+                {isTargeted && (
+                  <div className="absolute -top-2.5 left-6 z-30 transition-all duration-150 flex items-center gap-1 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-100">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openProjectLinkModal(i);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[11px] font-sans font-medium shadow-lg hover:bg-blue-600 transition-colors cursor-pointer border border-white/20"
+                    >
+                      <span className="text-[10px]">🔗</span>
+                      <span>{hasLink ? 'Edit Link' : 'Add Link'}</span>
+                    </button>
+                    {hasLink && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const newContent = applyLinkToProjectContent(proj.content, '');
+                          setProj(i, { content: newContent, link: undefined, linkLabel: undefined });
+                        }}
+                        className="w-4 h-4 rounded-full bg-slate-800 text-slate-300 hover:text-white hover:bg-red-600 flex items-center justify-center text-[9px] transition-colors cursor-pointer shadow-md"
+                        title="Remove link"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <Bullet marker={data.projectsBulletStyle === 'number' ? `${pos + 1}.` : '•'}>
-                  {editable ? (
-                    <RichText
-                      block
-                      html={proj.content}
-                      placeholder="Project Title (Technologies) – Description"
-                      onCommit={(v) => setProj(i, v)}
-                      bullet={projKeysFor(i)}
-                      onEmptyBackspace={() => projectEmptyBackspace(i)}
-                    />
-                  ) : (
-                    <Html html={proj.content} />
-                  )}
+                  <div className="w-full">
+                    {editable ? (
+                      <RichText
+                        block
+                        html={proj.content}
+                        placeholder="Project Title (Technologies) – Description"
+                        onCommit={(v) => setProj(i, v)}
+                        bullet={projKeysFor(i)}
+                        onEmptyBackspace={() => projectEmptyBackspace(i)}
+                      />
+                    ) : (
+                      <Html html={proj.content} />
+                    )}
+                  </div>
                 </Bullet>
               </div>
             );

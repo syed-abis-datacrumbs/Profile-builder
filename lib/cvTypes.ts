@@ -43,6 +43,10 @@ export interface CvProject {
    *  is exactly what silently broke "select and delete" when title/
    *  technologies/description were three adjacent fields on one line. */
   content: string;
+  /** Optional attached project URL (e.g. GitHub repo, live demo). */
+  link?: string;
+  /** Optional display label for the project link (e.g. '[Live Demo]', '[GitHub]'). */
+  linkLabel?: string;
 }
 
 export interface CvCertification {

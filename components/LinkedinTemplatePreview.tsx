@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Inter } from 'next/font/google';
+import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   MapPin,
@@ -80,10 +81,28 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
   ];
 
   return (
-    <div className={`fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 ${inter.className}`}>
-      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={onBack} />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.22, ease: 'easeOut' }}
+      className={`fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 ${inter.className}`}
+    >
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"
+        onClick={onBack}
+      />
 
-      <div className="relative w-full max-w-[820px] flex flex-col min-h-0 h-full max-h-[92vh]">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-[820px] flex flex-col min-h-0 h-full max-h-[92vh]"
+      >
         {/* ── Top Navigation Bar ── */}
         <div className="shrink-0 bg-white rounded-2xl shadow-xl px-4 sm:px-5 py-3 sm:py-3.5 flex flex-wrap items-center justify-between gap-2 sm:gap-4 mb-3 relative z-10">
           <button
@@ -511,7 +530,7 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
             This is a preview with sample content for the &quot;{template.name}&quot; template — click Edit to personalize it with your own details.
           </p>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

@@ -1789,15 +1789,15 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
       {
         title: 'Lead Technical Recruiter & HR Business Partner',
         company: 'TalentScale Global',
-        period: '2022 - Present · 2 yrs',
-        location: 'Lahore, Pakistan',
+        start: '2022',
+        end: 'Present',
         description: 'Led end-to-end recruitment strategy for 50+ technical and leadership hires across AI, Full-Stack, and Cloud domains. Reduced time-to-hire by 35% while increasing candidate acceptance rate to 92%.'
       },
       {
         title: 'Senior Talent Acquisition Specialist',
         company: 'InnovateX Technologies',
-        period: '2019 - 2022 · 3 yrs',
-        location: 'Lahore, Pakistan',
+        start: '2019',
+        end: '2022',
         description: 'Sourced and closed 120+ senior engineering professionals across software, data, and design. Implemented structured interview scorecards and automated pipeline tracking.'
       }
     ],

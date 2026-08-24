@@ -113,23 +113,42 @@ All application state, user resumes, saved profiles, AI usage credits, payment a
 - **Support / Bug Report Button**: Bottom-right floating bug icon allowing users to report issues and upload screenshots.
 
 ### 2. GitHub README Studio
-- **Interactive Markdown Preview**: Live rendered preview of developer bio, shields.io badges, and project cards.
-- **Standard Avatar Asset**: Default avatar initialized to `/images/github-profile/git-profile-1.png` across all templates and prompt actions.
-- **Action-Oriented Starter Prompts**: Prompts formatted as actionable instructions (`"Create Full-Stack Engineer README with live stats"`, `"Create AI & ML Systems Engineer Profile"`, etc.).
-- **Banner & Theme Customization**: Pre-curated Cloudinary tech headers, Dark/Tokyonight/Dracula/Radial color themes, and custom banner URLs.
-- **Support / Bug Report Button**: Floating bug report widget matching the Resume Studio.
+- **Interactive Markdown Preview**: Live rendered preview of developer bio, shields.io badges, GitHub metrics cards, and project showcases.
+- **Universal Avatar Standard**: Standardized on high-resolution `/images/github-profile/git-profile-1.png` across all starter templates, default builder state, and custom prompt submissions.
+- **Action-Oriented Starter Prompts**: Prompts formatted as actionable commands:
+  - `"Create Full-Stack Engineer Profile with modern tech stack and live metrics"`
+  - `"Create Frontend Developer Profile with interactive project showcases"`
+  - `"Create AI & Machine Learning Lead Profile with production pipelines"`
+  - `"Create Backend & Distributed Systems Profile with high-concurrency stats"`
+- **Theme & Header Customization**: Pre-curated Cloudinary tech headers, Dark/Tokyonight/Dracula/Radial color themes, and custom banner URLs.
+- **Support & Bug Report System**: Integrated floating bug report button dispatching categorized feedback (`category: 'github'`).
 
 ### 3. LinkedIn Profile & Cover Studio
-- **Cover Art Generator**: Vector canvas banners with live typography fitting (`ShrinkToFitCoverText`), custom gradient overlays, and photo headshot cropper (`PfpCropModal`).
-- **Profile Optimizer**: AI-crafted headlines, About summaries, quantified experience bullets, and skills section.
-- **Support / Bug Report Button**: Floating bug report widget sending `category: 'linkedin'`.
+- **Dual Cover Banner System**:
+  - **7 Clean Artwork Banners (`public/images/linkedin-banners/`)**: Modern high-impact graphic banners mapped 100% domain-relevantly across technical and business roles (`fields: []` with zero text collision):
+    - `banner-1.png`: *"Built For Impact — Helping businesses launch market-ready apps"* (Full Stack, Mobile App, Frontend, QA, Game Dev)
+    - `banner-2.png`: *"Intelligent AI Solutions — For Modern Businesses"* (AI/ML Engineer, MLOps, Computer Vision, Data Science)
+    - `banner-3.png`: *"Connecting Talent. Scaling Teams."* (HR & Talent Acquisition, Product Manager)
+    - `banner-4.png`: *"Performance Marketing — Built For Scale."* (Digital Marketing & Growth)
+    - `banner-5.png`: *Modern Cloud & Futuristic Infrastructure* (Cloud Engineer, DevOps, Network, Blockchain/Web3)
+    - `banner-6.png`: *Developer & Systems Engineering Grid* (Software Engineer, Backend Developer, Data Engineer, Database Administrator, Embedded/IoT)
+    - `banner-7.png`: *"BI Enthusiast — Drive Success with Data-Driven Decisions"* (Business Intelligence Analyst, Data Analytics, Business Analyst IT)
+  - **3 Restored Customizable Classic Covers**:
+    - `paid-marketing` (`/images/linkedin-templates/cover/helping-businesses/background.png`): *"Helping Businesses Scale Through Paid Marketing"* + skill pills & caption.
+    - `ideas-inspire` (`/images/linkedin-templates/cover/ideas-inspire/background.png`): *"Ideas that inspire. Solutions that last."* + caption (UI/UX, Graphic Design, Video Editing, Cyber Security).
+    - `lets-work-together` (`/images/linkedin-templates/cover/lets-work-together/background.png`): *"Let's Work Together"* with editable phone, email, website, name & title (Technical Writer, Consulting).
+  - **Excluded Legacy Banners**: `ai-engineer`, `blue-blocks`, `purple-geometric`, `stunning-websites`, `yellow-wave`.
+- **HR & Talent Acquisition Template**: Dedicated career track template card with specialized sample profile and hiring playbook projects.
+- **Profile Optimizer**: AI-crafted headlines, About summaries, quantified experience bullets, education, certifications, and skills endorsements.
+- **Photo Cropper & Studio Editor**: Interactive headshot positioning (`PfpCropModal`), gradient background pickers, and cover switching overlay.
+- **Support & Bug Report System**: Floating bug report widget dispatching categorized feedback (`category: 'linkedin'`).
 
 ### 4. Admin Management Suite (`/admin`)
 - **Reported Issues Dashboard (`/admin/issues`)**:
-  - Top-level category tabs: **All Features**, **Resume Builder**, **GitHub README**, **LinkedIn Optimizer**.
-  - Sub-status filters: **Open** and **Resolved** with live count badges.
-  - Compact table rows with user details, preview snippets, attachment badges, and quick resolve buttons.
-  - Inspection modal with user profile data, full description, and high-resolution screenshot lightbox.
+  - **Top-Level Feature Tabs**: **All Features**, **Resume Builder**, **GitHub README**, **LinkedIn Optimizer**.
+  - **Sub-Status Filters**: **All**, **Open**, and **Resolved** with real-time issue count badges.
+  - **Compact Table View**: Fast-scanning row layout with user identity, feature source, text snippet, attachment pill, and 1-click status toggles.
+  - **Detailed Modal Lightbox**: Comprehensive issue inspection modal with full issue description, reporter details, and high-resolution Cloudinary screenshot preview.
 - **Payment Verification (`/admin/payments`)**:
   - Side-by-side OCR receipt comparison with dHash anti-duplicate protection and instant one-click approval/rejection.
 - **User Management & Coupons (`/admin/users`)**:
@@ -249,3 +268,25 @@ CLOUDINARY_API_SECRET="..."
 # Admin Access
 ADMIN_USER_IDS="user_2...,user_3..."
 ```
+
+---
+
+## 8. Recent Feature Additions & Changelog
+
+### 1. Graceful Template Preview Modals (`framer-motion`)
+* **LinkedIn, Resume, and GitHub Previews**: All template preview modals (`ResumeTemplatePreview`, `LinkedinTemplatePreview`, and `GithubTemplatePreview`) now mount inside `<AnimatePresence>` with backdrop fade-in (`opacity: 0 -> 1`) and smooth modal panel scale-in (`scale: 0.94 -> 1, y: 16 -> 0`) using cubic-bezier easing.
+
+### 2. GitHub Studio Unlocked with Free Tier Protections
+* **Unlocked Studio Entry**: Free users can browse GitHub templates, pick role presets, use custom prompts, and access the GitHub Chat Studio.
+* **Gated Free Tier Actions**:
+  * `README.md` download button prompts `PaymentModal`.
+  * `Copy` markdown button prompts `PaymentModal`.
+  * Cover Banner download prompts `PaymentModal`.
+  * Profile Picture (PFP) download prompts `PaymentModal`.
+  * AI Message limit (5 free iterations) prompts `PaymentModal` upon reaching quota.
+
+### 3. Resume Builder: Direct Project Title Hyperlinks
+* When a project link is attached, the project title itself becomes a blue underlined hyperlink (`<a>`), matching the header link style.
+* Floating "Add Link / Edit Link" pill above the active project with strict single-target visibility.
+* 1-click modal for URL entry and instant removal.
+
