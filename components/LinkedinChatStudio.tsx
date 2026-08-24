@@ -608,9 +608,7 @@ export const LinkedinChatStudio: React.FC<{
                   <img src={art.backgroundUrl} alt="cover" className="absolute inset-0 w-full h-full object-cover" />
                 )}
 
-                {/* Text fields commented out for now as requested */}
-                {/*
-                {art?.fields.map((field: CoverArtField) => {
+                {art?.fields && art.fields.map((field: CoverArtField) => {
                   const value = profile.coverFieldValues[field.id] ?? field.placeholder;
                   const align = field.geometry.align;
                   const left = field.geometry.xPct;
@@ -708,7 +706,6 @@ export const LinkedinChatStudio: React.FC<{
                     </div>
                   );
                 })}
-                */}
 
                 {/* Cover edit affordance. Always visible rather than
                     hover-revealed: a touch device has no hover, so on a phone

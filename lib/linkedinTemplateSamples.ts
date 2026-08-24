@@ -1776,4 +1776,64 @@ export const linkedinTemplateSamples: Record<string, LinkedinTemplateSample> = {
     ],
     awards: [],
   },
+  'hr-talent-acquisition': {
+    fullName: 'Ayesha Raza',
+    title: 'HR & Talent Acquisition Lead',
+    headline: 'HR & Talent Acquisition Lead | Connecting Top Tech Talent & Scaling High-Performing Teams',
+    location: 'Lahore, Pakistan',
+    currentCompany: 'TalentScale Global',
+    school: 'Lahore University of Management Sciences (LUMS)',
+    about: 'Dynamic Talent Acquisition & HR Leader with 6+ years of experience partnering with executive leadership to attract, hire, and retain top engineering and product talent.\n\nSpecialized in technical recruiting, workforce planning, employer branding, and building high-retention company culture across fast-growing tech companies.',
+    skills: ['Technical Recruiting', 'Talent Acquisition', 'Executive Sourcing', 'Workforce Planning', 'HR Strategy', 'Employer Branding', 'Employee Retention', 'Interview Training'],
+    experience: [
+      {
+        title: 'Lead Technical Recruiter & HR Business Partner',
+        company: 'TalentScale Global',
+        period: '2022 - Present · 2 yrs',
+        location: 'Lahore, Pakistan',
+        description: 'Led end-to-end recruitment strategy for 50+ technical and leadership hires across AI, Full-Stack, and Cloud domains. Reduced time-to-hire by 35% while increasing candidate acceptance rate to 92%.'
+      },
+      {
+        title: 'Senior Talent Acquisition Specialist',
+        company: 'InnovateX Technologies',
+        period: '2019 - 2022 · 3 yrs',
+        location: 'Lahore, Pakistan',
+        description: 'Sourced and closed 120+ senior engineering professionals across software, data, and design. Implemented structured interview scorecards and automated pipeline tracking.'
+      }
+    ],
+    education: [
+      {
+        school: 'Lahore University of Management Sciences (LUMS)',
+        degree: 'Bachelor of Business Administration (BBA)',
+        fieldOfStudy: 'Human Resources',
+        start: '2015',
+        end: '2019'
+      }
+    ],
+    certifications: [
+      {
+        name: 'SHRM Certified Professional (SHRM-CP)',
+        organization: 'Society for Human Resource Management',
+        date: '2021'
+      },
+      {
+        name: 'AIRS Certified Diversity and Technical Recruiter (CDR)',
+        organization: 'AIRS powered by KellyOCG',
+        date: '2020'
+      }
+    ],
+    projects: [
+      {
+        title: 'Tech Hiring Playbook & Onboarding Framework',
+        description: 'Designed standardized technical interview rubric and 30-60-90 day onboarding roadmap adopted across 8 engineering teams.'
+      }
+    ],
+    awards: [
+      {
+        title: 'Top Recruiter of the Year',
+        issuer: 'TalentScale Global',
+        date: '2023'
+      }
+    ]
+  },
 };

@@ -130,15 +130,18 @@ export function computeFitScale(length: number, max: number | undefined): number
   return Math.max(MIN_FONT_SCALE, max / length);
 }
 
-// The 7 clean banner artworks from the user's Linkedin Banners collection
+// The 10 curated banner artworks (7 new banners + 3 kept old banners: helping-businesses, ideas-inspire, lets-work-together)
 export const COVER_ART_ORDER = [
-  'banner-1',
-  'banner-2',
-  'banner-3',
-  'banner-4',
-  'banner-5',
-  'banner-6',
-  'banner-7',
+  'banner-2',            // Intelligent AI Solutions (AI/ML)
+  'lets-work-together',  // Let's Work Together (Data Science & Consulting)
+  'banner-1',            // Built For Impact - Launch Market-Ready Apps (Full Stack / Mobile / Web)
+  'banner-6',            // Software Engineer & Developer Grid
+  'banner-7',            // BI Enthusiast & Data-Driven Decisions
+  'ideas-inspire',       // Ideas that inspire, Solutions that last (Design / UI / UX)
+  'banner-4',            // Performance Marketing Built For Scale (Digital Marketing)
+  'paid-marketing',      // Helping Businesses Scale Through Paid Marketing
+  'banner-3',            // Connecting Talent, Scaling Teams (HR & Talent Acquisition)
+  'banner-5',            // Modern Cloud & Infrastructure Architecture
 ] as const;
 
 export function getCoverArtId(index: number): string {
@@ -147,62 +150,303 @@ export function getCoverArtId(index: number): string {
 }
 
 export const COVER_ART: Record<string, CoverArtTemplate> = {
-  'banner-1': {
-    id: 'banner-1',
-    backgroundUrl: '/images/linkedin-banners/banner-1.png',
+  // 7 New Banners
+  'banner-1': { id: 'banner-1', backgroundUrl: '/images/linkedin-banners/banner-1.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'banner-2': { id: 'banner-2', backgroundUrl: '/images/linkedin-banners/banner-2.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'banner-3': { id: 'banner-3', backgroundUrl: '/images/linkedin-banners/banner-3.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'banner-4': { id: 'banner-4', backgroundUrl: '/images/linkedin-banners/banner-4.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'banner-5': { id: 'banner-5', backgroundUrl: '/images/linkedin-banners/banner-5.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'banner-6': { id: 'banner-6', backgroundUrl: '/images/linkedin-banners/banner-6.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'banner-7': { id: 'banner-7', backgroundUrl: '/images/linkedin-banners/banner-7.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+
+  // Full Stack Developer -> "Built For Impact - Helping businesses launch market-ready apps"
+  'helping-businesses': { id: 'helping-businesses', backgroundUrl: '/images/linkedin-banners/banner-1.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+
+  // Paid Marketing Cover (used for Digital / Performance Marketing)
+  'paid-marketing': {
+    id: 'paid-marketing',
+    backgroundUrl: '/images/linkedin-templates/cover/helping-businesses/background.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [],
+    fields: [
+      {
+        id: 'headline',
+        kind: 'text',
+        placeholder: 'Helping Businesses Scale\nThrough Paid Marketing',
+        maxLength: 55,
+        geometry: { xPct: 0.395, yPct: 0.18, maxWidthPct: 0.56, align: 'left', fontSizePx: 53, fontWeight: 800, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 50, maxLines: 2 },
+      },
+      {
+        id: 'pills',
+        kind: 'pills',
+        placeholder: ['Email Lead Generation', 'Social Media Ads', 'SEO'],
+        maxPills: 5,
+        pillMaxLengths: [30, 16, 4],
+        geometry: { xPct: 0.595, yPct: 0.6, maxWidthPct: 0.44, align: 'center', fontSizePx: 16, fontWeight: 500, color: '#ffffff', fontFamily: FONT_POPPINS, pillBg: 'rgba(0,0,0,0.35)', pillGapPx: 14 },
+      },
+      {
+        id: 'caption',
+        kind: 'text',
+        placeholder: 'DATACRUMBS.ORG',
+        maxLength: 27,
+        geometry: { xPct: 0.83, yPct: 0.82, maxWidthPct: 0.15, align: 'right', fontSizePx: 13, fontWeight: 700, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
+      },
+    ],
   },
-  'banner-2': {
-    id: 'banner-2',
-    backgroundUrl: '/images/linkedin-banners/banner-2.png',
+  'ideas-inspire': {
+    id: 'ideas-inspire',
+    backgroundUrl: '/images/linkedin-templates/cover/ideas-inspire/background.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [],
+    fields: [
+      {
+        id: 'tagline',
+        kind: 'text',
+        placeholder: 'Ideas that inspire.\nSolutions that last.',
+        maxLength: 80,
+        geometry: { xPct: 0.615, yPct: 0.26, maxWidthPct: 0.37, align: 'left', fontSizePx: 46, fontWeight: 600, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 62, maxLines: 2 },
+      },
+      {
+        id: 'caption',
+        kind: 'text',
+        placeholder: 'DATACRUMBS.ORG',
+        maxLength: 40,
+        geometry: { xPct: 0.615, yPct: 0.68, maxWidthPct: 0.37, align: 'left', fontSizePx: 15, fontWeight: 700, color: '#e5e7eb', maxLines: 1 },
+      },
+    ],
   },
-  'banner-3': {
-    id: 'banner-3',
-    backgroundUrl: '/images/linkedin-banners/banner-3.png',
+  'lets-work-together': {
+    id: 'lets-work-together',
+    backgroundUrl: '/images/linkedin-templates/cover/lets-work-together/background.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [],
+    fields: [
+      {
+        id: 'heading',
+        kind: 'text',
+        placeholder: "Let's Work Together",
+        maxLength: 22,
+        geometry: { xPct: 0.02, yPct: 0.29, maxWidthPct: 0.24, align: 'left', fontSizePx: 33, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
+      },
+      {
+        id: 'phone',
+        kind: 'text',
+        staticLabel: 'Phone Number:',
+        staticLabelFontSizePx: 12.6,
+        staticLabelFontFamily: FONT_POPPINS,
+        placeholder: '+123-456-7890',
+        maxLength: 30,
+        geometry: { xPct: 0.075, yPct: 0.44, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
+      },
+      {
+        id: 'email',
+        kind: 'text',
+        staticLabel: 'Email Address:',
+        staticLabelFontSizePx: 12.6,
+        staticLabelFontFamily: FONT_POPPINS,
+        placeholder: 'support@datacrumbs.org',
+        maxLength: 40,
+        geometry: { xPct: 0.075, yPct: 0.565, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
+      },
+      {
+        id: 'website',
+        kind: 'text',
+        staticLabel: 'Website:',
+        staticLabelFontSizePx: 12.6,
+        staticLabelFontFamily: FONT_POPPINS,
+        placeholder: 'www.datacrumbs.org',
+        maxLength: 40,
+        geometry: { xPct: 0.075, yPct: 0.69, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
+      },
+      {
+        id: 'name',
+        kind: 'text',
+        defaultFrom: 'fullName',
+        placeholder: 'Your Name',
+        maxLength: 13,
+        geometry: { xPct: 0.685, yPct: 0.22, maxWidthPct: 0.22, align: 'left', fontSizePx: 79, fontWeight: 400, color: '#ffffff', fontFamily: FONT_BRICOLAGE, lineHeightPx: 70, maxLines: 2 },
+      },
+      {
+        id: 'title',
+        kind: 'text',
+        defaultFrom: 'currentPosition',
+        placeholder: 'Your Title',
+        maxLength: 18,
+        geometry: { xPct: 0.685, yPct: 0.58, maxWidthPct: 0.22, align: 'left', fontSizePx: 38, fontWeight: 400, color: '#ffffff', maxLines: 1 },
+      },
+    ],
   },
-  'banner-4': {
-    id: 'banner-4',
-    backgroundUrl: '/images/linkedin-banners/banner-4.png',
+
+  // Role-Synced Cover Mappings
+  'stunning-websites': { id: 'stunning-websites', backgroundUrl: '/images/linkedin-banners/banner-1.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'purple-geometric': { id: 'purple-geometric', backgroundUrl: '/images/linkedin-banners/banner-6.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'blue-blocks': { id: 'blue-blocks', backgroundUrl: '/images/linkedin-banners/banner-7.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'yellow-wave': {
+    id: 'yellow-wave',
+    backgroundUrl: '/images/linkedin-templates/cover/ideas-inspire/background.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [],
+    fields: [
+      {
+        id: 'tagline',
+        kind: 'text',
+        placeholder: 'Ideas that inspire.\nSolutions that last.',
+        maxLength: 80,
+        geometry: { xPct: 0.615, yPct: 0.26, maxWidthPct: 0.37, align: 'left', fontSizePx: 46, fontWeight: 600, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 62, maxLines: 2 },
+      },
+      {
+        id: 'caption',
+        kind: 'text',
+        placeholder: 'DATACRUMBS.ORG',
+        maxLength: 40,
+        geometry: { xPct: 0.615, yPct: 0.68, maxWidthPct: 0.37, align: 'left', fontSizePx: 15, fontWeight: 700, color: '#e5e7eb', maxLines: 1 },
+      },
+    ],
   },
-  'banner-5': {
-    id: 'banner-5',
-    backgroundUrl: '/images/linkedin-banners/banner-5.png',
+  'ai-engineer-badge': { id: 'ai-engineer-badge', backgroundUrl: '/images/linkedin-banners/banner-4.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+
+  'data-engineer': { id: 'data-engineer', backgroundUrl: '/images/linkedin-banners/banner-6.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'devops-engineer': { id: 'devops-engineer', backgroundUrl: '/images/linkedin-banners/banner-5.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'mobile-app-developer': { id: 'mobile-app-developer', backgroundUrl: '/images/linkedin-banners/banner-1.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'ui-ux-designer': {
+    id: 'ui-ux-designer',
+    backgroundUrl: '/images/linkedin-templates/cover/ideas-inspire/background.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [],
+    fields: [
+      {
+        id: 'tagline',
+        kind: 'text',
+        placeholder: 'Ideas that inspire.\nSolutions that last.',
+        maxLength: 80,
+        geometry: { xPct: 0.615, yPct: 0.26, maxWidthPct: 0.37, align: 'left', fontSizePx: 46, fontWeight: 600, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 62, maxLines: 2 },
+      },
+      {
+        id: 'caption',
+        kind: 'text',
+        placeholder: 'DATACRUMBS.ORG',
+        maxLength: 40,
+        geometry: { xPct: 0.615, yPct: 0.68, maxWidthPct: 0.37, align: 'left', fontSizePx: 15, fontWeight: 700, color: '#e5e7eb', maxLines: 1 },
+      },
+    ],
   },
-  'banner-6': {
-    id: 'banner-6',
-    backgroundUrl: '/images/linkedin-banners/banner-6.png',
+  'graphic-designer': {
+    id: 'graphic-designer',
+    backgroundUrl: '/images/linkedin-templates/cover/ideas-inspire/background.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [],
+    fields: [
+      {
+        id: 'tagline',
+        kind: 'text',
+        placeholder: 'Ideas that inspire.\nSolutions that last.',
+        maxLength: 80,
+        geometry: { xPct: 0.615, yPct: 0.26, maxWidthPct: 0.37, align: 'left', fontSizePx: 46, fontWeight: 600, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 62, maxLines: 2 },
+      },
+      {
+        id: 'caption',
+        kind: 'text',
+        placeholder: 'DATACRUMBS.ORG',
+        maxLength: 40,
+        geometry: { xPct: 0.615, yPct: 0.68, maxWidthPct: 0.37, align: 'left', fontSizePx: 15, fontWeight: 700, color: '#e5e7eb', maxLines: 1 },
+      },
+    ],
   },
-  'banner-7': {
-    id: 'banner-7',
-    backgroundUrl: '/images/linkedin-banners/banner-7.png',
+  'video-editor': {
+    id: 'video-editor',
+    backgroundUrl: '/images/linkedin-templates/cover/ideas-inspire/background.png',
     canvasWidthPx: 1584,
     canvasHeightPx: 396,
-    fields: [],
+    fields: [
+      {
+        id: 'tagline',
+        kind: 'text',
+        placeholder: 'Ideas that inspire.\nSolutions that last.',
+        maxLength: 80,
+        geometry: { xPct: 0.615, yPct: 0.26, maxWidthPct: 0.37, align: 'left', fontSizePx: 46, fontWeight: 600, color: '#ffffff', fontFamily: FONT_POPPINS, lineHeightPx: 62, maxLines: 2 },
+      },
+      {
+        id: 'caption',
+        kind: 'text',
+        placeholder: 'DATACRUMBS.ORG',
+        maxLength: 40,
+        geometry: { xPct: 0.615, yPct: 0.68, maxWidthPct: 0.37, align: 'left', fontSizePx: 15, fontWeight: 700, color: '#e5e7eb', maxLines: 1 },
+      },
+    ],
   },
-  // Legacy / track template aliases mapping into the 7 new banner assets
-  'ideas-inspire': { id: 'ideas-inspire', backgroundUrl: '/images/linkedin-banners/banner-1.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
-  'lets-work-together': { id: 'lets-work-together', backgroundUrl: '/images/linkedin-banners/banner-2.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
-  'helping-businesses': { id: 'helping-businesses', backgroundUrl: '/images/linkedin-banners/banner-3.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
-  'stunning-websites': { id: 'stunning-websites', backgroundUrl: '/images/linkedin-banners/banner-4.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
-  'purple-geometric': { id: 'purple-geometric', backgroundUrl: '/images/linkedin-banners/banner-5.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
-  'blue-blocks': { id: 'blue-blocks', backgroundUrl: '/images/linkedin-banners/banner-6.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
-  'yellow-wave': { id: 'yellow-wave', backgroundUrl: '/images/linkedin-banners/banner-7.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
-  'ai-engineer-badge': { id: 'ai-engineer-badge', backgroundUrl: '/images/linkedin-banners/banner-1.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'backend-developer': { id: 'backend-developer', backgroundUrl: '/images/linkedin-banners/banner-6.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'cloud-engineer': { id: 'cloud-engineer', backgroundUrl: '/images/linkedin-banners/banner-5.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'qa-test-automation': { id: 'qa-test-automation', backgroundUrl: '/images/linkedin-banners/banner-1.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'game-developer': { id: 'game-developer', backgroundUrl: '/images/linkedin-banners/banner-1.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'mlops-engineer': { id: 'mlops-engineer', backgroundUrl: '/images/linkedin-banners/banner-2.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'business-intelligence-analyst': { id: 'business-intelligence-analyst', backgroundUrl: '/images/linkedin-banners/banner-7.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'computer-vision-engineer': { id: 'computer-vision-engineer', backgroundUrl: '/images/linkedin-banners/banner-2.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'blockchain-web3-developer': { id: 'blockchain-web3-developer', backgroundUrl: '/images/linkedin-banners/banner-5.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'embedded-iot-engineer': { id: 'embedded-iot-engineer', backgroundUrl: '/images/linkedin-banners/banner-6.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'product-manager-tech': { id: 'product-manager-tech', backgroundUrl: '/images/linkedin-banners/banner-3.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'hr-talent-acquisition': { id: 'hr-talent-acquisition', backgroundUrl: '/images/linkedin-banners/banner-3.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'business-analyst-it': { id: 'business-analyst-it', backgroundUrl: '/images/linkedin-banners/banner-7.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'technical-writer': {
+    id: 'technical-writer',
+    backgroundUrl: '/images/linkedin-templates/cover/lets-work-together/background.png',
+    canvasWidthPx: 1584,
+    canvasHeightPx: 396,
+    fields: [
+      {
+        id: 'heading',
+        kind: 'text',
+        placeholder: "Let's Work Together",
+        maxLength: 22,
+        geometry: { xPct: 0.02, yPct: 0.29, maxWidthPct: 0.24, align: 'left', fontSizePx: 33, fontWeight: 400, color: '#ffffff', fontFamily: FONT_POPPINS, maxLines: 1 },
+      },
+      {
+        id: 'phone',
+        kind: 'text',
+        staticLabel: 'Phone Number:',
+        staticLabelFontSizePx: 12.6,
+        staticLabelFontFamily: FONT_POPPINS,
+        placeholder: '+123-456-7890',
+        maxLength: 30,
+        geometry: { xPct: 0.075, yPct: 0.44, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
+      },
+      {
+        id: 'email',
+        kind: 'text',
+        staticLabel: 'Email Address:',
+        staticLabelFontSizePx: 12.6,
+        staticLabelFontFamily: FONT_POPPINS,
+        placeholder: 'support@datacrumbs.org',
+        maxLength: 40,
+        geometry: { xPct: 0.075, yPct: 0.565, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
+      },
+      {
+        id: 'website',
+        kind: 'text',
+        staticLabel: 'Website:',
+        staticLabelFontSizePx: 12.6,
+        staticLabelFontFamily: FONT_POPPINS,
+        placeholder: 'www.datacrumbs.org',
+        maxLength: 40,
+        geometry: { xPct: 0.075, yPct: 0.69, maxWidthPct: 0.17, align: 'left', fontSizePx: 16, fontWeight: 400, color: '#ffffff', maxLines: 1 },
+      },
+      {
+        id: 'name',
+        kind: 'text',
+        defaultFrom: 'fullName',
+        placeholder: 'Your Name',
+        maxLength: 13,
+        geometry: { xPct: 0.685, yPct: 0.22, maxWidthPct: 0.22, align: 'left', fontSizePx: 79, fontWeight: 400, color: '#ffffff', fontFamily: FONT_BRICOLAGE, lineHeightPx: 70, maxLines: 2 },
+      },
+      {
+        id: 'title',
+        kind: 'text',
+        defaultFrom: 'currentPosition',
+        placeholder: 'Your Title',
+        maxLength: 18,
+        geometry: { xPct: 0.685, yPct: 0.58, maxWidthPct: 0.22, align: 'left', fontSizePx: 38, fontWeight: 400, color: '#ffffff', maxLines: 1 },
+      },
+    ],
+  },
+  'network-engineer': { id: 'network-engineer', backgroundUrl: '/images/linkedin-banners/banner-5.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
+  'database-administrator': { id: 'database-administrator', backgroundUrl: '/images/linkedin-banners/banner-6.png', canvasWidthPx: 1584, canvasHeightPx: 396, fields: [] },
 };

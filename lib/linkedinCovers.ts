@@ -77,6 +77,7 @@ export const linkedinCovers: LinkedinCoverTemplate[] = [
   { id: 'computer-vision-engineer', name: 'Computer Vision Engineer', desc: 'Creative name & title cover template', thumbnail: '/images/linkedin-templates/thumbnails/computer-vision-engineer.png' },
   { id: 'blockchain-web3-developer', name: 'Blockchain/Web3 Developer', desc: 'Headline & contact details cover template', thumbnail: '/images/linkedin-templates/thumbnails/blockchain-web3-developer.png' },
   { id: 'embedded-iot-engineer', name: 'Embedded/IoT Engineer', desc: 'Bold title & website cover template', thumbnail: '/images/linkedin-templates/thumbnails/embedded-iot-engineer.png' },
+  { id: 'hr-talent-acquisition', name: 'HR & Talent Acquisition', desc: 'Connecting talent & scaling teams cover template', thumbnail: '/images/linkedin-templates/thumbnails/product-manager-tech.png' },
   { id: 'product-manager-tech', name: 'Product Manager (Tech)', desc: 'Badge & company name cover template', thumbnail: '/images/linkedin-templates/thumbnails/product-manager-tech.png' },
   { id: 'business-analyst-it', name: 'Business Analyst (IT)', desc: 'Tagline & caption cover template', thumbnail: '/images/linkedin-templates/thumbnails/business-analyst-it.png' },
   { id: 'technical-writer', name: 'Technical Writer', desc: 'Contact info & name cover template', thumbnail: '/images/linkedin-templates/thumbnails/technical-writer.png' },

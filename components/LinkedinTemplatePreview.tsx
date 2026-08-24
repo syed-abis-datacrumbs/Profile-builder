@@ -120,9 +120,7 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={art.backgroundUrl} alt={`${template.name} cover`} className="absolute inset-0 w-full h-full object-cover" />
 
-              {/* Text fields commented out for now as requested */}
-              {/*
-              {art.fields.map((field) => {
+              {art.fields && art.fields.map((field) => {
                 const value = resolveFieldValue(field, sample);
                 const align = field.geometry.align;
                 const left = field.geometry.xPct;
@@ -208,7 +206,6 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
                   </div>
                 );
               })}
-              */}
             </div>
 
             {/* Profile Card Body */}

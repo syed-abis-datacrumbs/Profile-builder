@@ -70,9 +70,7 @@ export const LinkedinTemplateThumbnail: React.FC<{ templateId: string; index: nu
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={art.backgroundUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
 
-          {/* Text fields commented out for now as requested */}
-          {/*
-          {art.fields.map((field) => {
+          {art.fields && art.fields.map((field) => {
             const value = resolve(field);
             const align = field.geometry.align;
             const left = field.geometry.xPct;
@@ -163,7 +161,6 @@ export const LinkedinTemplateThumbnail: React.FC<{ templateId: string; index: nu
               </div>
             );
           })}
-          */}
         </div>
 
         {/* Profile header body */}
