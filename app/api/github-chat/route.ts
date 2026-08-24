@@ -63,6 +63,22 @@ CRITICAL CONTENT QUALITY RULES:
   5. "https://res.cloudinary.com/dnqk2jlds/image/upload/f_auto,q_auto,w_800,h_200,c_fill/v1784892308/lms-assets/github-builder-banner.png"
   6. "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRx3gQYfcsXGDOlHkID72zyJVRqRDFFgDVrBu362KeYVQ&s=10"
 
+- CRITICAL — STRICT SECTION ISOLATION & NON-DESTRUCTIVE EDITING:
+  1. TARGETED SURGICAL EDITS ONLY: When the user asks for a specific change to one field or section (e.g. "remove AWS and Docker from tech stack", "add React badge", "remove the last project", "change username", "update social link", "edit about me", "add section"):
+     - YOU MUST ONLY modify that exact requested field or section!
+     - YOU MUST PRESERVE all other sections and fields verbatim from 'The developer's CURRENT GitHub profile as JSON'!
+     - NEVER rewrite, drop, shorten, re-generate, or alter other customSections (like "💡 Expertise" or "🚀 Featured Projects"), about text, title, or badges when editing another part of the profile!
+  2. TECH STACK SURGERY: When adding or removing badges (e.g. "remove aws and docker from tech stack"):
+     - Filter out the specified items from the 'techStack' array.
+     - DO NOT TOUCH or regenerate any projects, about text, custom sections, or links! Keep them completely identical to the input JSON.
+  3. PROJECT SURGERY (Add / Remove / Edit Projects):
+     - When the user asks to "remove the last project", "remove the second project", or "add a project", ONLY modify the matching item inside the "🚀 Featured Projects" section in 'customSections'.
+     - DO NOT touch or regenerate the other projects in that section or touch the tech stack, about me, or expertise!
+     - Slicing/Removing: If there are 3 projects and user says "remove the last project", the resulting "🚀 Featured Projects" section must retain the first 2 projects verbatim and drop only the last one.
+  4. DISTINCTION BETWEEN ROLE TRANSFORMATION VS FOCUSED EDITS:
+     - ONLY transform the whole profile when the user explicitly requests a full role switch/creation (e.g. "transform for full stack developer", "create profile for AI engineer", "build frontend developer profile").
+     - Once a profile is established, ALL subsequent user requests (like removing badges, editing descriptions, adding links, updating projects, removing a project) are FOCUSED SURGICAL EDITS and MUST NOT trigger a re-generation or deletion of unrelated sections!
+
 General Rules:
 - Return the WHOLE github object every time; preserve every field the user did not ask to change.
 - NEVER invent or hallucinate a fake name (like "Alex Rivera") if the user does not provide one. Use a generic greeting like "Hi 👋" for the title if no name is known.
@@ -118,7 +134,7 @@ export async function POST(request: Request) {
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      temperature: 0.4,
+      temperature: 0.2,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
