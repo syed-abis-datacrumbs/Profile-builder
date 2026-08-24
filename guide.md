@@ -1,68 +1,141 @@
 # Momentum Profile & Resume Builder
 
-Next.js-based AI career suite for generating, optimizing, and formatting industry-ready resumes (ATS-compliant), LinkedIn profiles, and GitHub developer portfolios with real-time AI assistance, dynamic 1-page pagination, and payment-proof verification.
+Next.js-based AI career suite for generating, optimizing, and formatting industry-ready resumes (ATS-compliant), LinkedIn profiles & covers, and GitHub developer portfolios with real-time AI assistance, dynamic 1-page pagination, support bug reporting, and payment-proof verification.
 
-## Architecture
+---
+
+## Architecture Overview
 
 ```
 Client (Next.js App Router, React 19, Tailwind CSS, Framer Motion)
-  ├── Resume Studio (Interactive Live Preview, ContentEditable DOM, Smart Pagination)
-  ├── LinkedIn Studio (Headline, About, Experience & Skills Generator)
-  ├── GitHub Studio (Interactive README Builder, Tech Stack Badges, Stats Generator)
-  └── Admin Panel (/admin/payments — Manual Review & Payment Proof Verification)
+  ├── Resume Studio (Interactive Live Preview, ContentEditable DOM, Smart Pagination, ATS Score)
+  ├── LinkedIn Studio (Cover Art Banner Generator, Headline, About & Experience Generator)
+  ├── GitHub Studio (Interactive README Builder, Tech Stack Badges, Live Stats & Avatar Cropper)
+  ├── Interview Prep & Job Hunting (Interactive MCQs, Career Blueprints & Live Mock Interviews)
+  └── Admin Suite (/admin)
+      ├── /admin/payments      ← Manual Review & Payment Proof Verification (EasyPaisa/JazzCash)
+      ├── /admin/users         ← User Management, Pro Access Toggle & Coupon Generator
+      ├── /admin/issues        ← Categorized Bug Reports & Feedback (Resume, GitHub, LinkedIn)
+      ├── /admin/name-requests ← Resume Locked Name Change Approval/Rejection
+      └── /admin/chats         ← User AI Conversation Logs & Session Viewer
 
 API Routes (Next.js Serverless / Node.js Runtime)
-  ├── /api/resume-chat        ← AI Resume Generator & Keyword Auto-Injector (Gemini / OpenAI)
-  ├── /api/ats-score          ← 4-Tier Mathematical ATS Scoring Engine (0–100 Points)
-  ├── /api/resumes/*          ← Resume Save / Load / Delete CRUD & Download Name Verification
-  ├── /api/linkedin-chat      ← AI LinkedIn Profile Assistant
-  ├── /api/github-chat        ← AI GitHub README & Showcase Generator
-  ├── /api/payment/*          ← OCR Receipt Extraction, Image Hashing & Unlock Status
-  └── /api/admin/*            ← Admin Payment Proof & Name Change Deciders
+  ├── /api/resume-chat         ← AI Resume Generator & 1-Page Keyword Auto-Injector (OpenAI / Gemini)
+  ├── /api/ats-score           ← 4-Tier Mathematical ATS Scoring Engine (0–100 Points)
+  ├── /api/resumes/*           ← Resume Save / Load / Delete CRUD & Download Name Verification
+  ├── /api/linkedin-chat       ← AI LinkedIn Profile & Cover Art Assistant
+  ├── /api/github-chat         ← AI GitHub README & Markdown Portfolio Generator
+  ├── /api/issues/*            ← User Bug / Feedback Submission with Cloudinary Image Attachments
+  ├── /api/payment/*           ← OCR Receipt Extraction, Image Hashing & Unlock Status
+  ├── /api/coupon/redeem       ← Coupon Validation & Instant Pro Unlock
+  └── /api/admin/*             ← Admin Decision Handlers (Payments, Users, Issues, Names, Coupons)
 
-Database & Auth
-  ├── Clerk                   ← Authentication, Session Tokens & Admin RBAC
-  └── PostgreSQL (Prisma ORM) ← Single Shared Database (Profile-builder specific tables)
+Database & Authentication
+  ├── Clerk                    ← Authentication, Session Tokens & Admin RBAC
+  ├── Cloudinary               ← Issue Screenshots & Payment Proof Receipt Storage
+  └── PostgreSQL (Prisma ORM)  ← Neon PostgreSQL Database (Profile-builder specific tables)
 ```
 
-All application state, user resumes, AI usage credits, payment approvals, and coupon redemptions persist in **PostgreSQL** via **Prisma ORM**. Clerk user IDs (`userId`) link user data across all tables without foreign-key coupling to external databases.
+All application state, user resumes, saved profiles, AI usage credits, payment approvals, coupon redemptions, and user-submitted feedback persist in **PostgreSQL** via **Prisma ORM**. Clerk user IDs (`userId`) link user data across all tables without foreign-key coupling to external databases.
 
 ---
 
-## Database
+## Database Schema & Models
 
-- **Provider**: PostgreSQL
+- **Provider**: PostgreSQL (Neon Database)
 - **Connection**: `DATABASE_URL` (direct connection string in `.env.local` / production environment)
 - **Client**: Prisma Client (`prisma/schema.prisma`)
 
-### Key Tables & Models:
-- **`profile_builder_resumes` (`ResumeSave`)** — Saved user resumes (`name`, `data` as structured JSON, `userId`). Independent of external LMS resume versions.
-- **`profile_builder_github_saves` (`GithubSave`)** — Saved GitHub README snapshots and profile configurations.
-- **`profile_builder_linkedin_saves` (`LinkedinSave`)** — Saved LinkedIn profile drafts (Headlines, About summaries, Experience bullets).
-- **`profile_builder_payment_unlocks` (`PaymentUnlock`)** — One-time payment unlock table (`userId`, `unlockedAt`). Once present, removes export watermarks permanently and unlocks unlimited AI credits.
-- **`profile_builder_payment_proofs` (`PaymentProof`)** — Audit trail of payment screenshots uploaded via EasyPaisa / JazzCash / Bank transfer. Stores `imageHash` (dHash duplicate detection), OCR extracted fields (`extractedTitle`, `extractedAccountNumber`, `extractedAmount`), fuzzy match flags, and `status` (`PENDING`, `APPROVED`, `REJECTED`).
-- **`profile_builder_coupons` (`ProfileBuilderCoupon`)** — Admin-issued coupon codes that grant instant watermark removal and unlock access.
-- **`profile_builder_coupon_redemptions` (`ProfileBuilderCouponRedemption`)** — One row per user redemption. Unique composite index `(couponId, userId)` prevents double redemption.
-- **`profile_builder_ai_usage` (`ProfileBuilderAiUsage`)** — Tracks free AI message consumption per user (5 free turns across tools for unpaid accounts).
-- **`profile_builder_chat_logs` (`ProfileBuilderChatLog`)** — Audit log of user messages and AI completions grouped by `sessionId`.
-- **`profile_builder_resume_profiles` (`ResumeProfile`)** — Tracks locked user resume names and `downloadedNames` JSON array for certificate/resume name integrity.
-- **`profile_builder_resume_name_requests` (`ResumeNameChangeRequest`)** — Student requests for admin approval to modify their resume name after exhausting free name edits.
+### Core Models:
+
+1. **`ResumeSave` (`profile_builder_resumes`)**
+   - Stores saved user resumes.
+   - Fields: `id`, `userId`, `name`, `data` (JSON structured resume shape), `createdAt`.
+
+2. **`GithubSave` (`profile_builder_github_saves`)**
+   - Stores saved GitHub README snapshots and profile configurations.
+   - Fields: `id`, `userId`, `name`, `data` (JSON GitHub profile data), `createdAt`.
+
+3. **`LinkedinSave` (`profile_builder_linkedin_saves`)**
+   - Stores saved LinkedIn profile drafts (Headlines, About summaries, Experience bullets, Cover templates).
+   - Fields: `id`, `userId`, `name`, `data` (JSON LinkedIn rich profile), `createdAt`.
+
+4. **`PaymentUnlock` (`profile_builder_payment_unlocks`)**
+   - One-time payment unlock table for Pro users.
+   - Fields: `id`, `userId` (unique), `unlockedAt`, `celebratedAt`.
+   - Grants permanent watermark-free downloads (Resume PDF/PNG, GitHub README) and unlimited AI credits.
+
+5. **`PaymentProof` (`profile_builder_payment_proofs`)**
+   - Audit trail of payment screenshots uploaded via EasyPaisa / JazzCash / Bank transfer.
+   - Fields: `id`, `userId`, `imageUrl`, `imageHash` (dHash duplicate detection), `transactionRef`, `extractedMethod`, `extractedTitle`, `extractedAccountNumber`, `extractedAmount`, `titleMatched`, `numberMatched`, `amountMatched`, `duplicateOfProofId`, `tamperSignal`, `status` (`PENDING`, `APPROVED`, `REJECTED`), `decisionReason`, `createdAt`.
+
+6. **`ProfileBuilderCoupon` (`profile_builder_coupons`)**
+   - Admin-issued coupon codes granting instant watermark removal and Pro unlock.
+   - Fields: `id`, `code` (unique, uppercase), `label`, `maxUses`, `usedCount`, `expiresAt`, `isActive`, `createdBy`, `createdAt`.
+
+7. **`ProfileBuilderCouponRedemption` (`profile_builder_coupon_redemptions`)**
+   - User redemption tracking. Unique composite key `(couponId, userId)` prevents double redemption.
+   - Fields: `id`, `couponId`, `userId`, `redeemedAt`.
+
+8. **`ProfileBuilderAiUsage` (`profile_builder_ai_usage`)**
+   - Tracks free AI message consumption per user (5 free turns across tools for unpaid accounts).
+   - Fields: `userId` (primary key), `usedCount`, `updatedAt`, `createdAt`.
+
+9. **`ProfileBuilderChatLog` (`profile_builder_chat_logs`)**
+   - Audit log of user messages and AI completions grouped by `sessionId`.
+   - Fields: `id`, `sessionId`, `builderType` (`"resume"`, `"github"`, `"linkedin"`), `userId`, `userMessage`, `aiReply`, `isAutoFit`, `createdAt`.
+
+10. **`ResumeProfile` (`profile_builder_resume_profiles`)**
+    - Tracks locked user resume names and `downloadedNames` JSON array for certificate/resume name integrity.
+    - Fields: `id`, `userId` (unique), `fullNameEditsUsed`, `downloadedNames` (JSON array), `createdAt`, `updatedAt`.
+
+11. **`ResumeNameChangeRequest` (`profile_builder_resume_name_requests`)**
+    - Student requests for admin approval to modify their resume name after exhausting free name edits.
+    - Fields: `id`, `userId`, `currentName`, `requestedName`, `status` (`PENDING`, `APPROVED`, `REJECTED`), `createdAt`, `decidedAt`.
+
+12. **`ProfileBuilderIssue` (`profile_builder_issues`)**
+    - User-submitted bug reports, UI issues, and feedback with optional screenshot attachments.
+    - Fields: `id`, `userId`, `category` (`"resume"`, `"github"`, `"linkedin"`), `text`, `imageUrl`, `status` (`OPEN`, `RESOLVED`), `createdAt`.
 
 ---
 
-## Known Gotchas
+## Core Feature Specifications
 
-- **Industry-Grade 4-Tier ATS Scoring Model (25 + 35 + 25 + 15 = 100 Points)**:
-  - **Structure (25 pts)**: Contact info (2), Header/Summary (3), Education (3), Experience (5), Projects (3), Skills (3), Certifications (2), Portfolio links (2), Metrics (2).
-  - **Weighted Keywords (35 pts)**: Top 15 domain keywords. Tier 1 Critical (Weight 3), Tier 2 Important (Weight 2), Tier 3 Nice-to-have (Weight 1). Location multipliers: Work Experience (`1.0x`), Projects (`1.0x`), Certifications (`0.9x`), Skills/Interests (`0.85x`).
-  - **Experience Relevance (25 pts)**: Evaluates whether work experience and projects actively demonstrate domain skills with quantified metrics and action verbs.
-  - **Resume Quality & ATS Readability (15 pts)**: Complete sentences, no cutoff punctuation, no keyword stuffing, clean distribution.
-  - **Zero Floor Boosters**: Scorers must remain 100% deterministic and mathematical without artificial jumps (`Math.max(96)`).
-- **Stopwords Vocabulary Filtering**: The ATS engine filters out generic English conversational words (`closely`, `ensure`, `delivery`, `sourcing`, `oversee`, `manager`, `experienced`, `responsibilities`, etc.) so only genuine technical skills, tools, and methodologies are matched.
-- **Prisma Client Generation**: Always run standard `npx prisma generate`. Never use `--no-engine` in standard Node.js environments as it triggers the Accelerate (`prisma://`) client error `P6001`.
-- **Smart 1-Page Layout Preservation (`Fit in 1 Page`)**: When condensing the resume to fit on a single page, `app/api/resume-chat/route.ts` preserves all injected technical keywords in `additional.skills` and `workExperience` while tightening sentence lengths.
-- **Watermark Removal Architecture**: Downloads are never blocked for unpaid users; exports include a semi-transparent rotated "Momentum" watermark. Unlocking via payment or coupon strips the watermark permanently.
-- **Inline Preview Editing**: ContentEditable DOM mutations commit to React state on `blur`. Pressing `Backspace` on an empty bullet or selecting all text in a project immediately removes the item, while pressing `Enter` creates a new bullet item.
+### 1. Resume Studio & ATS Scoring
+- **4-Tier Mathematical ATS Scoring Engine (0–100 Points)**:
+  - **Structure (25 pts)**: Contact info, summary, education, experience, projects, skills, certifications, links.
+  - **Weighted Keywords (35 pts)**: Top 15 domain keywords with location multipliers (Experience `1.0x`, Projects `1.0x`, Certifications `0.9x`, Skills `0.85x`).
+  - **Experience Relevance (25 pts)**: Quantified bullet points, action verbs, domain impact metrics.
+  - **Resume Quality (15 pts)**: Punctuation consistency, sentence completeness, zero keyword stuffing.
+- **Smart 1-Page Layout Preservation (`Fit in 1 Page`)**: Condenses line lengths and padding while retaining all technical keywords.
+- **ContentEditable DOM**: Inline editing with instant blur state syncing, undo/redo stacks, and formatting toolbar (Bold, Italic, Underline).
+- **Name Locking & Download Limits**: Protects certificate/resume name integrity; requests admin approval if name changes exceed the free limit.
+- **Support / Bug Report Button**: Bottom-right floating bug icon allowing users to report issues and upload screenshots.
+
+### 2. GitHub README Studio
+- **Interactive Markdown Preview**: Live rendered preview of developer bio, shields.io badges, and project cards.
+- **Standard Avatar Asset**: Default avatar initialized to `/images/github-profile/git-profile-1.png` across all templates and prompt actions.
+- **Action-Oriented Starter Prompts**: Prompts formatted as actionable instructions (`"Create Full-Stack Engineer README with live stats"`, `"Create AI & ML Systems Engineer Profile"`, etc.).
+- **Banner & Theme Customization**: Pre-curated Cloudinary tech headers, Dark/Tokyonight/Dracula/Radial color themes, and custom banner URLs.
+- **Support / Bug Report Button**: Floating bug report widget matching the Resume Studio.
+
+### 3. LinkedIn Profile & Cover Studio
+- **Cover Art Generator**: Vector canvas banners with live typography fitting (`ShrinkToFitCoverText`), custom gradient overlays, and photo headshot cropper (`PfpCropModal`).
+- **Profile Optimizer**: AI-crafted headlines, About summaries, quantified experience bullets, and skills section.
+- **Support / Bug Report Button**: Floating bug report widget sending `category: 'linkedin'`.
+
+### 4. Admin Management Suite (`/admin`)
+- **Reported Issues Dashboard (`/admin/issues`)**:
+  - Top-level category tabs: **All Features**, **Resume Builder**, **GitHub README**, **LinkedIn Optimizer**.
+  - Sub-status filters: **Open** and **Resolved** with live count badges.
+  - Compact table rows with user details, preview snippets, attachment badges, and quick resolve buttons.
+  - Inspection modal with user profile data, full description, and high-resolution screenshot lightbox.
+- **Payment Verification (`/admin/payments`)**:
+  - Side-by-side OCR receipt comparison with dHash anti-duplicate protection and instant one-click approval/rejection.
+- **User Management & Coupons (`/admin/users`)**:
+  - Search Clerk users, view AI usage counts, grant/revoke Pro access manually, create multi-use coupon codes with expiration dates.
+- **Name Change Requests (`/admin/name-requests`)**:
+  - Review student requested name changes on locked resumes.
 
 ---
 
@@ -71,13 +144,15 @@ All application state, user resumes, AI usage credits, payment approvals, and co
 ```
 app/
 ├── api/
-│   ├── ats-score/route.ts              4-Tier mathematical ATS Scoring Engine (25+35+25+15)
+│   ├── ats-score/route.ts              4-Tier mathematical ATS Scoring Engine
 │   ├── resume-chat/route.ts            AI Resume generation, 1-page condensing & keyword injection
-│   ├── linkedin-chat/route.ts          AI LinkedIn profile builder & section optimizer
+│   ├── linkedin-chat/route.ts          AI LinkedIn profile builder & cover optimizer
 │   ├── github-chat/route.ts            AI GitHub README & markdown portfolio generator
+│   ├── issues/route.ts                 User issue/feedback submission with Cloudinary upload
 │   ├── payment/
 │   │   ├── status/route.ts             Returns user's watermark unlock status and AI credits used
-│   │   └── upload/route.ts             OCR receipt scanner, dHash anti-duplicate & proof submission
+│   │   ├── upload/route.ts             OCR receipt scanner, dHash anti-duplicate & proof submission
+│   │   └── celebrate/route.ts          Persists Pro celebration state
 │   ├── coupon/
 │   │   └── redeem/route.ts             Coupon code validation & instant unlock handler
 │   ├── resumes/
@@ -87,29 +162,45 @@ app/
 │   │   └── download-check/route.ts     Download name verification before export
 │   └── admin/
 │       ├── payments/route.ts           Admin API to review and approve/reject payment proofs
+│       ├── users/route.ts              Admin API for user list and pro status management
+│       ├── issues/
+│       │   ├── route.ts                Admin API for categorized issues list & counts
+│       │   └── [id]/route.ts           Admin API to resolve/reopen issues
+│       ├── coupons/route.ts            Admin API to create and manage coupon codes
 │       └── name-requests/route.ts      Admin API to approve/reject locked name change requests
 ├── admin/
-│   └── payments/page.tsx               Admin Payment Verification Dashboard UI
+│   ├── payments/page.tsx               Admin Payment Verification Dashboard UI
+│   ├── users/page.tsx                  Admin Users & Coupon Management UI
+│   ├── issues/page.tsx                 Admin Categorized Issues & Feedback UI
+│   ├── name-requests/page.tsx          Admin Name Change Requests UI
+│   └── chats/page.tsx                  Admin AI Chat Logs & Sessions UI
 ├── layout.tsx                          Root layout, ClerkProvider, global fonts & metadata
-├── page.tsx                            Main studio shell, tab navigator & responsive sidebar
+├── page.tsx                            Main studio shell, tab navigator & responsive workspace
 └── globals.css                         Tailwind tokens, design utilities & print media styles
 
 components/
 ├── ResumeChatStudio.tsx                Interactive Resume Studio, chat sidebar & canvas controls
-├── CvPreview.tsx                       ContentEditable single-page canvas with inline formatting
-├── PaginatedCvPreview.tsx              Smart page-break splitter with dynamic height observers
+├── GithubChatStudio.tsx                Interactive GitHub README Studio & toolbar
+├── LinkedinChatStudio.tsx              Interactive LinkedIn Studio & cover editor
+├── GithubLandingView.tsx               GitHub templates grid, starter prompts & category filters
+├── LinkedinLandingView.tsx             LinkedIn cover presets & prompt generator
+├── BlockScreen.tsx                     Private Page modal gate for unauthorized users
 ├── MobileChatWidget.tsx                Floating mobile chat drawer with quick action pills
-├── ImagineSidebar.tsx                  Left navigation drawer (Resume, LinkedIn, GitHub, Upgrade)
 ├── PaymentModal.tsx                    Payment instructions, EasyPaisa/JazzCash upload & coupon tab
-├── LinkedinOptimizer.tsx               Interactive LinkedIn builder and preview studio
-└── GithubOptimizer.tsx                 Interactive GitHub README builder and raw markdown preview
+├── PfpCropModal.tsx                    Profile picture cropping and aspect-ratio adjustments
+└── icons.tsx                           SVG brand icons (GitHub, LinkedIn, etc.)
 
 lib/
 ├── db.ts                               Singleton PrismaClient instance
-├── cvTypes.ts                          TypeScript interfaces for CvData, sections & markdown parsers
-├── cvPagination.ts                     Block height measurement & auto-pagination algorithm
-├── resumeHelpers.ts                    Theme accent colors, formatting helpers & initial state
-└── easyPaisaOcr.ts                     Image preprocessing & transaction ID/amount regex parsers
+├── defaultData.ts                      Default placeholder CV, GitHub, and LinkedIn initial data
+├── adminData.ts                        Server-side data loaders for admin dashboards
+├── adminAuth.ts                        Admin authorization and Clerk role checks
+├── serverAuth.ts                       Server-side user authentication helpers
+├── cloudinary.ts                       Cloudinary image upload utility
+├── toast.ts                            Global toast notification utility
+├── easyPaisaOcr.ts                     Image preprocessing & transaction ID/amount regex parsers
+├── githubMarkdown.ts                   Markdown serializing and badge compilation engine
+└── linkedinRichProfile.ts              LinkedIn cover art layouts, palettes, and font measurement
 
 prisma/
 └── schema.prisma                       PostgreSQL schema definition & indexes
@@ -117,16 +208,27 @@ prisma/
 
 ---
 
-## Deploy & Environment Variables
+## Deployment & Environment Variables
 
-### Deploy:
-- **Build Command**: `npm run build` (or `npx next build`)
-- **Start Command**: `npm start`
-- **Database Migrations**: `npx prisma db push` or `npx prisma migrate deploy` followed by `npx prisma generate`
+### Build & Run Commands:
+```bash
+# Install dependencies
+npm install
 
-### Required Environment Variables:
+# Push database schema changes & regenerate Prisma Client
+npx prisma db push
+npx prisma generate
+
+# Build for production
+npm run build
+
+# Run local development server
+npm run dev
+```
+
+### Environment Variables (`.env.local`):
 ```env
-# Database
+# Database (Neon PostgreSQL)
 DATABASE_URL="postgresql://user:password@host:5432/dbname?sslmode=require"
 
 # Clerk Authentication
@@ -136,17 +238,14 @@ NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
 NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
 
 # AI Engines
-GEMINI_API_KEY="AIzaSy..."
 OPENAI_API_KEY="sk-proj-..."
+GEMINI_API_KEY="AIzaSy..."
+
+# Cloudinary (Issue Attachments & Payment Proofs)
+CLOUDINARY_CLOUD_NAME="dnqk2jlds"
+CLOUDINARY_API_KEY="..."
+CLOUDINARY_API_SECRET="..."
 
 # Admin Access
 ADMIN_USER_IDS="user_2...,user_3..."
 ```
-
----
-
-## Where Plans & Docs Live
-
-Standalone technical plans, handoff summaries, and design specifications live directly in the workspace root as `.md` documents:
-- `guide.md` — Project architecture, database schema, file map, and operational reference.
-- `AGENTS.md` — Agent rules and version guidelines.
