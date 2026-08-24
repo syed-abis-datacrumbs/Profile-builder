@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Inter } from 'next/font/google';
 import {
   ArrowLeft,
@@ -134,7 +134,8 @@ export const LinkedinChatStudio: React.FC<{
   /** Prompt typed on the landing page (after template selection) — sent to
    *  the AI automatically once, on mount. */
   initialPrompt?: string;
-}> = ({ profile, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt }) => {
+  isPro?: boolean;
+}> = ({ profile, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt, isPro }) => {
   const [messages, setMessages] = useState<Msg[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -192,18 +193,35 @@ export const LinkedinChatStudio: React.FC<{
     }
   };
 
-  const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  const [unlocked, setUnlocked] = useState<boolean | null>(isPro ?? null);
   const [aiMessagesUsed, setAiMessagesUsed] = useState<number>(0);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  useEffect(() => {
+
+  const refreshPaymentStatus = useCallback(() => {
     fetch('/api/payment/status')
       .then((r) => r.json())
-      .then((d: { unlocked: boolean, aiMessagesUsed: number }) => {
+      .then((d: { unlocked: boolean; aiMessagesUsed: number }) => {
         setUnlocked(d.unlocked);
         setAiMessagesUsed(d.aiMessagesUsed || 0);
       })
       .catch(() => setUnlocked(false));
   }, []);
+
+  useEffect(() => {
+    refreshPaymentStatus();
+    window.addEventListener('focus', refreshPaymentStatus);
+    window.addEventListener('profile_builder_unlocked', refreshPaymentStatus);
+    return () => {
+      window.removeEventListener('focus', refreshPaymentStatus);
+      window.removeEventListener('profile_builder_unlocked', refreshPaymentStatus);
+    };
+  }, [refreshPaymentStatus]);
+
+  useEffect(() => {
+    if (typeof isPro === 'boolean') {
+      setUnlocked(isPro);
+    }
+  }, [isPro]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sessionIdRef = useRef<string | null>(null);

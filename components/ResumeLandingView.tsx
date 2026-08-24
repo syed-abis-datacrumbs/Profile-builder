@@ -250,7 +250,7 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {LMS_RESUME_SAMPLES.map((sample, i) => {
             const accent = getResumeAccentColor(sample);
-            const fullName = (sample.data.personalInfo && sample.data.personalInfo.fullName) || 'Your Name';
+            const fullName = clerkFullName || (sample.data.personalInfo && sample.data.personalInfo.fullName) || 'Your Name';
             const isSelected = attachedTemplate?.label === sample.label;
             return (
               <motion.div

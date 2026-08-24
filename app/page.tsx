@@ -259,13 +259,16 @@ export default function Home() {
     }
   }, [isLoggedIn, isLoaded, user?.id]);
 
-  const displayFullName = lockedResumeName || clerkFullName || undefined;
+  const displayFullName = clerkFullName || lockedResumeName || undefined;
 
   const checkUnlockStatus = () => {
     fetch('/api/payment/status')
       .then((r) => r.json())
       .then((d: { unlocked: boolean; lastApprovedAt?: string; shouldCelebrate?: boolean }) => {
         setUnlocked(d.unlocked);
+        if (d.unlocked && typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('profile_builder_unlocked'));
+        }
         if (typeof window !== 'undefined') {
           localStorage.setItem('cached_pro_user', d.unlocked ? 'true' : 'false');
           if (user?.id) {
@@ -499,6 +502,7 @@ export default function Home() {
                         initialPrompt={resumeInitialPrompt}
                         setMobileHeaderRight={setMobileHeaderRight}
                         clerkName={clerkFullName || undefined}
+                        isPro={unlocked ?? false}
                       />
                     ) : resumeMode === 'editor' ? (
                       <div className="space-y-4">
@@ -591,6 +595,7 @@ export default function Home() {
                         isLoggedIn={isLoggedIn}
                         onRequireAuth={() => setIsAuthOpen(true)}
                         initialPrompt={githubInitialPrompt}
+                        isPro={unlocked ?? false}
                       />
                     ) : githubMode === 'editor' ? (
                       <div className="space-y-4">
@@ -701,6 +706,7 @@ export default function Home() {
                         isLoggedIn={isLoggedIn}
                         onRequireAuth={() => setIsAuthOpen(true)}
                         initialPrompt={linkedinInitialPrompt}
+                        isPro={unlocked ?? false}
                       />
                     ) : (
                       <LinkedinLandingView

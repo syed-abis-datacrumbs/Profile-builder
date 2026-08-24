@@ -69,6 +69,7 @@ interface ResumeChatStudioProps {
   /** Full name from Clerk registration — auto-seeds the locked name on a
    *  user's very first visit (no need to type it manually). */
   clerkName?: string;
+  isPro?: boolean;
 }
 
 export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
@@ -81,6 +82,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   initialPrompt,
   setMobileHeaderRight,
   clerkName,
+  isPro,
 }) => {
   // Same accent stripe the template's grid card and preview popup show —
   // derived from fieldLabel (the loaded template's name), so it stays
@@ -565,20 +567,35 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   // Builder ("everyone can build/export for free; paying removes a
   // watermark baked into the exported file, download itself is never
   // blocked"). Re-checked on mount only; the PaymentModal flips this to
-  // true directly on approval rather than re-fetching.
-  const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  const [unlocked, setUnlocked] = useState<boolean | null>(isPro ?? null);
   const [aiMessagesUsed, setAiMessagesUsed] = useState<number>(0);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  useEffect(() => {
+  const refreshPaymentStatus = useCallback(() => {
     fetch('/api/payment/status')
       .then((r) => r.json())
-      .then((d: { unlocked: boolean, aiMessagesUsed: number }) => {
+      .then((d: { unlocked: boolean; aiMessagesUsed: number }) => {
         setUnlocked(d.unlocked);
         setAiMessagesUsed(d.aiMessagesUsed || 0);
       })
       .catch(() => setUnlocked(false));
   }, []);
+
+  useEffect(() => {
+    refreshPaymentStatus();
+    window.addEventListener('focus', refreshPaymentStatus);
+    window.addEventListener('profile_builder_unlocked', refreshPaymentStatus);
+    return () => {
+      window.removeEventListener('focus', refreshPaymentStatus);
+      window.removeEventListener('profile_builder_unlocked', refreshPaymentStatus);
+    };
+  }, [refreshPaymentStatus]);
+
+  useEffect(() => {
+    if (typeof isPro === 'boolean') {
+      setUnlocked(isPro);
+    }
+  }, [isPro]);
 
   // Temporarily injects rotated, translucent "Momentum" watermark divs into
   // the live export DOM, positioned absolutely (so they scroll with content,
