@@ -452,7 +452,6 @@ export default function Home() {
               }`}
           >
             {(showBlockModal || (!isAuthorized && (
-              (activeTab === 'github' && (githubMode === 'studio' || githubMode === 'editor' || githubMode === 'preview')) ||
               (activeTab === 'linkedin' && (linkedinMode === 'studio' || linkedinMode === 'editor' || linkedinMode === 'preview')) ||
               (activeTab === 'assistant')
             ))) && (
@@ -463,7 +462,6 @@ export default function Home() {
                 }} 
                 onClose={() => {
                   setShowBlockModal(false);
-                  if (githubMode !== 'landing') setGithubMode('landing');
                   if (linkedinMode !== 'landing') setLinkedinMode('landing');
                   if (activeTab === 'assistant') setActiveTab('resume');
                 }} 
@@ -473,7 +471,7 @@ export default function Home() {
             <div 
               className="flex-1 min-h-0 flex flex-col"
               onClickCapture={(e) => {
-                if (!isAuthorized && activeTab !== 'resume') {
+                if (!isAuthorized && activeTab !== 'resume' && activeTab !== 'github') {
                   e.preventDefault();
                   e.stopPropagation();
                   setShowBlockModal(true);
@@ -535,6 +533,10 @@ export default function Home() {
                           attachedTemplate={attachedResumeTemplate}
                           onClearAttachedTemplate={() => setAttachedResumeTemplate(null)}
                           onUsePrompt={(promptText) => {
+                            if (!isLoggedIn) {
+                              setIsAuthOpen(true);
+                              return;
+                            }
                             if (attachedResumeTemplate) {
                               loadResumeField(attachedResumeTemplate);
                               if (typeof window !== 'undefined') {
