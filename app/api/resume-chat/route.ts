@@ -501,12 +501,102 @@ export async function POST(request: Request) {
       });
     }
 
-    // 2c. Add or Update Education Entry Handler
+    // 2c. Direct Date & Tenure / Duration Update Handler (MUST RUN BEFORE INSTITUTION ACTIONS)
+    // e.g. "change the duration of the university : Jan 2022- Feb 2026", "update university dates to 2022 - 2026", "change tenure to Jan 2022 - Present"
+    const isDateTenureUpdate = (
+      /\b(dates?|tenure|duration|timeline|period|years?)\b/i.test(lastMsgLower) ||
+      /\b\d{4}\s*(?:-|–|—|to)\s*(?:\d{4}|present|current)\b/i.test(lastMsgLower)
+    ) && /\b(change|update|set|replace|modify|to|with|of|:)\b/i.test(lastMsgLower);
+
+    if (isDateTenureUpdate) {
+      const dateRangeMatch =
+        lastUserMessage.match(/([A-Za-z]{3,9}\s*\d{4}|\b\d{4})\s*(?:-|–|—|to)\s*([A-Za-z]{3,9}\s*\d{4}|\b\d{4}|present|current)\b/i) ||
+        lastUserMessage.match(/\b(?:from\s+)?([A-Za-z]{3,9}\s*\d{4}|\b\d{4})\s+(?:to|until)\s+([A-Za-z]{3,9}\s*\d{4}|\b\d{4}|present|current)\b/i);
+
+      if (dateRangeMatch) {
+        const newStart = dateRangeMatch[1].trim();
+        const newEnd = dateRangeMatch[2].trim();
+
+        // Check if education is targeted
+        if (/\b(university|uni|college|school|intermediate|degree|education|bachelor|master|fast|habib|szabist|berkeley)\b/i.test(lastMsgLower) && cv.education && cv.education.length > 0) {
+          const currentEdu = [...cv.education];
+          let targetIdx = 0;
+          if (/\b(college|intermediate|school)\b/i.test(lastMsgLower)) {
+            targetIdx = currentEdu.findIndex(e => /\b(college|intermediate|school|diploma)\b/i.test(`${e.institution} ${e.degree}`));
+            if (targetIdx === -1 && currentEdu.length > 1) targetIdx = 1;
+          } else {
+            targetIdx = currentEdu.findIndex(e => /\b(university|degree|bachelor|master|phd)\b/i.test(`${e.institution} ${e.degree}`));
+            if (targetIdx === -1) targetIdx = 0;
+          }
+
+          if (targetIdx !== -1 && targetIdx < currentEdu.length) {
+            currentEdu[targetIdx] = {
+              ...currentEdu[targetIdx],
+              start: newStart,
+              end: newEnd,
+            };
+
+            const updatedCv: CvData = { ...cv, education: currentEdu };
+            if (sessionId !== 'unknown') {
+              await db.profileBuilderChatLog.create({
+                data: {
+                  sessionId,
+                  userId: user?.id,
+                  userMessage,
+                  aiReply: `Done — updated your education duration to ${newStart} – ${newEnd}.`,
+                  isAutoFit: false,
+                },
+              });
+            }
+            return Response.json({
+              reply: `Done — updated your education duration to ${newStart} – ${newEnd}.`,
+              cv: updatedCv,
+            });
+          }
+        }
+
+        // Check if work experience is targeted
+        if (cv.workExperience && cv.workExperience.length > 0) {
+          const currentExp = [...cv.workExperience];
+          let targetIdx = findBestMatchIndex(currentExp, lastUserMessage, w => `${w.company} ${w.title}`);
+          if (targetIdx === -1) targetIdx = 0;
+
+          currentExp[targetIdx] = {
+            ...currentExp[targetIdx],
+            start: newStart,
+            end: newEnd,
+          };
+
+          const updatedCv: CvData = { ...cv, workExperience: currentExp };
+          if (sessionId !== 'unknown') {
+            await db.profileBuilderChatLog.create({
+              data: {
+                sessionId,
+                userId: user?.id,
+                userMessage,
+                aiReply: `Done — updated your experience dates to ${newStart} – ${newEnd}.`,
+                isAutoFit: false,
+              },
+            });
+          }
+          return Response.json({
+            reply: `Done — updated your experience dates to ${newStart} – ${newEnd}.`,
+            cv: updatedCv,
+          });
+        }
+      }
+    }
+
+    // 2d. Add or Update Education Entry Handler
     const isEduAction = (
       /\b(add|change|update|set|replace|put|insert|switch|rename)\b.*?\b(college|collage|university|uni|intermediate|school|degree|education|bachelor|master|phd)\b/i.test(lastMsgLower) ||
       /\b(?:my\s+)?(college|collage|university|uni|intermediate)\s*(?:is|was|to|:|=)\s*(.+?)$/i.test(lastMsgLower) ||
       /\bfrom\s+.+?\s+(?:to|with)\s+.+?\b/i.test(lastMsgLower)
-    ) && !isNamedRemovalReq && !isFullSectionRemoval;
+    ) &&
+      !isNamedRemovalReq &&
+      !isFullSectionRemoval &&
+      !/\b(duration|dates?|tenure|timeline|period|years?)\b/i.test(lastMsgLower) &&
+      !/\b\d{4}\s*(?:-|–|—|to)\s*(?:\d{4}|present|current)\b/i.test(lastMsgLower);
 
     if (isEduAction) {
       const isExplicitAdd = /\b(add|insert|push|new)\b/i.test(lastMsgLower) && !/\b(from\s+.+?\s+to)\b/i.test(lastMsgLower);
@@ -956,89 +1046,6 @@ export async function POST(request: Request) {
 
           return Response.json({
             reply: `Done — updated your technical skills to "${updatedAdditional.skills}".`,
-            cv: updatedCv,
-          });
-        }
-      }
-    }
-
-    // 2g. Direct Date & Tenure Update Handler
-    // e.g. "change the univeristy tenure to Jan 2022 - Feb 2026", "update my food panda rider date with Aug 2025 - Aug 2026", "change dates of X to Y"
-    const isDateTenureUpdate = /\b(dates?|tenure|duration|timeline|period|years?)\b/i.test(lastMsgLower) &&
-      /\b(change|update|set|replace|modify|to|with)\b/i.test(lastMsgLower);
-
-    if (isDateTenureUpdate) {
-      const dateRangeMatch = lastUserMessage.match(/([A-Za-z]{3,9}\s+\d{4}|\d{4})\s*(?:-|–|—|to)\s*([A-Za-z]{3,9}\s+\d{4}|\d{4}|present|current)/i) ||
-        lastUserMessage.match(/\b(?:from\s+)?([A-Za-z]{3,9}\s+\d{4}|\d{4})\s+(?:to|until)\s+([A-Za-z]{3,9}\s+\d{4}|\d{4}|present|current)\b/i);
-
-      if (dateRangeMatch) {
-        const newStart = dateRangeMatch[1].trim();
-        const newEnd = dateRangeMatch[2].trim();
-
-        // Check if education is targeted
-        if (/\b(university|uni|college|school|intermediate|degree|education|bachelor|master|fast|szabist|berkeley)\b/i.test(lastMsgLower) && cv.education && cv.education.length > 0) {
-          const currentEdu = [...cv.education];
-          let targetIdx = 0;
-          if (/\b(college|intermediate|school)\b/i.test(lastMsgLower)) {
-            targetIdx = currentEdu.findIndex(e => /\b(college|intermediate|school|diploma)\b/i.test(`${e.institution} ${e.degree}`));
-            if (targetIdx === -1 && currentEdu.length > 1) targetIdx = 1;
-          } else {
-            targetIdx = currentEdu.findIndex(e => /\b(university|degree|bachelor|master|phd)\b/i.test(`${e.institution} ${e.degree}`));
-            if (targetIdx === -1) targetIdx = 0;
-          }
-
-          if (targetIdx !== -1 && targetIdx < currentEdu.length) {
-            currentEdu[targetIdx] = {
-              ...currentEdu[targetIdx],
-              start: newStart,
-              end: newEnd,
-            };
-
-            const updatedCv: CvData = { ...cv, education: currentEdu };
-            if (sessionId !== 'unknown') {
-              await db.profileBuilderChatLog.create({
-                data: {
-                  sessionId,
-                  userId: user?.id,
-                  userMessage,
-                  aiReply: `Done — updated your dates to ${newStart} – ${newEnd}.`,
-                  isAutoFit: false,
-                },
-              });
-            }
-            return Response.json({
-              reply: `Done — updated your dates to ${newStart} – ${newEnd}.`,
-              cv: updatedCv,
-            });
-          }
-        }
-
-        // Check if work experience is targeted
-        if (cv.workExperience && cv.workExperience.length > 0) {
-          const currentExp = [...cv.workExperience];
-          let targetIdx = findBestMatchIndex(currentExp, lastUserMessage, w => `${w.company} ${w.title}`);
-          if (targetIdx === -1) targetIdx = 0;
-
-          currentExp[targetIdx] = {
-            ...currentExp[targetIdx],
-            start: newStart,
-            end: newEnd,
-          };
-
-          const updatedCv: CvData = { ...cv, workExperience: currentExp };
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply: `Done — updated your experience dates to ${newStart} – ${newEnd}.`,
-                isAutoFit: false,
-              },
-            });
-          }
-          return Response.json({
-            reply: `Done — updated your experience dates to ${newStart} – ${newEnd}.`,
             cv: updatedCv,
           });
         }
