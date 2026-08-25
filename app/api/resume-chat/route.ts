@@ -227,46 +227,54 @@ export async function POST(request: Request) {
     const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content ?? '';
     const lastMsgLower = lastUserMessage.toLowerCase();
 
-    const WORD_NUMS: Record<string, number> = {
-      one: 1, two: 2, three: 3, four: 4, five: 5,
-      six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
-      first: 1, '1st': 1,
-      second: 2, '2nd': 2,
-      third: 3, '3rd': 3,
-      fourth: 4, '4th': 4,
-      fifth: 5, '5th': 5,
-    };
+    // Multi-Sentence / Comprehensive Background / Story / Full Transformation Check
+    // When user provides multiple details or explicitly requests a full resume rewrite,
+    // ALL fast single-field interceptors MUST be bypassed and forwarded directly to the AI engine!
+    const isMultiSentenceOrStory =
+      lastUserMessage.length > 140 ||
+      /\b(my name is|i am an?|i have been working|i worked|i have done|i have created|i graduated|transform\s+(?:the|this|my)?\s*(?:whole)?\s*resume|build\s+(?:me\s+)?(?:a\s+)?resume|create\s+(?:a\s+)?resume|as per the information)\b/i.test(lastMsgLower);
 
-    const parseCountVal = (s: string | undefined): number | undefined => {
-      if (!s) return undefined;
-      const n = parseInt(s, 10);
-      if (!isNaN(n)) return n;
-      return WORD_NUMS[s.toLowerCase()];
-    };
+    if (!isMultiSentenceOrStory) {
+      const WORD_NUMS: Record<string, number> = {
+        one: 1, two: 2, three: 3, four: 4, five: 5,
+        six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+        first: 1, '1st': 1,
+        second: 2, '2nd': 2,
+        third: 3, '3rd': 3,
+        fourth: 4, '4th': 4,
+        fifth: 5, '5th': 5,
+      };
 
-    const SECTION_KEY: Record<string, keyof CvData> = {
-      project: 'projects',
-      projects: 'projects',
-      certification: 'certifications',
-      certifications: 'certifications',
-      cert: 'certifications',
-      certs: 'certifications',
-      certificate: 'certifications',
-      certificates: 'certifications',
-      education: 'education',
-      educaton: 'education',
-      experience: 'workExperience',
-      experiences: 'workExperience',
-      workshop: 'workshops',
-      workshops: 'workshops',
-      job: 'workExperience',
-      jobs: 'workExperience',
-    };
+      const parseCountVal = (s: string | undefined): number | undefined => {
+        if (!s) return undefined;
+        const n = parseInt(s, 10);
+        if (!isNaN(n)) return n;
+        return WORD_NUMS[s.toLowerCase()];
+      };
 
-    // 1. Full Section Removals (e.g. "remove the project section", "remove all projects", "remove projects section", "delete certifications")
-    const isFullSectionRemoval = /\b(remove|delete|drop|clear)\b.*?\b(all\s+)?(project|certification|cert|certificate|education|educaton|experience|workshop|job)s?(\s+section|\s+entirely|\s+all)?\b/i.test(lastMsgLower) &&
-      !/\b(last|first|1st|2nd|3rd|second|third|one|two|three|1|2|3)\b/i.test(lastMsgLower) &&
-      !/\b(university|college)\b/i.test(lastMsgLower);
+      const SECTION_KEY: Record<string, keyof CvData> = {
+        project: 'projects',
+        projects: 'projects',
+        certification: 'certifications',
+        certifications: 'certifications',
+        cert: 'certifications',
+        certs: 'certifications',
+        certificate: 'certifications',
+        certificates: 'certifications',
+        education: 'education',
+        educaton: 'education',
+        experience: 'workExperience',
+        experiences: 'workExperience',
+        workshop: 'workshops',
+        workshops: 'workshops',
+        job: 'workExperience',
+        jobs: 'workExperience',
+      };
+
+      // 1. Full Section Removals (e.g. "remove the project section", "remove all projects", "remove projects section", "delete certifications")
+      const isFullSectionRemoval = /\b(remove|delete|drop|clear)\b.*?\b(all\s+)?(project|certification|cert|certificate|education|educaton|experience|workshop|job)s?(\s+section|\s+entirely|\s+all)?\b/i.test(lastMsgLower) &&
+        !/\b(last|first|1st|2nd|3rd|second|third|one|two|three|1|2|3)\b/i.test(lastMsgLower) &&
+        !/\b(university|college)\b/i.test(lastMsgLower);
 
     if (isFullSectionRemoval) {
       for (const [key, cvField] of Object.entries(SECTION_KEY)) {
@@ -687,6 +695,62 @@ export async function POST(request: Request) {
           reply: `Done — removed ${removedLinks.join(' and ')} from your resume header.`,
           cv: updatedCv,
         });
+      }
+    }
+
+    // 2d. Direct Social/Contact Link Addition Handler
+    // e.g. "add one more link at the top : Behance", "add behance link", "add a link for portfolio", "insert dribbble link"
+    const isLinkAddReq = /\b(add|insert|put|include|push)\b.*?\b(link|links|social|behance|dribbble|kaggle|github|linkedin|portfolio|youtube|twitter|leetcode|hackerrank|artstation)\b/i.test(lastMsgLower);
+
+    if (isLinkAddReq && cv.personalInfo) {
+      const platformMatch =
+        lastUserMessage.match(/\b(?:as|for|to|:|;|=)\s*([a-z0-9._-]+)(?:\s+link|\s+at\s+the\s+top)?$/i) ||
+        lastUserMessage.match(/\b(behance|dribbble|kaggle|github|linkedin|portfolio|youtube|twitter|x|leetcode|hackerrank|artstation|itch\.io|substack|medium|gitlab|bitbucket|website)\b/i);
+
+      if (platformMatch) {
+        const rawPlatform = (platformMatch[1] || '').trim();
+        if (rawPlatform && !/^(?:a|an|the|one|more|link|links|social|top|header|resume)$/i.test(rawPlatform)) {
+          const platformName = rawPlatform.charAt(0).toUpperCase() + rawPlatform.slice(1);
+          const updatedPersonal = { ...cv.personalInfo };
+          const domain = platformName.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const targetUrl = domain.includes('behance') ? 'https://behance.net/your-username' : `https://${domain}.com/your-username`;
+
+          if (!updatedPersonal.kaggle || !updatedPersonal.kaggle.trim()) {
+            updatedPersonal.kaggle = targetUrl;
+            updatedPersonal.kaggleLabel = platformName;
+          } else if (!updatedPersonal.github || !updatedPersonal.github.trim()) {
+            updatedPersonal.github = targetUrl;
+            updatedPersonal.githubLabel = platformName;
+          } else if (!updatedPersonal.linkedin || !updatedPersonal.linkedin.trim()) {
+            updatedPersonal.linkedin = targetUrl;
+            updatedPersonal.linkedinLabel = platformName;
+          } else {
+            updatedPersonal.kaggle = targetUrl;
+            updatedPersonal.kaggleLabel = platformName;
+          }
+
+          const updatedCv: CvData = {
+            ...cv,
+            personalInfo: updatedPersonal,
+          };
+
+          if (sessionId !== 'unknown') {
+            await db.profileBuilderChatLog.create({
+              data: {
+                sessionId,
+                userId: user?.id,
+                userMessage,
+                aiReply: `Done — added ${platformName} link to the top header.`,
+                isAutoFit: false,
+              },
+            });
+          }
+
+          return Response.json({
+            reply: `Done — added ${platformName} link to the top header.`,
+            cv: updatedCv,
+          });
+        }
       }
     }
 
@@ -1139,6 +1203,7 @@ export async function POST(request: Request) {
         cv: updatedCv,
       });
     }
+  }
     // ───────────────────────────────────────────────────────────────────────
 
     const openai = new OpenAI({ apiKey });
@@ -1283,25 +1348,23 @@ export async function POST(request: Request) {
       (cv.workExperience && cv.workExperience.some(w => isPlaceholderToken(w.company) || isPlaceholderToken(w.title))) ||
       (cv.certifications && cv.certifications.some(c => isPlaceholderToken(c.name) || isPlaceholderToken(c.organization)));
 
-    // A prompt is a specific minor edit ONLY if the user explicitly targets a single field/item
-    // and is NOT asking for a general role/domain creation or full resume build.
-    const isExplicitMinorEdit =
-      !cvHasPlaceholders &&
-      /\b(change\s+(?:the\s+)?(?:email|phone|name|linkedin|github|kaggle|dates?|duration|start|end)|add\s+(?:more\s+)?(?:interests?|skills?|bullets?|points?)|remove\s+(?:the\s+)?(?:1st|2nd|3rd|first|second|third|last|\d+)\b)/i.test(msgLower) &&
-      !/\b(transform|make|create|build|generate|rewrite|adapt|tailor|convert|switch|for|role|position|engineer|developer|designer|manager|analyst|specialist|lead|architect|consultant|executive|officer|scientist|writer|marketer|intern|grad|fresh|resume|cv)\b/i.test(msgLower);
-
-    // Generalized Role Transformation & Resume Generation:
-    // If the resume has placeholders, or if the prompt describes ANY role/domain/career/resume creation,
-    // it automatically updates ALL sections with authentic, high-impact domain data!
-    const isRoleTransform = cvHasPlaceholders || !isExplicitMinorEdit;
-
     const isPageFillReq =
-      /\b(fill|expand|increase|add)\b.*?\b(page|gap|space|empty|bottom|content)\b/i.test(msgLower) ||
+      /\b(fill|expand|increase)\b.*?\b(page|gap|space|empty|bottom|content)\b/i.test(msgLower) ||
       /\b(gap|space|empty)\b.*?\b(fill|expand|increase)\b/i.test(msgLower) ||
       (msgLower.includes('fill') && msgLower.includes('page')) ||
       (msgLower.includes('increase') && msgLower.includes('content'));
 
-    if (!isRoleTransform && !isPageFillReq) {
+    const isFullRolePrompt =
+      /\b(transform|tranform|switch|convert|rewrite|rebuild|generate|make|create)\b.*?\b(resume|cv|profile|for|as|into)\b/i.test(msgLower) ||
+      /\b(for|as|into)\b.*?\b(role|position|job|title|bidder|engineer|developer|designer|analyst|manager|consultant|freelancer|editor|executive|specialist|lead|architect|artist|writer|marketer|officer|scientist|intern)\b/i.test(msgLower) ||
+      /\b(ats[- ]?friendly|ats[- ]?optimized|ats[- ]?compliant)\b/i.test(msgLower);
+
+    // Generalized Role Transformation & Resume Generation:
+    // Only true full role prompts, multi-sentence background descriptions, or initial placeholder CVs trigger a total rewrite.
+    // Page fill requests, section edits, or minor requests never trigger a full role rewrite.
+    const isRoleTransform = !isPageFillReq && (cvHasPlaceholders || isFullRolePrompt || isMultiSentenceOrStory);
+
+    if (!isRoleTransform) {
       if (!isProjEdit && cv.projects && !cv.projects.some(p => isPlaceholderToken(p.content))) {
         safeCv.projects = cv.projects;
       }
@@ -1314,44 +1377,62 @@ export async function POST(request: Request) {
       if (!isEduEdit && cv.education && !cv.education.some(e => isPlaceholderToken(e.institution) || isPlaceholderToken(e.degree))) {
         safeCv.education = cv.education;
       }
+      // If user previously removed certifications (empty array), NEVER resurrect them on non-cert prompts!
+      if (!isCertEdit && (!cv.certifications || cv.certifications.length === 0)) {
+        safeCv.certifications = [];
+      }
     }
 
     // Auto-fix: Universal Page Fill / Increase Content Request Handler
-    // When user asks to fill the page or eliminate bottom gap, expands Work Experience, Projects, and Interests together
+    // When user asks to fill the page or eliminate bottom gap, expands Work Experience, Projects, and Skills
     if (isPageFillReq) {
-      // 1. Expand Work Experience bullets with rich detail & extra bullet if needed
+      // 1. Expand Work Experience with rich 5th and 6th bullets if space allows
       if (safeCv.workExperience.length > 0) {
         const bullets = (safeCv.workExperience[0].bullets || '').split('\n').filter((b) => b.trim().length > 0);
-        const enrichedBullets = bullets.map((b) => {
-          if (!b.toLowerCase().includes('workflow') && !b.toLowerCase().includes('efficiency') && b.length < 140) {
-            return b.replace(/\.$/, '') + ', optimizing workflow efficiency and operational performance.';
-          }
-          return b;
-        });
-
-        if (enrichedBullets.length < 4) {
-          enrichedBullets.push(
-            'Collaborated with cross-functional team members to streamline operational workflows, <strong>improving overall team productivity by 25%</strong>.'
+        if (bullets.length < 5) {
+          bullets.push(
+            'Architected and deployed scalable RESTful backend microservices, reducing server response latency by <strong>35%</strong>.'
           );
         }
-        safeCv.workExperience[0].bullets = enrichedBullets.join('\n');
+        if (bullets.length < 6 && (!safeCv.certifications || safeCv.certifications.length === 0)) {
+          bullets.push(
+            'Implemented automated CI/CD deployment pipelines with comprehensive unit and integration test suites, achieving <strong>99.9% uptime</strong>.'
+          );
+        }
+        safeCv.workExperience[0].bullets = bullets.join('\n');
       }
 
-      // 2. Enrich project descriptions to fill visual lines
-      if (safeCv.projects.length > 0) {
-        safeCv.projects = safeCv.projects.map((p) => {
-          if (!p.content.includes('ensuring') && !p.content.includes('delivering') && p.content.length < 140) {
-            return { content: p.content.replace(/\.$/, '') + ', ensuring high availability and seamless operational workflow.' };
-          }
-          return p;
-        });
+      // 2. Add 4th project if certifications section was removed and more content is needed
+      if (safeCv.projects && safeCv.projects.length > 0) {
+        if (safeCv.projects.length < 4 && (!safeCv.certifications || safeCv.certifications.length === 0)) {
+          safeCv.projects.push({
+            content: '<strong>Cloud Infrastructure & Monitoring Dashboard</strong> (Docker, AWS, Grafana, Node.js) – Built an automated system health monitoring dashboard tracking real-time API latency and throughput, reducing incident recovery time by <strong>40%</strong>.'
+          });
+        }
       }
 
-      // 3. Enrich interests
-      if (safeCv.additional?.interests) {
-        const currentInt = safeCv.additional.interests;
-        if (!currentInt.includes('Continuous Improvement') && currentInt.split(',').length < 8) {
-          safeCv.additional.interests = currentInt + ', Continuous Process Improvement, Industry Best Practices';
+      // 3. Enrich Technical Skills & Interests
+      if (safeCv.additional) {
+        if (safeCv.additional.skills && safeCv.additional.skills.split(',').length < 12) {
+          const extraSkills = ['Docker', 'Kubernetes', 'CI/CD Pipelines', 'TypeScript', 'GraphQL', 'System Design', 'PostgreSQL'];
+          const currentSkillsList = safeCv.additional.skills.split(',').map(s => s.trim());
+          extraSkills.forEach(skill => {
+            if (!currentSkillsList.some(s => s.toLowerCase() === skill.toLowerCase()) && currentSkillsList.length < 14) {
+              currentSkillsList.push(skill);
+            }
+          });
+          safeCv.additional.skills = currentSkillsList.join(', ');
+        }
+
+        if (safeCv.additional.interests && safeCv.additional.interests.split(',').length < 8) {
+          const extraInterests = ['Microservices Architecture', 'Distributed Systems', 'Cloud Native Technologies', 'Agile Leadership'];
+          const currentIntList = safeCv.additional.interests.split(',').map(s => s.trim());
+          extraInterests.forEach(interest => {
+            if (!currentIntList.some(i => i.toLowerCase() === interest.toLowerCase()) && currentIntList.length < 8) {
+              currentIntList.push(interest);
+            }
+          });
+          safeCv.additional.interests = currentIntList.join(', ');
         }
       }
     }
@@ -1571,56 +1652,18 @@ export async function POST(request: Request) {
       }
     }
 
-    // Auto-fix: One Page Fitting request handler (guarantees 1-page fit while preserving all sections, projects, and certifications)
-    if (/\b(one|1)\s*page\b/i.test(msgLower) || /\bfit\b.*?\bpage\b/i.test(msgLower)) {
+    // Auto-fix: One Page Fitting request handler (ensures clean 1-page fit while preserving grammatical completeness)
+    if (/\b(one|1)\s*page\b/i.test(msgLower) && !isPageFillReq) {
       safeCv.workExperience = (safeCv.workExperience ?? []).map((w) => {
         const bulletLines = (w.bullets || '').split('\n').filter((b) => b.trim().length > 0);
-        const topBullets = bulletLines.slice(0, 3);
-        const condensedBullets = topBullets.map((line) => {
-          if (line.length > 130) {
-            return line.slice(0, 125).replace(/,?\s*$/, '') + '.';
-          }
-          return line;
-        });
-        return { ...w, bullets: condensedBullets.join('\n') };
+        const topBullets = bulletLines.slice(0, 4);
+        return { ...w, bullets: topBullets.join('\n') };
       });
-      safeCv.projects = (safeCv.projects ?? []).map((p) => {
-        if (p.content.length > 130) {
-          return { content: p.content.slice(0, 125).replace(/,?\s*$/, '') + '.' };
-        }
-        return p;
-      });
-    }
-
-    // Auto-fix: Page Fill & Expand Request Handler ("fill the page", "increase content so space gets filled", "no empty space")
-    const isFillPageRequest = /\b(fill\b.*?\b(page|space)|increase\b.*?\bcontent|space\b.*?\b(end|bottom)|empty\s*space)\b/i.test(msgLower);
-    if (isFillPageRequest) {
-      if (safeCv.projects && safeCv.projects.length > 3) {
+      if (safeCv.projects && safeCv.projects.length > 3 && safeCv.certifications && safeCv.certifications.length > 0) {
         safeCv.projects = safeCv.projects.slice(0, 3);
       }
-      safeCv.projects = (safeCv.projects ?? []).map((p) => {
-        if (p.content.length > 155) {
-          return { content: p.content.slice(0, 150).replace(/,?\s*$/, '') + '.' };
-        }
-        return p;
-      });
-
-      if (safeCv.workExperience && safeCv.workExperience.length > 0) {
-        const bulletLines = (safeCv.workExperience[0].bullets || '').split('\n').filter((b) => b.trim().length > 0);
-        const top4 = bulletLines.slice(0, 4);
-        const calibratedBullets = top4.map((line) => {
-          if (line.length > 150) {
-            return line.slice(0, 145).replace(/,?\s*$/, '') + '.';
-          }
-          return line;
-        });
-        safeCv.workExperience[0].bullets = calibratedBullets.join('\n');
-      }
-
-      if (safeCv.certifications && safeCv.certifications.length > 4) {
-        safeCv.certifications = safeCv.certifications.slice(0, 4);
-      }
     }
+
     if (/\b(add|more)\b.*?\bbullet/i.test(msgLower) || /\bmore\s+points\b/i.test(msgLower)) {
       if (safeCv.workExperience.length > 0) {
         const currentBullets = (safeCv.workExperience[0].bullets || '').split('\n').filter((b) => b.trim().length > 0);
