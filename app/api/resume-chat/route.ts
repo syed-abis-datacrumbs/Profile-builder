@@ -28,6 +28,13 @@ Resume JSON schema (keep this exact shape and keys — do NOT include a "cvType"
 You'll be told the CURRENT resume type (professional or student) as separate context on every turn — that's fixed for this conversation. If the user asks to switch it, tell them in "reply" to use the Professional/Student toggle above the chat, and keep filling the sections for the CURRENT type this turn — don't guess ahead.
 
 Rules:
+- RULE 0: STRICT SURGICAL EDITING & ABSOLUTE SECTION/ITEM PRESERVATION (HIGHEST PRIORITY):
+  1. When the user asks for a specific, targeted change (such as changing dates/tenure, updating an institution name, adding/removing a skill, changing email/phone, adding a college, or editing a bullet point), YOU MUST ONLY MODIFY THAT EXACT SPECIFIC TARGET.
+  2. YOU MUST PRESERVE EVERY OTHER SECTION, ARRAY, OBJECT, AND FIELD 100% UNCHANGED EXACTLY AS IN THE CURRENT RESUME JSON.
+  3. NEVER DROP, OMIT, TRUNCATE, OR FORGET OTHER EDUCATION ENTRIES, PROJECTS, WORK EXPERIENCES, CERTIFICATIONS, OR CONTACT LINKS!
+  4. Example: If the current resume has 2 education entries (e.g. University + College) and the user asks to change the university's tenure/dates or name, YOU MUST RETURN BOTH EDUCATION ENTRIES in the "education" array — the university with the updated dates/name, and the college entry 100% PRESERVED EXACTLY AS IT WAS.
+  5. ONLY perform a full multi-section rewrite when the user explicitly requests a full role transformation or new resume (e.g. "transform whole resume for video editor", "build ATS resume for data analyst"). In ALL other turns, treat the request as a surgical edit and preserve everything else!
+
 - ALWAYS make forward progress. Never respond with only a clarifying question and no changes to the cv — a beginner with almost no info (e.g. just a name) should still get a complete, realistic, ready-to-edit resume back immediately, not an empty shell or a stalled conversation. If you have a genuine follow-up question, ask it in "reply" AFTER you've already filled in a full, plausible draft — never before. EXCEPTION: The one case where you MUST return the cv unchanged is an ambiguous removal request (see the Ambiguous removal rule below) — in that case returning unchanged + asking is correct and required.
 - Whenever a section is missing or empty and the user hasn't given you real content for it, fill it yourself with complete, plausible, professional example content appropriate to their stated (or inferable) target role/field — education, work experience or workshops, projects, certifications, skills, and interests should never be left blank or as raw placeholder text. Base it on whatever real details the user DID give you (name, target role, field, experience level); invent sensible specifics (a school, a past role, a couple of projects with quantified bullets) the same way a filled-out sample resume would, so the student has something concrete to react to and edit rather than a blank form.
 - Exception: contact fields (phone, email, linkedin, github, kaggle) are the one place NOT to invent realistic-looking specifics, since those are personal to the student and could be mistaken for real. If the user hasn't given you their own, use obviously-generic placeholder values — phone "+92 3XX XXXXXXX", email "your.email@example.com", and leave linkedin/github/kaggle as empty strings ("") rather than guessing a URL from their name. Never build a name-based or otherwise plausible-looking fake phone number, email, or profile URL.
@@ -891,6 +898,89 @@ export async function POST(request: Request) {
       }
     }
 
+    // 2g. Direct Date & Tenure Update Handler
+    // e.g. "change the univeristy tenure to Jan 2022 - Feb 2026", "update my food panda rider date with Aug 2025 - Aug 2026", "change dates of X to Y"
+    const isDateTenureUpdate = /\b(dates?|tenure|duration|timeline|period|years?)\b/i.test(lastMsgLower) &&
+      /\b(change|update|set|replace|modify|to|with)\b/i.test(lastMsgLower);
+
+    if (isDateTenureUpdate) {
+      const dateRangeMatch = lastUserMessage.match(/([A-Za-z]{3,9}\s+\d{4}|\d{4})\s*(?:-|–|—|to)\s*([A-Za-z]{3,9}\s+\d{4}|\d{4}|present|current)/i) ||
+        lastUserMessage.match(/\b(?:from\s+)?([A-Za-z]{3,9}\s+\d{4}|\d{4})\s+(?:to|until)\s+([A-Za-z]{3,9}\s+\d{4}|\d{4}|present|current)\b/i);
+
+      if (dateRangeMatch) {
+        const newStart = dateRangeMatch[1].trim();
+        const newEnd = dateRangeMatch[2].trim();
+
+        // Check if education is targeted
+        if (/\b(university|uni|college|school|intermediate|degree|education|bachelor|master|fast|szabist|berkeley)\b/i.test(lastMsgLower) && cv.education && cv.education.length > 0) {
+          const currentEdu = [...cv.education];
+          let targetIdx = 0;
+          if (/\b(college|intermediate|school)\b/i.test(lastMsgLower)) {
+            targetIdx = currentEdu.findIndex(e => /\b(college|intermediate|school|diploma)\b/i.test(`${e.institution} ${e.degree}`));
+            if (targetIdx === -1 && currentEdu.length > 1) targetIdx = 1;
+          } else {
+            targetIdx = currentEdu.findIndex(e => /\b(university|degree|bachelor|master|phd)\b/i.test(`${e.institution} ${e.degree}`));
+            if (targetIdx === -1) targetIdx = 0;
+          }
+
+          if (targetIdx !== -1 && targetIdx < currentEdu.length) {
+            currentEdu[targetIdx] = {
+              ...currentEdu[targetIdx],
+              start: newStart,
+              end: newEnd,
+            };
+
+            const updatedCv: CvData = { ...cv, education: currentEdu };
+            if (sessionId !== 'unknown') {
+              await db.profileBuilderChatLog.create({
+                data: {
+                  sessionId,
+                  userId: user?.id,
+                  userMessage,
+                  aiReply: `Done — updated your dates to ${newStart} – ${newEnd}.`,
+                  isAutoFit: false,
+                },
+              });
+            }
+            return Response.json({
+              reply: `Done — updated your dates to ${newStart} – ${newEnd}.`,
+              cv: updatedCv,
+            });
+          }
+        }
+
+        // Check if work experience is targeted
+        if (cv.workExperience && cv.workExperience.length > 0) {
+          const currentExp = [...cv.workExperience];
+          let targetIdx = findBestMatchIndex(currentExp, lastUserMessage, w => `${w.company} ${w.title}`);
+          if (targetIdx === -1) targetIdx = 0;
+
+          currentExp[targetIdx] = {
+            ...currentExp[targetIdx],
+            start: newStart,
+            end: newEnd,
+          };
+
+          const updatedCv: CvData = { ...cv, workExperience: currentExp };
+          if (sessionId !== 'unknown') {
+            await db.profileBuilderChatLog.create({
+              data: {
+                sessionId,
+                userId: user?.id,
+                userMessage,
+                aiReply: `Done — updated your experience dates to ${newStart} – ${newEnd}.`,
+                isAutoFit: false,
+              },
+            });
+          }
+          return Response.json({
+            reply: `Done — updated your experience dates to ${newStart} – ${newEnd}.`,
+            cv: updatedCv,
+          });
+        }
+      }
+    }
+
     // 3. Ordinal Specific Item Removal (e.g. "remove the second education", "remove 2nd education", "remove the first project", "remove 3rd certification")
     const ORDINAL_RE = /\b(remove|delete|drop|clear)\b.*?\b(?:the\s+)?(first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th|last)\s+(project|certification|cert|certificate|education|educaton|experience|workshop|job)\b/i;
     const ordMatch = lastUserMessage.match(ORDINAL_RE);
@@ -1130,8 +1220,25 @@ export async function POST(request: Request) {
     }
 
     // Preserve user's clean education list if this was not an education removal request
-    if (cleanEducation.length === 0 && !isEduRemoval && Array.isArray(cv.education) && cv.education.length > 0) {
-      cleanEducation.push(...cv.education);
+    if (!isEduRemoval && Array.isArray(cv.education) && cv.education.length > 0) {
+      if (cleanEducation.length === 0) {
+        cleanEducation.push(...cv.education);
+      } else if (cv.education.length > cleanEducation.length) {
+        // If the model lazily returned fewer items (e.g. only 1 item when editing tenure), preserve the unedited items
+        cv.education.forEach((prevEdu) => {
+          const alreadyExists = cleanEducation.some((c) =>
+            (c.institution && prevEdu.institution &&
+             (c.institution.toLowerCase().includes(prevEdu.institution.toLowerCase()) ||
+              prevEdu.institution.toLowerCase().includes(c.institution.toLowerCase()))) ||
+            (c.degree && prevEdu.degree &&
+             (c.degree.toLowerCase().includes(prevEdu.degree.toLowerCase()) ||
+              prevEdu.degree.toLowerCase().includes(c.degree.toLowerCase())))
+          );
+          if (!alreadyExists) {
+            cleanEducation.push(prevEdu);
+          }
+        });
+      }
     }
 
     const mergedCertifications = [
