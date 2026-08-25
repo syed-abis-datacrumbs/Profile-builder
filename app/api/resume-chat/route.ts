@@ -97,6 +97,33 @@ function typeContextLine(cvType: 'professional' | 'student'): string {
     : 'RESUME TYPE (fixed for this conversation): PROFESSIONAL — sections are Education, Work Experience, Projects, Professional Certifications, Additional. Fill "workExperience"; leave "workshops" as [].';
 }
 
+function isPlaceholderToken(str?: string): boolean {
+  if (!str) return false;
+  const l = str.toLowerCase();
+  return (
+    l.includes('your university') ||
+    l.includes('your college') ||
+    l.includes('pre-university') ||
+    l.includes('graduate school') ||
+    l.includes('college name') ||
+    l.includes('degree program') ||
+    l.includes('field of study') ||
+    l.includes('company / organization') ||
+    l.includes('company name') ||
+    l.includes('job title / position') ||
+    l.includes('your job title') ||
+    l.includes('primary project') ||
+    l.includes('secondary project') ||
+    l.includes('key project title') ||
+    l.includes('secondary project title') ||
+    l.includes('professional credential') ||
+    l.includes('industry certification') ||
+    l.includes('issuing organization') ||
+    l.includes('technical skills, frameworks') ||
+    l.includes('professional interests, specializations')
+  );
+}
+
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -328,6 +355,119 @@ export async function POST(request: Request) {
         reply: "I've removed all numbers and percentages from your work experience while keeping your bullet points strong and professional.",
         cv: updatedCv,
       });
+    }
+
+    // 2c. Direct College / University Assignment Handler (e.g. "add DJ Science in college", "my college was DJ Science", "change college to DJ Science")
+    const collegeAddMatch =
+      lastUserMessage.match(/\b(?:add|change|update|set|put)\s+(.+?)\s+(?:in|to|as|for)\s+(?:the\s+)?college\b/i) ||
+      lastUserMessage.match(/\b(?:college|intermediate)\s*(?:is|was|to|:|=)\s*(.+?)$/i) ||
+      lastUserMessage.match(/\b(?:change|set|update)\s+(?:the\s+)?college\s+(?:to|name to|as)\s*(.+?)$/i);
+
+    if (collegeAddMatch && collegeAddMatch[1]) {
+      const collegeName = collegeAddMatch[1].trim();
+      if (collegeName && !/\b(course|cert|certification|project|experience|skills)\b/i.test(collegeName)) {
+        const currentEdu = cv.education ? [...cv.education] : [];
+        let targetIdx = currentEdu.findIndex(e =>
+          /\b(college|intermediate|preparatory|school|diploma|your college)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
+        );
+        if (targetIdx === -1 && currentEdu.length > 1) {
+          targetIdx = 1;
+        }
+        if (targetIdx !== -1) {
+          currentEdu[targetIdx] = {
+            ...currentEdu[targetIdx],
+            institution: collegeName,
+            degree: currentEdu[targetIdx].degree && !isPlaceholderToken(currentEdu[targetIdx].degree)
+              ? currentEdu[targetIdx].degree
+              : 'Intermediate / Pre-Engineering',
+          };
+        } else {
+          currentEdu.push({
+            institution: collegeName,
+            degree: 'Intermediate / Pre-Engineering',
+            start: '2018',
+            end: '2020',
+          });
+        }
+
+        const updatedCv: CvData = {
+          ...cv,
+          education: currentEdu,
+        };
+
+        if (sessionId !== 'unknown') {
+          await db.profileBuilderChatLog.create({
+            data: {
+              sessionId,
+              userId: user?.id,
+              userMessage,
+              aiReply: `Done — updated your college to "${collegeName}".`,
+              isAutoFit: false,
+            },
+          });
+        }
+
+        return Response.json({
+          reply: `Done — updated your college to "${collegeName}".`,
+          cv: updatedCv,
+        });
+      }
+    }
+
+    const uniAddMatch =
+      lastUserMessage.match(/\b(?:add|change|update|set|put)\s+(.+?)\s+(?:in|to|as|for)\s+(?:the\s+)?(?:university|uni|grad school)\b/i) ||
+      lastUserMessage.match(/\b(?:university|uni)\s*(?:is|was|to|:|=)\s*(.+?)$/i) ||
+      lastUserMessage.match(/\b(?:change|set|update)\s+(?:the\s+)?(?:university|uni)\s+(?:to|name to|as)\s*(.+?)$/i);
+
+    if (uniAddMatch && uniAddMatch[1]) {
+      const uniName = uniAddMatch[1].trim();
+      if (uniName && !/\b(course|cert|certification|project|experience|skills)\b/i.test(uniName)) {
+        const currentEdu = cv.education ? [...cv.education] : [];
+        let targetIdx = currentEdu.findIndex(e =>
+          /\b(university|bachelor|master|degree|szabist|berkeley|your university)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
+        );
+        if (targetIdx === -1 && currentEdu.length > 0) {
+          targetIdx = 0;
+        }
+        if (targetIdx !== -1) {
+          currentEdu[targetIdx] = {
+            ...currentEdu[targetIdx],
+            institution: uniName,
+            degree: currentEdu[targetIdx].degree && !isPlaceholderToken(currentEdu[targetIdx].degree)
+              ? currentEdu[targetIdx].degree
+              : 'B.S. in Computer Science',
+          };
+        } else {
+          currentEdu.unshift({
+            institution: uniName,
+            degree: 'B.S. in Computer Science',
+            start: '2020',
+            end: '2024',
+          });
+        }
+
+        const updatedCv: CvData = {
+          ...cv,
+          education: currentEdu,
+        };
+
+        if (sessionId !== 'unknown') {
+          await db.profileBuilderChatLog.create({
+            data: {
+              sessionId,
+              userId: user?.id,
+              userMessage,
+              aiReply: `Done — updated your university to "${uniName}".`,
+              isAutoFit: false,
+            },
+          });
+        }
+
+        return Response.json({
+          reply: `Done — updated your university to "${uniName}".`,
+          cv: updatedCv,
+        });
+      }
     }
 
     // 3. Ordinal Specific Item Removal (e.g. "remove the second education", "remove 2nd education", "remove the first project", "remove 3rd certification")
@@ -599,19 +739,33 @@ export async function POST(request: Request) {
     let reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.';
 
     // ───────────────────────────────────────────────────────────────────────
-
     // Deterministic Section Locking Architecture:
     // When the user is NOT performing a total role transformation, any section not explicitly targeted
     // by the user's prompt (e.g. projects when editing interests) is STRICTLY LOCKED to its previous state.
     const msgLower = userMessage.toLowerCase();
-    const isCertEdit = /\b(cert|certification)/i.test(msgLower);
-    const isProjEdit = /\b(project)/i.test(msgLower);
-    const isWorkEdit = /\b(work|experience|job|bullet|point)/i.test(msgLower);
-    const isEduEdit  = /\b(education|degree|school|university|college)/i.test(msgLower);
-    const isRoleTransform =
-      /\b(transform|tranform|tailor|adapt|make|create|change|update|convert|rewrite|build)\b.*?\b(for|to|as|into)\b/i.test(msgLower) ||
-      /\b(for|as|into)\b.*?\b(role|position|job|title|profile|bidder|engineer|developer|designer|analyst|manager|consultant|freelancer|editor|executive|specialist|lead|architect|artist|writer|marketer|officer)\b/i.test(msgLower) ||
-      /\b(cv|resume)\b.*?\b(for|to|as|into)\b/i.test(msgLower);
+    const isCertEdit = /\b(cert|certification|certs|certificates)/i.test(msgLower);
+    const isProjEdit = /\b(project|projects)/i.test(msgLower);
+    const isWorkEdit = /\b(work|experience|job|bullet|point|bullets|points)/i.test(msgLower);
+    const isEduEdit  = /\b(education|degree|school|university|college|educaton)/i.test(msgLower);
+
+    // Check if the current resume still contains any initial template placeholder tokens
+    const cvHasPlaceholders =
+      (cv.projects && cv.projects.some(p => isPlaceholderToken(p.content))) ||
+      (cv.education && cv.education.some(e => isPlaceholderToken(e.institution) || isPlaceholderToken(e.degree))) ||
+      (cv.workExperience && cv.workExperience.some(w => isPlaceholderToken(w.company) || isPlaceholderToken(w.title))) ||
+      (cv.certifications && cv.certifications.some(c => isPlaceholderToken(c.name) || isPlaceholderToken(c.organization)));
+
+    // A prompt is a specific minor edit ONLY if the user explicitly targets a single field/item
+    // and is NOT asking for a general role/domain creation or full resume build.
+    const isExplicitMinorEdit =
+      !cvHasPlaceholders &&
+      /\b(change\s+(?:the\s+)?(?:email|phone|name|linkedin|github|kaggle|dates?|duration|start|end)|add\s+(?:more\s+)?(?:interests?|skills?|bullets?|points?)|remove\s+(?:the\s+)?(?:1st|2nd|3rd|first|second|third|last|\d+)\b)/i.test(msgLower) &&
+      !/\b(transform|make|create|build|generate|rewrite|adapt|tailor|convert|switch|for|role|position|engineer|developer|designer|manager|analyst|specialist|lead|architect|consultant|executive|officer|scientist|writer|marketer|intern|grad|fresh|resume|cv)\b/i.test(msgLower);
+
+    // Generalized Role Transformation & Resume Generation:
+    // If the resume has placeholders, or if the prompt describes ANY role/domain/career/resume creation,
+    // it automatically updates ALL sections with authentic, high-impact domain data!
+    const isRoleTransform = cvHasPlaceholders || !isExplicitMinorEdit;
 
     const isPageFillReq =
       /\b(fill|expand|increase|add)\b.*?\b(page|gap|space|empty|bottom|content)\b/i.test(msgLower) ||
@@ -620,16 +774,16 @@ export async function POST(request: Request) {
       (msgLower.includes('increase') && msgLower.includes('content'));
 
     if (!isRoleTransform && !isPageFillReq) {
-      if (!isProjEdit && cv.projects) {
+      if (!isProjEdit && cv.projects && !cv.projects.some(p => isPlaceholderToken(p.content))) {
         safeCv.projects = cv.projects;
       }
-      if (!isCertEdit && cv.certifications) {
+      if (!isCertEdit && cv.certifications && !cv.certifications.some(c => isPlaceholderToken(c.name) || isPlaceholderToken(c.organization))) {
         safeCv.certifications = cv.certifications;
       }
-      if (!isWorkEdit && cv.workExperience) {
+      if (!isWorkEdit && cv.workExperience && !cv.workExperience.some(w => isPlaceholderToken(w.company) || isPlaceholderToken(w.title))) {
         safeCv.workExperience = cv.workExperience;
       }
-      if (!isEduEdit && cv.education) {
+      if (!isEduEdit && cv.education && !cv.education.some(e => isPlaceholderToken(e.institution) || isPlaceholderToken(e.degree))) {
         safeCv.education = cv.education;
       }
     }
@@ -1025,30 +1179,22 @@ export async function POST(request: Request) {
       return { ...w, bullets: enrichedLines.join('\n') };
     });
 
-    // Auto-fix: Sanitize any leftover raw placeholder tokens in safeCv
-    const isPlaceholderToken = (str?: string) => {
-      if (!str) return false;
-      const l = str.toLowerCase();
-      return (
-        l.includes('your university') ||
-        l.includes('college name') ||
-        l.includes('degree program') ||
-        l.includes('field of study') ||
-        l.includes('company / organization') ||
-        l.includes('job title / position') ||
-        l.includes('key project title') ||
-        l.includes('secondary project title') ||
-        l.includes('industry certification') ||
-        l.includes('issuing organization')
-      );
-    };
-
     if (safeCv.education) {
-      safeCv.education = safeCv.education.map((edu) => ({
-        ...edu,
-        institution: isPlaceholderToken(edu.institution) ? 'University of California, Berkeley' : edu.institution,
-        degree: isPlaceholderToken(edu.degree) ? 'B.S. in Business Administration & Management' : edu.degree,
-      }));
+      safeCv.education = safeCv.education.map((edu, idx) => {
+        let inst = edu.institution;
+        let deg = edu.degree;
+        if (isPlaceholderToken(inst)) {
+          inst = idx === 0 ? 'University of California, Berkeley' : 'State College Preparatory';
+        }
+        if (isPlaceholderToken(deg)) {
+          deg = idx === 0 ? 'B.S. in Business Administration & Management' : 'Intermediate / Pre-University Diploma (Honors)';
+        }
+        return {
+          ...edu,
+          institution: inst,
+          degree: deg,
+        };
+      });
 
       // Only provide starter education if doing a full role transformation from an empty state
       if (isRoleTransform && safeCv.education.length === 0) {
