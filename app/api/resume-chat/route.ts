@@ -502,21 +502,31 @@ export async function POST(request: Request) {
 
       const fromToMatch = lastUserMessage.match(/\bfrom\s+(.+?)\s+(?:to|with|into)\s+(.+?)(?:\s+in\s+education|\s+section)?$/i);
       if (fromToMatch) {
-        oldTargetName = fromToMatch[1].replace(/\b(?:my\s+)?(?:college|collage|university|uni|intermediate|school|education|name)\b/gi, '').trim();
-        newTargetName = fromToMatch[2].replace(/\b(?:my\s+)?(?:college|collage|university|uni|intermediate|school|education|name)\b/gi, '').trim();
+        oldTargetName = fromToMatch[1].replace(/\b(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|name)\b/gi, '').trim();
+        newTargetName = fromToMatch[2].replace(/\b(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|name)\b/gi, '').trim();
       } else {
-        const cleanQuery = lastUserMessage
-          .replace(/\b(?:please\s+)?(?:add|insert|push|change|update|set|replace|put|rename|switch)\s+/i, '')
-          .replace(/\b(?:in|from|to|into)\s+(?:the\s+)?(?:education|resume|cv)\s*(?:section)?\s*/gi, '')
-          .replace(/\b(?:education|resume|cv)\s+section\s*/gi, '')
-          .trim();
+        // Match explicit separators: "as", "to", ":", "called", "named", "is", "was"
+        // e.g. "add a college in education section as Kent College" -> "Kent College"
+        const sepMatch = lastUserMessage.match(/\b(?:as|to|is|was|called|named|:|;|=)\s+([^,]+?)(?:\s+(?:in|for|to|into)\s+(?:the\s+)?(?:education|resume|cv)(?:\s+section)?)?$/i);
+        const candidate = sepMatch ? sepMatch[1].trim() : '';
 
-        newTargetName = cleanQuery
-          .replace(/^(?:my\s+)?(?:college|collage|university|uni|intermediate|school)\s*(?:name)?\s*(?:as|to|is|was|:|;|=)\s*/i, '')
-          .replace(/\s+(?:as|in|to|into)\s+(?:my\s+)?(?:college|collage|university|uni|intermediate|school)(?:\s+section)?$/i, '')
-          .replace(/^(?:my\s+)?(?:college|collage|university|uni|intermediate|school)\s+/i, '')
-          .replace(/\b(?:as|to|in|into)\s+(?:education|resume|section)\b/gi, '')
-          .trim();
+        if (candidate && !/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|degree)$/i.test(candidate)) {
+          newTargetName = candidate
+            .replace(/\b(?:in|from|to|into|for)\s+(?:the\s+)?(?:education|resume|cv)\s*(?:section)?\s*/gi, '')
+            .replace(/\b(?:education|resume|cv)\s+section\s*/gi, '')
+            .trim();
+        } else {
+          newTargetName = lastUserMessage
+            .replace(/\b(?:please\s+)?(?:add|insert|push|change|update|set|replace|put|rename|switch)\s+/i, '')
+            .replace(/\b(?:a|an|the|my|our|another|new|extra)\s+(?:college|collage|university|uni|intermediate|school|education|degree)\s*(?:entry|item)?\s*/gi, '')
+            .replace(/\b(?:in|from|to|into|for)\s+(?:the\s+)?(?:education|resume|cv)\s*(?:section)?\s*/gi, '')
+            .replace(/\b(?:education|resume|cv)\s+section\s*/gi, '')
+            .replace(/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school)\s*(?:name)?\s*(?:as|to|is|was|called|named|:|;|=)\s*/i, '')
+            .replace(/\s+(?:as|in|to|into|for)\s+(?:a|an|the|my)?\s*(?:college|collage|university|uni|intermediate|school)(?:\s+section)?$/i, '')
+            .replace(/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school)\s+/i, '')
+            .replace(/\b(?:as|to|in|into|for)\s+(?:education|resume|section)\b/gi, '')
+            .trim();
+        }
       }
 
       if (newTargetName.length > 0 && !/\b(course|cert|certification|project|experience|skills|interests|bullet|point)\b/i.test(newTargetName)) {
