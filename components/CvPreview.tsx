@@ -423,22 +423,22 @@ function CvPreviewBase({
             {editable ? <RichText html={p.phone} placeholder="Phone" onCommit={(v) => setPersonal({ phone: v })} /> : <Html html={p.phone} />}
           </div>
           <div className="flex flex-nowrap justify-center gap-x-3 whitespace-nowrap">
-            {(editable ? p.linkedin !== undefined : !!p.linkedin) && (
+            {Boolean(p.linkedin && p.linkedin.trim()) && (
               <span className="inline-flex items-center group relative">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
-                    openLinkModal('linkedin', p.linkedinLabel || 'Linkedin', p.linkedin || '');
+                    openLinkModal('linkedin', p.linkedinLabel || 'LinkedIn', p.linkedin || '');
                   }}
                   className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
                   title="Click to add or change LinkedIn link"
                 >
-                  {p.linkedinLabel || 'Linkedin'}
+                  {p.linkedinLabel || 'LinkedIn'}
                 </button>
                 {editable && (
                   <button
-                    onClick={() => setPersonal({ linkedin: undefined, linkedinLabel: undefined })}
+                    onClick={() => setPersonal({ linkedin: '', linkedinLabel: '' })}
                     className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
                     title="Remove"
                   >
@@ -447,7 +447,7 @@ function CvPreviewBase({
                 )}
               </span>
             )}
-            {(editable ? p.github !== undefined : !!p.github) && (
+            {Boolean(p.github && p.github.trim()) && (
               <span className="inline-flex items-center group relative">
                 <button
                   type="button"
@@ -462,7 +462,7 @@ function CvPreviewBase({
                 </button>
                 {editable && (
                   <button
-                    onClick={() => setPersonal({ github: undefined, githubLabel: undefined })}
+                    onClick={() => setPersonal({ github: '', githubLabel: '' })}
                     className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
                     title="Remove"
                   >
@@ -471,7 +471,7 @@ function CvPreviewBase({
                 )}
               </span>
             )}
-            {(editable ? p.kaggle !== undefined : !!p.kaggle) && (
+            {Boolean(p.kaggle && p.kaggle.trim()) && (
               <span className="inline-flex items-center group relative">
                 <button
                   type="button"
@@ -486,7 +486,7 @@ function CvPreviewBase({
                 </button>
                 {editable && (
                   <button
-                    onClick={() => setPersonal({ kaggle: undefined, kaggleLabel: undefined })}
+                    onClick={() => setPersonal({ kaggle: '', kaggleLabel: '' })}
                     className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
                     title="Remove"
                   >

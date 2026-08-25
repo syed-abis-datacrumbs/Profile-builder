@@ -124,6 +124,41 @@ function isPlaceholderToken(str?: string): boolean {
   );
 }
 
+function findBestMatchIndex<T>(items: T[], query: string, getText: (item: T) => string): number {
+  if (!items || items.length === 0 || !query.trim()) return -1;
+  const cleanTokens = query
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length > 2 && !['the', 'and', 'from', 'for', 'with', 'section', 'item', 'entry', 'please', 'resume', 'my'].includes(t));
+
+  if (cleanTokens.length === 0) return -1;
+
+  let bestIdx = -1;
+  let maxScore = 0;
+
+  items.forEach((item, idx) => {
+    const text = getText(item).toLowerCase();
+    let score = 0;
+    for (const token of cleanTokens) {
+      if (text.includes(token)) {
+        score += 10;
+      } else {
+        const prefix = token.slice(0, Math.min(4, token.length));
+        if (prefix.length >= 3 && text.includes(prefix)) {
+          score += 5;
+        }
+      }
+    }
+    if (score > maxScore) {
+      maxScore = score;
+      bestIdx = idx;
+    }
+  });
+
+  return maxScore > 0 ? bestIdx : -1;
+}
+
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -252,52 +287,126 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Specific Education Item Removal by Entity (e.g. "remove the university", "remove university from education", "remove college", "remove the college from education entirely")
-    if (/\b(remove|delete|drop|clear)\b.*?\b(university|college|school|intermediate|preparatory|bachelor|master)\b/i.test(lastMsgLower)) {
-      const currentEdu = cv.education ?? [];
-      let updatedEdu = [...currentEdu];
-      let removedName = 'education entry';
+    // 2. Specific Item Removal by Exact Name / Keyword Match across all sections
+    const isNamedRemovalReq = /\b(?:please\s+)?(?:remove|delete|drop|clear|strip|hide|eliminate)\b/i.test(lastMsgLower) &&
+      !isFullSectionRemoval &&
+      !/\b(percent|percentages|percentage|numbers|number|metrics|numeric|stats)\b/i.test(lastMsgLower) &&
+      !/\b(github|kaggle|linkedin|portfolio|website|all\s+links)\b/i.test(lastMsgLower) &&
+      !/\b(?:the\s+)?(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th|last)\s+(?:project|certification|cert|certificate|education|educaton|experience|workshop|job)\b/i.test(lastMsgLower);
 
-      if (/\b(college|intermediate|preparatory|school)\b/i.test(lastMsgLower)) {
-        const idx = updatedEdu.findIndex(e =>
-          /\b(college|intermediate|preparatory|school|diploma)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
-        );
-        if (idx !== -1) {
-          removedName = updatedEdu[idx].institution || 'college';
-          updatedEdu.splice(idx, 1);
-        } else if (updatedEdu.length > 1) {
-          removedName = updatedEdu[updatedEdu.length - 1].institution || 'college';
-          updatedEdu.pop();
+    if (isNamedRemovalReq) {
+      const targetQuery = lastUserMessage
+        .replace(/\b(?:please\s+)?(?:remove|delete|drop|clear|strip|hide|take\s+out|eliminate)\s+(?:the\s+)?/i, '')
+        .replace(/\b(?:from\s+my\s+resume|from\s+resume|from\s+education|from\s+projects|from\s+experience|from\s+certifications|section|entirely|completely|entry|item)\b/gi, '')
+        .trim();
+
+      if (targetQuery.length > 0) {
+        // A. Match Education
+        if (cv.education && cv.education.length > 0) {
+          const matchIdx = findBestMatchIndex(cv.education, targetQuery, e => `${e.institution} ${e.degree}`);
+          if (matchIdx !== -1) {
+            const removedEdu = cv.education[matchIdx];
+            const updatedEdu = cv.education.filter((_, i) => i !== matchIdx);
+            const removedName = removedEdu.institution || 'education entry';
+            const updatedCv: CvData = { ...cv, education: updatedEdu };
+
+            if (sessionId !== 'unknown') {
+              await db.profileBuilderChatLog.create({
+                data: {
+                  sessionId,
+                  userId: user?.id,
+                  userMessage,
+                  aiReply: `Done — removed ${removedName} from your education section.`,
+                  isAutoFit: false,
+                },
+              });
+            }
+            return Response.json({
+              reply: `Done — removed ${removedName} from your education section.`,
+              cv: updatedCv,
+            });
+          }
         }
-      } else if (/\b(university|bachelor|master|degree)\b/i.test(lastMsgLower)) {
-        const idx = updatedEdu.findIndex(e =>
-          /\b(university|bachelor|master|degree|szabist|berkeley)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
-        );
-        if (idx !== -1) {
-          removedName = updatedEdu[idx].institution || 'university';
-          updatedEdu.splice(idx, 1);
-        } else if (updatedEdu.length > 0) {
-          removedName = updatedEdu[0].institution || 'university';
-          updatedEdu.shift();
+
+        // B. Match Projects
+        if (cv.projects && cv.projects.length > 0) {
+          const matchIdx = findBestMatchIndex(cv.projects, targetQuery, p => p.content);
+          if (matchIdx !== -1) {
+            const updatedProj = cv.projects.filter((_, i) => i !== matchIdx);
+            const updatedCv: CvData = { ...cv, projects: updatedProj };
+
+            if (sessionId !== 'unknown') {
+              await db.profileBuilderChatLog.create({
+                data: {
+                  sessionId,
+                  userId: user?.id,
+                  userMessage,
+                  aiReply: `Done — removed project from your resume.`,
+                  isAutoFit: false,
+                },
+              });
+            }
+            return Response.json({
+              reply: `Done — removed project from your resume.`,
+              cv: updatedCv,
+            });
+          }
+        }
+
+        // C. Match Certifications
+        if (cv.certifications && cv.certifications.length > 0) {
+          const matchIdx = findBestMatchIndex(cv.certifications, targetQuery, c => `${c.name} ${c.organization}`);
+          if (matchIdx !== -1) {
+            const removedCert = cv.certifications[matchIdx];
+            const updatedCerts = cv.certifications.filter((_, i) => i !== matchIdx);
+            const removedName = removedCert.name || 'certification';
+            const updatedCv: CvData = { ...cv, certifications: updatedCerts };
+
+            if (sessionId !== 'unknown') {
+              await db.profileBuilderChatLog.create({
+                data: {
+                  sessionId,
+                  userId: user?.id,
+                  userMessage,
+                  aiReply: `Done — removed ${removedName} from your certifications.`,
+                  isAutoFit: false,
+                },
+              });
+            }
+            return Response.json({
+              reply: `Done — removed ${removedName} from your certifications.`,
+              cv: updatedCv,
+            });
+          }
+        }
+
+        // D. Match Work Experience
+        if (cv.workExperience && cv.workExperience.length > 0) {
+          const matchIdx = findBestMatchIndex(cv.workExperience, targetQuery, w => `${w.company} ${w.title}`);
+          if (matchIdx !== -1) {
+            const removedExp = cv.workExperience[matchIdx];
+            const updatedExp = cv.workExperience.filter((_, i) => i !== matchIdx);
+            const removedName = removedExp.company || 'work experience';
+            const updatedCv: CvData = { ...cv, workExperience: updatedExp };
+
+            if (sessionId !== 'unknown') {
+              await db.profileBuilderChatLog.create({
+                data: {
+                  sessionId,
+                  userId: user?.id,
+                  userMessage,
+                  aiReply: `Done — removed ${removedName} from your work experience.`,
+                  isAutoFit: false,
+                },
+              });
+            }
+            return Response.json({
+              reply: `Done — removed ${removedName} from your work experience.`,
+              cv: updatedCv,
+            });
+          }
         }
       }
-
-      const updatedCv: CvData = { ...cv, education: updatedEdu };
-      if (sessionId !== 'unknown') {
-        await db.profileBuilderChatLog.create({
-          data: {
-            sessionId,
-            userId: user?.id,
-            userMessage,
-            aiReply: `Done — removed ${removedName} from your education section.`,
-            isAutoFit: false,
-          },
-        });
-      }
-      return Response.json({
-        reply: `Done — removed ${removedName} from your education section.`,
-        cv: updatedCv,
-      });
     }
 
     // 2b. Remove Numbers & Percentages from Work Experience / Resume
@@ -357,42 +466,150 @@ export async function POST(request: Request) {
       });
     }
 
-    // 2c. Direct College / University Assignment Handler (e.g. "add DJ Science in college", "my college was DJ Science", "change college to DJ Science")
-    const collegeAddMatch =
-      lastUserMessage.match(/\b(?:add|change|update|set|put)\s+(.+?)\s+(?:in|to|as|for)\s+(?:the\s+)?college\b/i) ||
-      lastUserMessage.match(/\b(?:college|intermediate)\s*(?:is|was|to|:|=)\s*(.+?)$/i) ||
-      lastUserMessage.match(/\b(?:change|set|update)\s+(?:the\s+)?college\s+(?:to|name to|as)\s*(.+?)$/i);
+    // 2c. Add or Update Education Entry Handler
+    const isEduAction = (
+      /\b(add|change|update|set|replace|put|insert)\b.*?\b(college|collage|university|uni|intermediate|school|degree|education|bachelor|master|phd)\b/i.test(lastMsgLower) ||
+      /\b(college|collage|university|uni|intermediate)\s*(?:is|was|to|:|=)\s*(.+?)$/i.test(lastMsgLower)
+    ) && !isNamedRemovalReq && !isFullSectionRemoval;
 
-    if (collegeAddMatch && collegeAddMatch[1]) {
-      const collegeName = collegeAddMatch[1].trim();
-      if (collegeName && !/\b(course|cert|certification|project|experience|skills)\b/i.test(collegeName)) {
+    if (isEduAction) {
+      const isExplicitAdd = /\b(add|insert|push|new)\b/i.test(lastMsgLower);
+      const isExplicitChange = /\b(change|update|set|replace|rename)\b/i.test(lastMsgLower);
+
+      let instName = lastUserMessage
+        .replace(/\b(?:please\s+)?(?:add|change|update|set|replace|put|insert)\s+(?:the\s+)?/i, '')
+        .replace(/\b(?:as\s+my|as\s+the|as|in\s+the|in|to\s+the|to|into|for)\s+(?:college|collage|university|uni|intermediate|school|education)\b/gi, '')
+        .replace(/\b(?:college|collage|university|uni|intermediate|school|education)\s*(?:as|to|is|was|name\s+to|:|=)\s*/gi, '')
+        .replace(/\b(?:in\s+education|to\s+education|from\s+education|section)\b/gi, '')
+        .trim();
+
+      if (instName.length > 1 && !/\b(course|cert|certification|project|experience|skills|interests|bullet|point)\b/i.test(instName)) {
+        const isCollegeType = /\b(college|collage|intermediate|preparatory|school|diploma)\b/i.test(lastMsgLower) ||
+          /\b(college|collage|intermediate|preparatory|school|diploma)\b/i.test(instName);
+
         const currentEdu = cv.education ? [...cv.education] : [];
-        let targetIdx = currentEdu.findIndex(e =>
-          /\b(college|intermediate|preparatory|school|diploma|your college)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
-        );
-        if (targetIdx === -1 && currentEdu.length > 1) {
-          targetIdx = 1;
-        }
-        if (targetIdx !== -1) {
-          currentEdu[targetIdx] = {
-            ...currentEdu[targetIdx],
-            institution: collegeName,
-            degree: currentEdu[targetIdx].degree && !isPlaceholderToken(currentEdu[targetIdx].degree)
-              ? currentEdu[targetIdx].degree
-              : 'Intermediate / Pre-Engineering',
-          };
-        } else {
-          currentEdu.push({
-            institution: collegeName,
-            degree: 'Intermediate / Pre-Engineering',
-            start: '2018',
-            end: '2020',
+
+        if (isExplicitAdd) {
+          // If an existing entry is a raw placeholder token, fill it; otherwise append a new entry!
+          const placeholderIdx = currentEdu.findIndex(e => isPlaceholderToken(e.institution));
+          if (placeholderIdx !== -1) {
+            currentEdu[placeholderIdx] = {
+              ...currentEdu[placeholderIdx],
+              institution: instName,
+              degree: currentEdu[placeholderIdx].degree && !isPlaceholderToken(currentEdu[placeholderIdx].degree)
+                ? currentEdu[placeholderIdx].degree
+                : (isCollegeType ? 'Intermediate / Pre-Engineering' : 'Bachelor of Science'),
+            };
+          } else {
+            currentEdu.push({
+              institution: instName,
+              degree: isCollegeType
+                ? (instName.toLowerCase().includes('degree') ? 'Associate Degree in Commerce' : 'Intermediate / Pre-Engineering')
+                : 'Bachelor of Science',
+              start: isCollegeType ? '2018' : '2020',
+              end: isCollegeType ? '2020' : '2024',
+            });
+          }
+
+          const updatedCv: CvData = { ...cv, education: currentEdu };
+
+          if (sessionId !== 'unknown') {
+            await db.profileBuilderChatLog.create({
+              data: {
+                sessionId,
+                userId: user?.id,
+                userMessage,
+                aiReply: `Done — added ${instName} to your education section.`,
+                isAutoFit: false,
+              },
+            });
+          }
+
+          return Response.json({
+            reply: `Done — added ${instName} to your education section.`,
+            cv: updatedCv,
+          });
+        } else if (isExplicitChange) {
+          let targetIdx = -1;
+          if (isCollegeType) {
+            targetIdx = currentEdu.findIndex(e =>
+              /\b(college|collage|intermediate|preparatory|school|diploma|your college)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
+            );
+            if (targetIdx === -1 && currentEdu.length > 1) {
+              targetIdx = 1;
+            }
+          } else {
+            targetIdx = currentEdu.findIndex(e =>
+              /\b(university|bachelor|master|degree|berkeley|harvard|your university)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
+            );
+            if (targetIdx === -1 && currentEdu.length > 0) {
+              targetIdx = 0;
+            }
+          }
+
+          if (targetIdx !== -1) {
+            currentEdu[targetIdx] = {
+              ...currentEdu[targetIdx],
+              institution: instName,
+            };
+          } else {
+            currentEdu.push({
+              institution: instName,
+              degree: isCollegeType ? 'Intermediate / Pre-Engineering' : 'Bachelor of Science',
+              start: isCollegeType ? '2018' : '2020',
+              end: isCollegeType ? '2020' : '2024',
+            });
+          }
+
+          const updatedCv: CvData = { ...cv, education: currentEdu };
+
+          if (sessionId !== 'unknown') {
+            await db.profileBuilderChatLog.create({
+              data: {
+                sessionId,
+                userId: user?.id,
+                userMessage,
+                aiReply: `Done — updated your education to ${instName}.`,
+                isAutoFit: false,
+              },
+            });
+          }
+
+          return Response.json({
+            reply: `Done — updated your education to ${instName}.`,
+            cv: updatedCv,
           });
         }
+      }
+    }
 
+    // 2d. Direct Social/Contact Links Removal (e.g. "remove github and kaggle", "remove github", "remove kaggle", "remove linkedin", "remove all links")
+    const isLinkRemoval = /\b(remove|delete|drop|clear|strip|hide)\b.*?\b(github|kaggle|linkedin|portfolio|website|links?|socials?)\b/i.test(lastMsgLower);
+
+    if (isLinkRemoval && cv.personalInfo) {
+      const updatedPersonal = { ...cv.personalInfo };
+      const removedLinks: string[] = [];
+
+      if (/\bgithub\b/i.test(lastMsgLower) || /\b(all\s+links|all\s+socials)\b/i.test(lastMsgLower)) {
+        updatedPersonal.github = '';
+        updatedPersonal.githubLabel = '';
+        removedLinks.push('GitHub');
+      }
+      if (/\bkaggle\b/i.test(lastMsgLower) || /\b(all\s+links|all\s+socials)\b/i.test(lastMsgLower)) {
+        updatedPersonal.kaggle = '';
+        updatedPersonal.kaggleLabel = '';
+        removedLinks.push('Kaggle');
+      }
+      if (/\blinkedin\b/i.test(lastMsgLower) || /\b(all\s+links|all\s+socials)\b/i.test(lastMsgLower)) {
+        updatedPersonal.linkedin = '';
+        updatedPersonal.linkedinLabel = '';
+        removedLinks.push('LinkedIn');
+      }
+
+      if (removedLinks.length > 0) {
         const updatedCv: CvData = {
           ...cv,
-          education: currentEdu,
+          personalInfo: updatedPersonal,
         };
 
         if (sessionId !== 'unknown') {
@@ -401,73 +618,63 @@ export async function POST(request: Request) {
               sessionId,
               userId: user?.id,
               userMessage,
-              aiReply: `Done — updated your college to "${collegeName}".`,
+              aiReply: `Done — removed ${removedLinks.join(' and ')} from your resume header.`,
               isAutoFit: false,
             },
           });
         }
 
         return Response.json({
-          reply: `Done — updated your college to "${collegeName}".`,
+          reply: `Done — removed ${removedLinks.join(' and ')} from your resume header.`,
           cv: updatedCv,
         });
       }
     }
 
-    const uniAddMatch =
-      lastUserMessage.match(/\b(?:add|change|update|set|put)\s+(.+?)\s+(?:in|to|as|for)\s+(?:the\s+)?(?:university|uni|grad school)\b/i) ||
-      lastUserMessage.match(/\b(?:university|uni)\s*(?:is|was|to|:|=)\s*(.+?)$/i) ||
-      lastUserMessage.match(/\b(?:change|set|update)\s+(?:the\s+)?(?:university|uni)\s+(?:to|name to|as)\s*(.+?)$/i);
+    // 2e. Direct Social/Contact Link Replacement & Label Update
+    // e.g. "update kaggle with behance", "change github to youtube", "replace kaggle with dribbble", "rename github to portfolio"
+    const linkUpdateMatch =
+      /\b(?:update|change|replace|rename|set|swap|switch)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|link|social)\s*(?:link|social)?\s*(?:with|to|as|for|into)\s+(?:the\s+)?([a-z0-9\s._-]+)$/i.exec(lastUserMessage) ||
+      /\b(?:update|change|replace|rename|set|swap|switch)\s+(?:the\s+)?([a-z0-9._-]+)\s+(?:link|social)?\s*(?:with|to|as|for|into)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|behance|dribbble|youtube|twitter|instagram|leetcode|hackerrank|artstation|itch\.io|substack|medium|gitlab|bitbucket|tryhackme|[a-z0-9._-]+)$/i.exec(lastUserMessage);
 
-    if (uniAddMatch && uniAddMatch[1]) {
-      const uniName = uniAddMatch[1].trim();
-      if (uniName && !/\b(course|cert|certification|project|experience|skills)\b/i.test(uniName)) {
-        const currentEdu = cv.education ? [...cv.education] : [];
-        let targetIdx = currentEdu.findIndex(e =>
-          /\b(university|bachelor|master|degree|szabist|berkeley|your university)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
-        );
-        if (targetIdx === -1 && currentEdu.length > 0) {
-          targetIdx = 0;
-        }
-        if (targetIdx !== -1) {
-          currentEdu[targetIdx] = {
-            ...currentEdu[targetIdx],
-            institution: uniName,
-            degree: currentEdu[targetIdx].degree && !isPlaceholderToken(currentEdu[targetIdx].degree)
-              ? currentEdu[targetIdx].degree
-              : 'B.S. in Computer Science',
-          };
-        } else {
-          currentEdu.unshift({
-            institution: uniName,
-            degree: 'B.S. in Computer Science',
-            start: '2020',
-            end: '2024',
-          });
-        }
+    if (linkUpdateMatch && cv.personalInfo) {
+      const sourceSlot = linkUpdateMatch[1].toLowerCase().trim();
+      const targetLabelRaw = linkUpdateMatch[2].trim();
+      const targetLabel = targetLabelRaw.charAt(0).toUpperCase() + targetLabelRaw.slice(1);
+      const updatedPersonal = { ...cv.personalInfo };
 
-        const updatedCv: CvData = {
-          ...cv,
-          education: currentEdu,
-        };
+      if (/\b(kaggle|behance|artstation|leetcode|hackerrank|tryhackme|itch|medium|substack)\b/i.test(sourceSlot)) {
+        updatedPersonal.kaggleLabel = targetLabel;
+        updatedPersonal.kaggle = `https://${targetLabel.toLowerCase().replace(/\s+/g, '')}.net/your-username`;
+      } else if (/\b(linkedin|twitter|x)\b/i.test(sourceSlot)) {
+        updatedPersonal.linkedinLabel = targetLabel;
+        updatedPersonal.linkedin = `https://${targetLabel.toLowerCase().replace(/\s+/g, '')}.com/in/your-username`;
+      } else {
+        updatedPersonal.githubLabel = targetLabel;
+        updatedPersonal.github = `https://${targetLabel.toLowerCase().replace(/\s+/g, '')}.com/your-username`;
+      }
 
-        if (sessionId !== 'unknown') {
-          await db.profileBuilderChatLog.create({
-            data: {
-              sessionId,
-              userId: user?.id,
-              userMessage,
-              aiReply: `Done — updated your university to "${uniName}".`,
-              isAutoFit: false,
-            },
-          });
-        }
+      const updatedCv: CvData = {
+        ...cv,
+        personalInfo: updatedPersonal,
+      };
 
-        return Response.json({
-          reply: `Done — updated your university to "${uniName}".`,
-          cv: updatedCv,
+      if (sessionId !== 'unknown') {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            userId: user?.id,
+            userMessage,
+            aiReply: `Done — updated your link to ${targetLabel}.`,
+            isAutoFit: false,
+          },
         });
       }
+
+      return Response.json({
+        reply: `Done — updated your link to ${targetLabel}.`,
+        cv: updatedCv,
+      });
     }
 
     // 3. Ordinal Specific Item Removal (e.g. "remove the second education", "remove 2nd education", "remove the first project", "remove 3rd certification")
