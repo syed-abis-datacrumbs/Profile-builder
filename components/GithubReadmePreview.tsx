@@ -478,7 +478,16 @@ export const GithubReadmePreview: React.FC<{
       {/* Spacer for the avatar overflow + name/username row */}
       <div className="pt-14 px-6 pb-2 flex items-end justify-between">
         <div>
-          <div className="text-lg font-bold text-white">{github.username ? github.username : 'your-username'}</div>
+          <Edit
+            readOnly={!editable}
+            value={github.username}
+            placeholder="your-username"
+            onCommit={(v) => {
+              const clean = v.trim().replace(/^@/, '').replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
+              onSet?.({ username: clean });
+            }}
+            className="text-lg font-bold text-white tracking-tight inline-block hover:bg-white/10 rounded px-1 -ml-1 transition-colors cursor-text"
+          />
         </div>
       </div>
 

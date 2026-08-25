@@ -75,8 +75,8 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     id: 'ai-ml-engineer',
     presetId: 'ai-ml-engineer',
     category: 'data-ai',
-    name: 'AI & Machine Learning Lead',
-    tagline: 'Deep Learning, PyTorch & LLM Architectures',
+    name: 'AI & Machine Learning',
+    tagline: 'Deep Learning, PyTorch & LLMs',
     badge: 'Trending',
     theme: 'dark',
     bannerUrl: 'https://github.blog/wp-content/uploads/2023/10/Security-DarkMode-4.png?fit=800%2C200',
@@ -111,8 +111,8 @@ export const GITHUB_TEMPLATES: GithubTemplateCard[] = [
     id: 'cloud-devops',
     presetId: 'mlops-engineer',
     category: 'devops',
-    name: 'Cloud & DevOps Architect',
-    tagline: 'Infrastructure as Code & CI/CD workflows',
+    name: 'Cloud & DevOps',
+    tagline: 'Infrastructure as Code & CI/CD',
     badge: 'Infrastructure',
     theme: 'radial',
     bannerUrl: 'https://github.blog/wp-content/uploads/2024/04/Enterprise-DarkMode-2-3.png?fit=800%2C200',
@@ -504,17 +504,19 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
               </div>
 
               {/* Card Meta & CTA */}
-              <div className="flex items-center justify-between px-1 pt-1">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-xs text-slate-900">{template.name}</span>
-                    <span className="text-[9px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                      {template.badge}
-                    </span>
+              <div className="flex items-center justify-between gap-3 px-1 pt-1">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-bold text-xs text-slate-900 truncate">{template.name}</span>
+                    {template.badge && (
+                      <span className="text-[9px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded shrink-0">
+                        {template.badge}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">{template.tagline}</div>
+                  <div className="text-[11px] text-slate-500 truncate mt-0.5">{template.tagline}</div>
                 </div>
-                <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform shrink-0">
+                <span className="text-xs font-semibold text-blue-600 group-hover:translate-x-0.5 transition-transform shrink-0 whitespace-nowrap">
                   Use Template →
                 </span>
               </div>

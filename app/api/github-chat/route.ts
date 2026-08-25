@@ -156,6 +156,97 @@ export async function POST(request: Request) {
     const builderType = body.builderType || 'github';
     const userMessage = messages[messages.length - 1]?.content || '';
 
+    // ── Direct Fast & Deterministic Field Handlers ─────────────────────────
+    const userMsg = userMessage.trim();
+
+    // 1. Direct Username Handler ("change username to ahmerkhanak", "my github is ahmerkhanak", etc.)
+    const usernameMatch =
+      userMsg.match(/\b(?:change|update|set)?\s*(?:the\s+)?(?:github\s+)?(?:user\s*name|username|handle)\s*(?:to|:|=)?\s*([a-zA-Z0-9_\-\.]+)\b/i) ||
+      userMsg.match(/\b(?:my\s+github\s+is|my\s+username\s+is|github\.com\/)\s*([a-zA-Z0-9_\-\.]+)\b/i) ||
+      userMsg.match(/\b(?:username|handle):\s*([a-zA-Z0-9_\-\.]+)\b/i);
+
+    if (usernameMatch && usernameMatch[1]) {
+      const cleanUsername = usernameMatch[1].trim().replace(/^@/, '').replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
+      if (cleanUsername) {
+        const updatedGithub: GithubProfileData = {
+          ...github as GithubProfileData,
+          username: cleanUsername,
+        };
+        if (Array.isArray(updatedGithub.customSections)) {
+          updatedGithub.customSections = updatedGithub.customSections.map((sec) => ({
+            ...sec,
+            content: sec.content ? sec.content.replace(/github\.com\/(?:alex-rivera-dev|your-username|username|alexrivera-ai)/g, `github.com/${cleanUsername}`) : sec.content,
+          }));
+        }
+        if (sessionId !== 'unknown') {
+          await db.profileBuilderChatLog.create({
+            data: {
+              sessionId,
+              builderType,
+              userId: user?.id,
+              userMessage,
+              aiReply: `Done — I've updated your GitHub username to "${cleanUsername}".`,
+              isAutoFit: false,
+            },
+          });
+        }
+        return Response.json({
+          reply: `Done — I've updated your GitHub username to "${cleanUsername}".`,
+          github: updatedGithub,
+        });
+      }
+    }
+
+    // 2. Direct Social Connections Removal ("remove all connects from my git", "remove social links", etc.)
+    const isRemoveAllConnects = /\b(?:remove|delete|clear)\s+(?:all\s+)?(?:connects|connections|social\s*links|socials|links)\b/i.test(userMsg);
+    if (isRemoveAllConnects) {
+      const updatedGithub: GithubProfileData = {
+        ...github as GithubProfileData,
+        socialLinks: {},
+      };
+      if (sessionId !== 'unknown') {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            builderType,
+            userId: user?.id,
+            userMessage,
+            aiReply: "I've removed all social connections from your profile.",
+            isAutoFit: false,
+          },
+        });
+      }
+      return Response.json({
+        reply: "I've removed all social connections from your profile.",
+        github: updatedGithub,
+      });
+    }
+
+    // 3. Direct Banner Removal ("remove banner", "delete cover", etc.)
+    const isRemoveBanner = /\b(?:remove|delete|clear)\s+(?:banner|cover|header)\b/i.test(userMsg);
+    if (isRemoveBanner) {
+      const updatedGithub: GithubProfileData = {
+        ...github as GithubProfileData,
+        bannerUrl: '',
+      };
+      if (sessionId !== 'unknown') {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            builderType,
+            userId: user?.id,
+            userMessage,
+            aiReply: "I've removed the cover banner from your README.",
+            isAutoFit: false,
+          },
+        });
+      }
+      return Response.json({
+        reply: "I've removed the cover banner from your README.",
+        github: updatedGithub,
+      });
+    }
+
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',

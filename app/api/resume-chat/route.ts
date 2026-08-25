@@ -78,7 +78,7 @@ Rules:
 - CRITICAL — Adding Interests & Skills ("add two more in interest", "add skills", "add interest"): When the user requests to add interests or skills to the additional section, YOU MUST IMMEDIATELY APPEND THE NEW ITEMS to the comma-separated 'additional.interests' or 'additional.skills' string in the returned JSON! For example, if current interests is "Software Architecture, Cloud Computing", and user asks to add 2 more, return "Software Architecture, Cloud Computing, Machine Learning & AI, High-Performance Systems". NEVER return 'additional.interests' or 'additional.skills' unchanged when the user asks to add items!
 - CRITICAL — Strict Section Preservation: Edits to one section (e.g. adding interests or skills to "additional") MUST NEVER drop or modify items in OTHER sections (such as "certifications", "projects", "workExperience", or "education")! Unless the user explicitly asks to remove items from a specific section, preserve all existing array items in all other sections verbatim!
 - CRITICAL — Expanding Bullets ("add more bullets", "more bullet points", "add points"): When the user requests to add more bullet points to work experience, YOU MUST IMMEDIATELY APPEND AT LEAST 2 NEW QUANTIFIED BULLET POINTS (with bolded percentages or numbers) to the target work experience entry! The output bullets string MUST contain more lines than before. NEVER return the workExperience bullets array with the same length or unchanged text!
-- CRITICAL — Quantified Metrics in Work Experience Bullets: EVERY SINGLE BULLET POINT in "workExperience" MUST CONTAIN QUANTIFIED NUMBERS OR PERCENTAGES with bolded metrics! (e.g. "<strong>achieving a 25% increase</strong> in user engagement", "<strong>reducing latency by 40%</strong>", "<strong>improving efficiency by 35%</strong>", "<strong>serving 100k+ active users</strong>", "<strong>cutting manual work by 80%</strong>"). No matter how many bullets are created or edited, EVERY bullet MUST include at least one specific percentage (%) or numerical metric in bold HTML tags (<strong>...</strong>). NEVER return a workExperience bullet line without numbers or percentages!
+- CRITICAL — Quantified Metrics in Work Experience Bullets: By default, include quantified numbers or percentages in bold tags inside "workExperience" bullets (e.g. "<strong>growing channel watch time by 50%</strong>"). EXCEPTION: When the user explicitly requests to remove numbers, percentages, or metrics (e.g. "remove these percentages or numbers", "remove numbers from experience", "no percentages"), YOU MUST STRIP ALL PERCENTAGES AND NUMBERS from the bullets, rewrite them as clean professional qualitative descriptions, and STRICTLY PRESERVE all other sections completely unchanged!
 - CRITICAL — Adding & Updating Projects: When the user describes a project (e.g. "For projects I created...", "I built a...", "Add project...", "I have created an AI post generator...", "automated door lock..."), YOU MUST IMMEDIATELY ADD OR UPDATE IT as an entry in the "projects" array in the returned JSON! Format each project as { "content": "<strong>Project Title</strong> (Tech Stack) – Description of features, technical implementation, and impact." }. Place real user projects at the top of the "projects" array and replace irrelevant placeholder projects. NEVER return "Done" or a chat reply claiming you updated the resume without modifying the "projects" array in the JSON!
 - CRITICAL — Field-Specific Minor Edits & Absolute Section Preservation: When the user asks to edit a specific field (e.g. "change the email to X", "update phone to Y", "change university duration", "update link", "change title", "edit summary"):
   1. ONLY modify the requested target field.
@@ -154,14 +154,18 @@ export async function POST(request: Request) {
       });
     }
 
-    // ── Universal Array Slicing & Reduction Handler ─────────────────────────
-    // Handles ALL removal, reduction, capping, and limiting requests deterministically in code:
-    // - "remove 2 certificates", "delete 3 projects"
-    // - "reduce certificates to 2", "reduce the certs to two only", "keep only 2 certificates", "limit projects to 2"
+    // ── Universal Array Slicing & Targeted Removal Engine ─────────────────
     const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content ?? '';
+    const lastMsgLower = lastUserMessage.toLowerCase();
+
     const WORD_NUMS: Record<string, number> = {
       one: 1, two: 2, three: 3, four: 4, five: 5,
       six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+      first: 1, '1st': 1,
+      second: 2, '2nd': 2,
+      third: 3, '3rd': 3,
+      fourth: 4, '4th': 4,
+      fifth: 5, '5th': 5,
     };
 
     const parseCountVal = (s: string | undefined): number | undefined => {
@@ -172,17 +176,208 @@ export async function POST(request: Request) {
     };
 
     const SECTION_KEY: Record<string, keyof CvData> = {
-      project: 'projects', certification: 'certifications', cert: 'certifications',
-      certificate: 'certifications', education: 'education', experience: 'workExperience',
-      workshop: 'workshops', job: 'workExperience',
+      project: 'projects',
+      projects: 'projects',
+      certification: 'certifications',
+      certifications: 'certifications',
+      cert: 'certifications',
+      certs: 'certifications',
+      certificate: 'certifications',
+      certificates: 'certifications',
+      education: 'education',
+      educaton: 'education',
+      experience: 'workExperience',
+      experiences: 'workExperience',
+      workshop: 'workshops',
+      workshops: 'workshops',
+      job: 'workExperience',
+      jobs: 'workExperience',
     };
 
-    // Pattern A: Reduction to target length ("reduce/keep/limit/cap/set/make/cut X to N")
-    const REDUCE_RE1 = /\b(reduce|keep|limit|cap|set|make|cut|trim|shrink)\b.*?\b(project|certification|cert|certificate|education|experience|workshop|job)s?\b.*?\b(to|at|only)?\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/i;
-    const REDUCE_RE2 = /\b(reduce|keep|limit|cap|set|make|cut|trim|shrink)\b.*?\b(only\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b.*?\b(project|certification|cert|certificate|education|experience|workshop|job)s?\b/i;
+    // 1. Full Section Removals (e.g. "remove the project section", "remove all projects", "remove projects section", "delete certifications")
+    const isFullSectionRemoval = /\b(remove|delete|drop|clear)\b.*?\b(all\s+)?(project|certification|cert|certificate|education|educaton|experience|workshop|job)s?(\s+section|\s+entirely|\s+all)?\b/i.test(lastMsgLower) &&
+      !/\b(last|first|1st|2nd|3rd|second|third|one|two|three|1|2|3)\b/i.test(lastMsgLower) &&
+      !/\b(university|college)\b/i.test(lastMsgLower);
 
-    // Pattern B: Removal of N items ("remove/delete/drop/clear 2 certificates")
-    const REMOVAL_RE = /\b(remove|delete|drop|clear)\b(?:\s+(?:the\s+)?)?(all|(last|first)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)|(\d+|one|two|three|four|five|six|seven|eight|nine|ten))?\s+(?:the\s+)?(project|certification|cert|certificate|education|experience|workshop|job)s?\b/i;
+    if (isFullSectionRemoval) {
+      for (const [key, cvField] of Object.entries(SECTION_KEY)) {
+        if (new RegExp(`\\b${key}\\b`, 'i').test(lastMsgLower)) {
+          const updatedCv: CvData = {
+            ...cv,
+            [cvField]: [],
+          };
+          if (sessionId !== 'unknown') {
+            await db.profileBuilderChatLog.create({
+              data: {
+                sessionId,
+                userId: user?.id,
+                userMessage,
+                aiReply: `Done — removed the ${key} section from your resume.`,
+                isAutoFit: false,
+              },
+            });
+          }
+          return Response.json({
+            reply: `Done — removed the ${key} section from your resume.`,
+            cv: updatedCv,
+          });
+        }
+      }
+    }
+
+    // 2. Specific Education Item Removal by Entity (e.g. "remove the university", "remove university from education", "remove college", "remove the college from education entirely")
+    if (/\b(remove|delete|drop|clear)\b.*?\b(university|college|school|intermediate|preparatory|bachelor|master)\b/i.test(lastMsgLower)) {
+      const currentEdu = cv.education ?? [];
+      let updatedEdu = [...currentEdu];
+      let removedName = 'education entry';
+
+      if (/\b(college|intermediate|preparatory|school)\b/i.test(lastMsgLower)) {
+        const idx = updatedEdu.findIndex(e =>
+          /\b(college|intermediate|preparatory|school|diploma)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
+        );
+        if (idx !== -1) {
+          removedName = updatedEdu[idx].institution || 'college';
+          updatedEdu.splice(idx, 1);
+        } else if (updatedEdu.length > 1) {
+          removedName = updatedEdu[updatedEdu.length - 1].institution || 'college';
+          updatedEdu.pop();
+        }
+      } else if (/\b(university|bachelor|master|degree)\b/i.test(lastMsgLower)) {
+        const idx = updatedEdu.findIndex(e =>
+          /\b(university|bachelor|master|degree|szabist|berkeley)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
+        );
+        if (idx !== -1) {
+          removedName = updatedEdu[idx].institution || 'university';
+          updatedEdu.splice(idx, 1);
+        } else if (updatedEdu.length > 0) {
+          removedName = updatedEdu[0].institution || 'university';
+          updatedEdu.shift();
+        }
+      }
+
+      const updatedCv: CvData = { ...cv, education: updatedEdu };
+      if (sessionId !== 'unknown') {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            userId: user?.id,
+            userMessage,
+            aiReply: `Done — removed ${removedName} from your education section.`,
+            isAutoFit: false,
+          },
+        });
+      }
+      return Response.json({
+        reply: `Done — removed ${removedName} from your education section.`,
+        cv: updatedCv,
+      });
+    }
+
+    // 2b. Remove Numbers & Percentages from Work Experience / Resume
+    const isRemoveMetricsReq =
+      /\b(remove|delete|drop|clear|strip|eliminate|take\s*out|without|no)\b.*?\b(percent|percentages|percentage|numbers|number|metrics|numeric|stats)\b/i.test(lastMsgLower) ||
+      /\b(percent|percentages|percentage|numbers|number|metrics)\b.*?\b(remove|delete|drop|clear|strip|eliminate|take\s*out)\b/i.test(lastMsgLower);
+
+    if (isRemoveMetricsReq && Array.isArray(cv.workExperience) && cv.workExperience.length > 0) {
+      const cleanBullets = (text: string) => {
+        return text
+          .split('\n')
+          .map(line => {
+            let cleaned = line
+              // Replace "by 50%" or "by 35%" with "significantly"
+              .replace(/\bby\s+\d+(?:\.\d+)?%\b/gi, 'significantly')
+              // Replace "100+ " with "numerous "
+              .replace(/\b\d{2,}\+\s*/g, 'numerous ')
+              // Replace "$12M" with "substantial revenue"
+              .replace(/\$\d+(?:\.\d+)?\s*(?:M|K|B|million|billion|thousand)?\b/gi, 'substantial revenue')
+              // Replace remaining "50%" or "25%" with "measurable"
+              .replace(/\b\d+(?:\.\d+)?%\b/g, 'measurable')
+              // Clean empty bold tags like <strong></strong> or <strong> </strong>
+              .replace(/<strong>\s*<\/strong>/gi, '')
+              // Clean repeated spaces
+              .replace(/\s{2,}/g, ' ')
+              .trim();
+            return cleaned;
+          })
+          .join('\n');
+      };
+
+      const updatedWorkExperience = cv.workExperience.map(exp => ({
+        ...exp,
+        bullets: cleanBullets(exp.bullets || ''),
+      }));
+
+      const updatedCv: CvData = {
+        ...cv,
+        workExperience: updatedWorkExperience,
+      };
+
+      if (sessionId !== 'unknown') {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            userId: user?.id,
+            userMessage,
+            aiReply: "I've removed all numbers and percentages from your work experience while keeping your bullet points strong and professional.",
+            isAutoFit: false,
+          },
+        });
+      }
+
+      return Response.json({
+        reply: "I've removed all numbers and percentages from your work experience while keeping your bullet points strong and professional.",
+        cv: updatedCv,
+      });
+    }
+
+    // 3. Ordinal Specific Item Removal (e.g. "remove the second education", "remove 2nd education", "remove the first project", "remove 3rd certification")
+    const ORDINAL_RE = /\b(remove|delete|drop|clear)\b.*?\b(?:the\s+)?(first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th|last)\s+(project|certification|cert|certificate|education|educaton|experience|workshop|job)\b/i;
+    const ordMatch = lastUserMessage.match(ORDINAL_RE);
+
+    if (ordMatch) {
+      const posRaw = ordMatch[2].toLowerCase();
+      const secRaw = ordMatch[3].toLowerCase();
+      const cvKey = SECTION_KEY[secRaw];
+
+      if (cvKey) {
+        const arr = [...((cv[cvKey] as unknown[]) ?? [])];
+        let targetIdx = -1;
+
+        if (posRaw === 'last') {
+          targetIdx = arr.length - 1;
+        } else if (WORD_NUMS[posRaw] !== undefined) {
+          targetIdx = WORD_NUMS[posRaw] - 1;
+        }
+
+        if (targetIdx >= 0 && targetIdx < arr.length) {
+          arr.splice(targetIdx, 1);
+          const updatedCv: CvData = { ...cv, [cvKey]: arr };
+          const label = secRaw === 'cert' || secRaw === 'certificate' || secRaw === 'certification' ? 'certification' : secRaw;
+          if (sessionId !== 'unknown') {
+            await db.profileBuilderChatLog.create({
+              data: {
+                sessionId,
+                userId: user?.id,
+                userMessage,
+                aiReply: `Done — removed the ${posRaw} ${label} from your resume.`,
+                isAutoFit: false,
+              },
+            });
+          }
+          return Response.json({
+            reply: `Done — removed the ${posRaw} ${label} from your resume.`,
+            cv: updatedCv,
+          });
+        }
+      }
+    }
+
+    // 4. Pattern A: Reduction to target length ("reduce/keep/limit/cap/set/make/cut X to N")
+    const REDUCE_RE1 = /\b(reduce|keep|limit|cap|set|make|cut|trim|shrink)\b.*?\b(project|certification|cert|certificate|education|educaton|experience|workshop|job)s?\b.*?\b(to|at|only)?\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/i;
+    const REDUCE_RE2 = /\b(reduce|keep|limit|cap|set|make|cut|trim|shrink)\b.*?\b(only\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b.*?\b(project|certification|cert|certificate|education|educaton|experience|workshop|job)s?\b/i;
+
+    // 5. Pattern B: Removal of N items ("remove/delete/drop/clear 2 certificates")
+    const REMOVAL_RE = /\b(remove|delete|drop|clear)\b(?:\s+(?:the\s+)?)?(all|(last|first)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)|(\d+|one|two|three|four|five|six|seven|eight|nine|ten))?\s+(?:the\s+)?(project|certification|cert|certificate|education|educaton|experience|workshop|job)s?\b/i;
 
     const redMatch1 = lastUserMessage.match(REDUCE_RE1);
     const redMatch2 = lastUserMessage.match(REDUCE_RE2);
@@ -201,6 +396,17 @@ export async function POST(request: Request) {
         const updatedCv: CvData = { ...cv, [cvKey]: updated };
         const label = sectionRaw === 'cert' || sectionRaw === 'certificate' || sectionRaw === 'certification' ? 'certification' : sectionRaw;
 
+        if (sessionId !== 'unknown') {
+          await db.profileBuilderChatLog.create({
+            data: {
+              sessionId,
+              userId: user?.id,
+              userMessage,
+              aiReply: `Done — reduced your ${label}s to ${targetLen}.`,
+              isAutoFit: false,
+            },
+          });
+        }
         return Response.json({
           reply: `Done — reduced your ${label}s to ${targetLen}.`,
           cv: updatedCv,
@@ -235,6 +441,17 @@ export async function POST(request: Request) {
           ? `Done — removed all ${label}s from your resume.`
           : `Done — removed ${numToRemove} ${label}${plural} from your resume.`;
 
+        if (sessionId !== 'unknown') {
+          await db.profileBuilderChatLog.create({
+            data: {
+              sessionId,
+              userId: user?.id,
+              userMessage,
+              aiReply: replyText,
+              isAutoFit: false,
+            },
+          });
+        }
         return Response.json({
           reply: replyText,
           cv: updatedCv,
@@ -337,8 +554,11 @@ export async function POST(request: Request) {
       );
     };
 
+    const isEduRemoval = /\b(remove|delete|drop|clear)\b.*?\b(education|educaton|university|college|school|bachelor|master|degree)\b/i.test(lastMsgLower);
+    const isCertRemoval = /\b(remove|delete|drop|clear)\b.*?\b(cert|certification|certificate)s?\b/i.test(lastMsgLower);
+
     for (const edu of nextCv.education ?? []) {
-      if (isNonDegreeCourse(edu)) {
+      if (isNonDegreeCourse(edu) && !isCertRemoval) {
         extraCertifications.push({
           name: edu.degree || edu.institution || 'Web and App Development Course',
           organization: edu.institution || 'Saylani Mass IT',
@@ -348,8 +568,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Preserve user's clean education list — never forcibly re-insert previously deleted colleges
-    if (cleanEducation.length === 0 && Array.isArray(cv.education) && cv.education.length > 0) {
+    // Preserve user's clean education list if this was not an education removal request
+    if (cleanEducation.length === 0 && !isEduRemoval && Array.isArray(cv.education) && cv.education.length > 0) {
       cleanEducation.push(...cv.education);
     }
 
@@ -830,21 +1050,22 @@ export async function POST(request: Request) {
         degree: isPlaceholderToken(edu.degree) ? 'B.S. in Business Administration & Management' : edu.degree,
       }));
 
-      // Ensure 2 education entries are always present
-      if (safeCv.education.length < 2) {
-        const edu1 = safeCv.education[0] || {
-          institution: 'University of California, Berkeley',
-          degree: 'B.S. in Business Administration & Management',
-          start: '2020',
-          end: '2024',
-        };
-        const edu2 = {
-          institution: 'State College Preparatory',
-          degree: 'Intermediate / Pre-University Diploma (Honors)',
-          start: '2018',
-          end: '2020',
-        };
-        safeCv.education = [edu1, edu2];
+      // Only provide starter education if doing a full role transformation from an empty state
+      if (isRoleTransform && safeCv.education.length === 0) {
+        safeCv.education = [
+          {
+            institution: 'University of California, Berkeley',
+            degree: 'B.S. in Business Administration & Management',
+            start: '2020',
+            end: '2024',
+          },
+          {
+            institution: 'State College Preparatory',
+            degree: 'Intermediate / Pre-University Diploma (Honors)',
+            start: '2018',
+            end: '2020',
+          }
+        ];
       }
     }
 
@@ -933,8 +1154,8 @@ export async function POST(request: Request) {
         return cert;
       });
 
-      // Ensure 2 or 4 certifications for balanced grid fill
-      if (safeCv.certifications.length < 2) {
+      // Only provide starter certifications if doing a full role transformation from an empty state
+      if (isRoleTransform && safeCv.certifications.length === 0) {
         safeCv.certifications = certPool.slice(0, 2);
       }
     }
