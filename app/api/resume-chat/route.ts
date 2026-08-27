@@ -34,6 +34,7 @@ Rules:
   3. NEVER DROP, OMIT, TRUNCATE, OR FORGET OTHER EDUCATION ENTRIES, PROJECTS, WORK EXPERIENCES, CERTIFICATIONS, OR CONTACT LINKS!
   4. Example: If the current resume has 2 education entries (e.g. University + College) and the user asks to change the university's tenure/dates or name, YOU MUST RETURN BOTH EDUCATION ENTRIES in the "education" array — the university with the updated dates/name, and the college entry 100% PRESERVED EXACTLY AS IT WAS.
   5. ONLY perform a full multi-section rewrite when the user explicitly requests a full role transformation or new resume (e.g. "transform whole resume for video editor", "build ATS resume for data analyst"). In ALL other turns, treat the request as a surgical edit and preserve everything else!
+  6. Cross-Section Project Alignment: When the user asks to update work experience, skills, or interests "as per my projects" (or based on projects), you MUST examine the user's active projects, extract all technologies, frameworks, APIs, and achievements (e.g. Meta API, React Native, WhatsApp integrations, AI generators, Python, YOLO, dlib, Arduino), and rewrite the work experience bullets, technical skills, and interests to authentically reflect those exact technologies while keeping existing projects intact!
 
 - ALWAYS make forward progress. Never respond with only a clarifying question and no changes to the cv — a beginner with almost no info (e.g. just a name) should still get a complete, realistic, ready-to-edit resume back immediately, not an empty shell or a stalled conversation. If you have a genuine follow-up question, ask it in "reply" AFTER you've already filled in a full, plausible draft — never before. EXCEPTION: The one case where you MUST return the cv unchanged is an ambiguous removal request (see the Ambiguous removal rule below) — in that case returning unchanged + asking is correct and required.
 - Whenever a section is missing or empty and the user hasn't given you real content for it, fill it yourself with complete, plausible, professional example content appropriate to their stated (or inferable) target role/field — education, work experience or workshops, projects, certifications, skills, and interests should never be left blank or as raw placeholder text. Base it on whatever real details the user DID give you (name, target role, field, experience level); invent sensible specifics (a school, a past role, a couple of projects with quantified bullets) the same way a filled-out sample resume would, so the student has something concrete to react to and edit rather than a blank form.
@@ -271,10 +272,78 @@ export async function POST(request: Request) {
         jobs: 'workExperience',
       };
 
+      // 0. Certifications Add / Reset / Replace Handler
+      // e.g. "remove the all certifications, and add only one : Web & App Development Course from Saylani Mass IT", "add certification AWS Cloud from Amazon", "replace all certifications with X from Y"
+      const isCertAction = /\b(cert|certification|certs|certificates)\b/i.test(lastMsgLower) &&
+        /\b(add|insert|set|replace|only|keep|from|by)\b/i.test(lastMsgLower);
+
+      if (isCertAction) {
+        const isReplaceAll = /\b(remove\s+(?:the\s+)?all|delete\s+(?:the\s+)?all|clear\s+(?:the\s+)?all|replace\s+(?:the\s+)?all|add\s+only|only\s+add|keep\s+only|only\s+keep|and\s+add\s+only|and\s+only\s+add)\b/i.test(lastMsgLower);
+
+        // Extract the cert info
+        let certText = lastUserMessage;
+        const afterColonOrAs = lastUserMessage.match(/\b(?:add\s+only\s+one|only\s+one|only\s+add|add\s+only|and\s+add|add|replace\s+with|set\s+to|:|;|=)\s*[:=]?\s*(.+?)$/i);
+        if (afterColonOrAs && afterColonOrAs[1]) {
+          certText = afterColonOrAs[1].trim();
+        }
+
+        // Clean up leading/trailing punctuation or filler words
+        certText = certText
+          .replace(/^(?:one\s*:|a\s+cert\s*:|certification\s*:|certificate\s*:)\s*/i, '')
+          .replace(/[,;.]+$/, '')
+          .trim();
+
+        let certName = certText;
+        let certOrg = 'Saylani Mass IT';
+
+        // Check if "from <Org>" or "by <Org>" is present
+        const fromOrgMatch = certText.match(/^(.+?)\s+(?:from|by|at|via)\s+(.+?)$/i);
+        if (fromOrgMatch) {
+          certName = fromOrgMatch[1].trim();
+          certOrg = fromOrgMatch[2].trim();
+        } else {
+          if (/saylani/i.test(certText)) {
+            certName = certText.replace(/\b(?:from|by|at|via)?\s*saylani\s*(?:mass\s*it)?\b/gi, '').trim() || 'Web & App Development Course';
+            certOrg = 'Saylani Mass IT';
+          }
+        }
+
+        if (certName.length > 0) {
+          const newCert = {
+            name: certName,
+            organization: certOrg || 'Certified Authority',
+          };
+
+          const currentCerts = isReplaceAll ? [newCert] : [...(cv.certifications || []), newCert];
+          const updatedCv: CvData = {
+            ...cv,
+            certifications: currentCerts,
+          };
+
+          if (sessionId !== 'unknown') {
+            await db.profileBuilderChatLog.create({
+              data: {
+                sessionId,
+                userId: user?.id,
+                userMessage,
+                aiReply: `Done — updated your certifications to ${certName} from ${certOrg}.`,
+                isAutoFit: false,
+              },
+            });
+          }
+
+          return Response.json({
+            reply: `Done — updated your certifications to ${certName} from ${certOrg}.`,
+            cv: updatedCv,
+          });
+        }
+      }
+
       // 1. Full Section Removals (e.g. "remove the project section", "remove all projects", "remove projects section", "delete certifications")
       const isFullSectionRemoval = /\b(remove|delete|drop|clear)\b.*?\b(all\s+)?(project|certification|cert|certificate|education|educaton|experience|workshop|job)s?(\s+section|\s+entirely|\s+all)?\b/i.test(lastMsgLower) &&
         !/\b(last|first|1st|2nd|3rd|second|third|one|two|three|1|2|3)\b/i.test(lastMsgLower) &&
-        !/\b(university|college)\b/i.test(lastMsgLower);
+        !/\b(university|college)\b/i.test(lastMsgLower) &&
+        !/\b(and\s+add|and\s+only\s+add|only\s+add|add\s+only|replace\s+with)\b/i.test(lastMsgLower);
 
     if (isFullSectionRemoval) {
       for (const [key, cvField] of Object.entries(SECTION_KEY)) {
@@ -308,6 +377,7 @@ export async function POST(request: Request) {
       !/\b(percent|percentages|percentage|numbers|number|metrics|numeric|stats)\b/i.test(lastMsgLower) &&
       !/\b(github|kaggle|linkedin|portfolio|website|all\s+links)\b/i.test(lastMsgLower) &&
       !/\b(interest|interests|skill|skills|extracurricular|hobbies|hobby|additional)\b/i.test(lastMsgLower) &&
+      !/\b(and\s+add|and\s+only\s+add|only\s+add|add\s+only|replace\s+with)\b/i.test(lastMsgLower) &&
       !/\b(?:the\s+)?(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th|last)\s+(?:project|certification|cert|certificate|education|educaton|experience|workshop|job)\b/i.test(lastMsgLower);
 
     if (isNamedRemovalReq) {
@@ -893,7 +963,8 @@ export async function POST(request: Request) {
     // 2f. Skills & Interests Customization / Filter / Replacement Handler
     // e.g. "remove all the interests except playing cricket", "remove interests and only add playing cricket", "only keep python in skills", "remove html, css from skills"
     const isSkillsOrInterestsAction = /\b(skills?|interests?|extracurricular|hobbies|hobby)\b/i.test(lastMsgLower) &&
-      /\b(remove|delete|drop|clear|strip|only|keep|except|add|set|change|update|replace)\b/i.test(lastMsgLower);
+      /\b(remove|delete|drop|clear|strip|only|keep|except|add|set|change|update|replace)\b/i.test(lastMsgLower) &&
+      !/\b(work|experience|job|bullet|point|projects?|education|certifications?|as per my projects|as per)\b/i.test(lastMsgLower);
 
     if (isSkillsOrInterestsAction) {
       const isInterestsTarget = /\b(interests?|extracurricular|hobbies|hobby)\b/i.test(lastMsgLower);
@@ -1344,7 +1415,7 @@ export async function POST(request: Request) {
     // by the user's prompt (e.g. projects when editing interests) is STRICTLY LOCKED to its previous state.
     const msgLower = userMessage.toLowerCase();
     const isCertEdit = /\b(cert|certification|certs|certificates)/i.test(msgLower);
-    const isProjEdit = /\b(project|projects)/i.test(msgLower);
+    const isProjEdit = /\b(project|projects)\b/i.test(msgLower) && !/\b(as per\s+(?:my\s+)?projects?|based on\s+(?:my\s+)?projects?)\b/i.test(msgLower);
     const isWorkEdit = /\b(work|experience|job|bullet|point|bullets|points)/i.test(msgLower);
     const isEduEdit  = /\b(education|degree|school|university|college|educaton)/i.test(msgLower);
 
