@@ -35,6 +35,7 @@ Rules:
   4. Example: If the current resume has 2 education entries (e.g. University + College) and the user asks to change the university's tenure/dates or name, YOU MUST RETURN BOTH EDUCATION ENTRIES in the "education" array — the university with the updated dates/name, and the college entry 100% PRESERVED EXACTLY AS IT WAS.
   5. ONLY perform a full multi-section rewrite when the user explicitly requests a full role transformation or new resume (e.g. "transform whole resume for video editor", "build ATS resume for data analyst"). In ALL other turns, treat the request as a surgical edit and preserve everything else!
   6. Cross-Section Project Alignment: When the user asks to update work experience, skills, or interests "as per my projects" (or based on projects), you MUST examine the user's active projects, extract all technologies, frameworks, APIs, and achievements (e.g. Meta API, React Native, WhatsApp integrations, AI generators, Python, YOLO, dlib, Arduino), and rewrite the work experience bullets, technical skills, and interests to authentically reflect those exact technologies while keeping existing projects intact!
+  7. Strict Information Purge Rule ("just keep what information I have given you and remove what was already written before"): When the user asks to keep only the information they provided and remove previous/old content, you MUST strictly purge any previous companies, unmentioned projects, old degrees, and template certifications. You MUST return ONLY the authentic entities and items the user explicitly provided in the conversation (e.g. DataCrumbs, Habib University, Saylani Mass IT, and the specific user projects), with ZERO leftover template or unmentioned data!
 
 - ALWAYS make forward progress. Never respond with only a clarifying question and no changes to the cv — a beginner with almost no info (e.g. just a name) should still get a complete, realistic, ready-to-edit resume back immediately, not an empty shell or a stalled conversation. If you have a genuine follow-up question, ask it in "reply" AFTER you've already filled in a full, plausible draft — never before. EXCEPTION: The one case where you MUST return the cv unchanged is an ambiguous removal request (see the Ambiguous removal rule below) — in that case returning unchanged + asking is correct and required.
 - Whenever a section is missing or empty and the user hasn't given you real content for it, fill it yourself with complete, plausible, professional example content appropriate to their stated (or inferable) target role/field — education, work experience or workshops, projects, certifications, skills, and interests should never be left blank or as raw placeholder text. Base it on whatever real details the user DID give you (name, target role, field, experience level); invent sensible specifics (a school, a past role, a couple of projects with quantified bullets) the same way a filled-out sample resume would, so the student has something concrete to react to and edit rather than a blank form.
@@ -232,8 +233,8 @@ export async function POST(request: Request) {
     // When user provides multiple details or explicitly requests a full resume rewrite,
     // ALL fast single-field interceptors MUST be bypassed and forwarded directly to the AI engine!
     const isMultiSentenceOrStory =
-      lastUserMessage.length > 140 ||
-      /\b(my name is|i am an?|i have been working|i worked|i have done|i have created|i graduated|transform\s+(?:the|this|my)?\s*(?:whole)?\s*resume|build\s+(?:me\s+)?(?:a\s+)?resume|create\s+(?:a\s+)?resume|as per the information)\b/i.test(lastMsgLower);
+      lastUserMessage.length > 120 ||
+      /\b(my name is|i am an?|i have been working|i worked|i have done|i have created|i graduated|transform\s+(?:the|this|my)?\s*(?:whole)?\s*resume|build\s+(?:me\s+)?(?:a\s+)?resume|create\s+(?:a\s+)?resume|craft\s+(?:a\s+)?(?:transition\s+)?resume|transition\s+resume|pivoting\s+from|pivot\s+from|career\s+switch|career\s+transition|switch\s+to|as per the information|just\s+keep\s+what\s+information|remove\s+what\s+was\s+already\s+written|only\s+what\s+i\s+(?:have\s+)?given|keep\s+only\s+what)\b/i.test(lastMsgLower);
 
     if (!isMultiSentenceOrStory) {
       const WORD_NUMS: Record<string, number> = {
@@ -378,6 +379,7 @@ export async function POST(request: Request) {
       !/\b(github|kaggle|linkedin|portfolio|website|all\s+links)\b/i.test(lastMsgLower) &&
       !/\b(interest|interests|skill|skills|extracurricular|hobbies|hobby|additional)\b/i.test(lastMsgLower) &&
       !/\b(and\s+add|and\s+only\s+add|only\s+add|add\s+only|replace\s+with)\b/i.test(lastMsgLower) &&
+      !/\b(what\s+was|already\s+written|before\s+this|previous\s+content|template|dummy|information\s+i\s+(?:have\s+)?given|only\s+what\s+i\s+gave|just\s+keep\s+what|keep\s+only\s+what)\b/i.test(lastMsgLower) &&
       !/\b(?:the\s+)?(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th|last)\s+(?:project|certification|cert|certificate|education|educaton|experience|workshop|job)\b/i.test(lastMsgLower);
 
     if (isNamedRemovalReq) {
@@ -661,11 +663,12 @@ export async function POST(request: Request) {
     const isEduAction = (
       /\b(add|change|update|set|replace|put|insert|switch|rename)\b.*?\b(college|collage|university|uni|intermediate|school|degree|education|bachelor|master|phd)\b/i.test(lastMsgLower) ||
       /\b(?:my\s+)?(college|collage|university|uni|intermediate)\s*(?:is|was|to|:|=)\s*(.+?)$/i.test(lastMsgLower) ||
-      /\bfrom\s+.+?\s+(?:to|with)\s+.+?\b/i.test(lastMsgLower)
+      (/\bfrom\s+.+?\s+(?:to|with)\s+.+?\b/i.test(lastMsgLower) && /\b(college|collage|university|uni|intermediate|school|degree|education)\b/i.test(lastMsgLower))
     ) &&
       !isNamedRemovalReq &&
       !isFullSectionRemoval &&
       !/\b(duration|dates?|tenure|timeline|period|years?)\b/i.test(lastMsgLower) &&
+      !/\b(transition|pivot|pivoting|career|switch\s+to|switch\s+from)\b/i.test(lastMsgLower) &&
       !/\b\d{4}\s*(?:-|–|—|to)\s*(?:\d{4}|present|current)\b/i.test(lastMsgLower);
 
     if (isEduAction) {
@@ -1433,9 +1436,10 @@ export async function POST(request: Request) {
       (msgLower.includes('increase') && msgLower.includes('content'));
 
     const isFullRolePrompt =
-      /\b(transform|tranform|switch|convert|rewrite|rebuild|generate|make|create)\b.*?\b(resume|cv|profile|for|as|into)\b/i.test(msgLower) ||
-      /\b(for|as|into)\b.*?\b(role|position|job|title|bidder|engineer|developer|designer|analyst|manager|consultant|freelancer|editor|executive|specialist|lead|architect|artist|writer|marketer|officer|scientist|intern)\b/i.test(msgLower) ||
-      /\b(ats[- ]?friendly|ats[- ]?optimized|ats[- ]?compliant)\b/i.test(msgLower);
+      /\b(transform|tranform|switch|convert|rewrite|rebuild|generate|make|create|craft|transition|pivot|pivoting)\b.*?\b(resume|cv|profile|for|as|into|from|to)\b/i.test(msgLower) ||
+      /\b(for|as|into|to)\b.*?\b(role|position|job|title|bidder|engineer|developer|designer|analyst|manager|consultant|freelancer|editor|executive|specialist|lead|architect|artist|writer|marketer|officer|scientist|intern|product\s+management|management)\b/i.test(msgLower) ||
+      /\b(ats[- ]?friendly|ats[- ]?optimized|ats[- ]?compliant)\b/i.test(msgLower) ||
+      /\b(transition\s+resume|pivoting\s+from|pivot\s+from|career\s+transition|career\s+switch|just\s+keep\s+what\s+information|remove\s+what\s+was\s+already\s+written|only\s+what\s+i\s+(?:have\s+)?given|keep\s+only\s+what\s+i\s+gave)\b/i.test(msgLower);
 
     // Generalized Role Transformation & Resume Generation:
     // Only true full role prompts, multi-sentence background descriptions, or initial placeholder CVs trigger a total rewrite.

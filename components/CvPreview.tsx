@@ -118,43 +118,29 @@ function RichText({
   onEmptyBackspace?: () => void;
   editable?: boolean;
 }) {
+  const elRef = React.useRef<HTMLElement | null>(null);
+
+  // Initialize and update DOM innerHTML ONLY when the user is NOT actively focused/typing in this element
+  React.useEffect(() => {
+    if (elRef.current) {
+      if (document.activeElement !== elRef.current && elRef.current.innerHTML !== (html || '')) {
+        elRef.current.innerHTML = html || '';
+      }
+    }
+  }, [html]);
+
   const Tag = (block ? 'div' : 'span') as 'div';
   return (
     <Tag
+      ref={elRef as any}
       contentEditable={editable}
       suppressContentEditableWarning
       data-ph={placeholder}
-      dangerouslySetInnerHTML={{ __html: html || '' }}
       className={`${className || ''} outline-none rounded-sm hover:bg-slate-50/60 cursor-text empty:before:content-[attr(data-ph)] empty:before:text-slate-300`}
       onKeyDown={(e) => {
-        if (e.key === 'Backspace' || e.key === 'Delete') {
-          const sel = window.getSelection();
-          if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
-            const range = sel.getRangeAt(0);
-            if (e.currentTarget.contains(range.commonAncestorContainer)) {
-              const textContent = (e.currentTarget.textContent || '').trim();
-              const selText = sel.toString().trim();
-              if (selText.length >= textContent.length && textContent.length > 0) {
-                // User selected the entire bullet content and hit delete/backspace -> remove immediately!
-                e.preventDefault();
-                e.currentTarget.innerHTML = '';
-                if (bullet) {
-                  bullet.onBackspaceEmpty();
-                  return;
-                } else if (onEmptyBackspace) {
-                  onEmptyBackspace();
-                  return;
-                }
-              } else {
-                e.preventDefault();
-                range.deleteContents();
-                return;
-              }
-            }
-          }
-        }
         const textVal = (e.currentTarget.textContent ?? '').trim();
         const isEmpty = textVal === '' || textVal === '\u200B' || e.currentTarget.innerHTML === '' || e.currentTarget.innerHTML === '<br>';
+
         if (bullet) {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -289,6 +275,9 @@ function CvPreviewBase({
   const certEmptyBackspace = (i: number) => {
     const c = data.certifications[i];
     if (isBlank(c.name) && isBlank(c.organization)) commit({ ...data, certifications: data.certifications.filter((_, j) => j !== i) });
+  };
+  const deleteCert = (i: number) => {
+    commit({ ...data, certifications: data.certifications.filter((_, j) => j !== i) });
   };
 
   // Bullet editing (editable mode renders ALL lines incl. empty, so line index
@@ -914,8 +903,23 @@ function CvPreviewBase({
                 {row.map((cert) => {
                   const i = data.certifications.indexOf(cert);
                   return (
-                    <div key={i}>
-                      <div className="font-bold">
+                    <div key={i} className="relative group/cert-item">
+                      {editable && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            deleteCert(i);
+                          }}
+                          className="opacity-0 group-hover/cert-item:opacity-100 absolute -top-1.5 -right-1 w-4 h-4 rounded-full bg-slate-100 hover:bg-red-500 text-slate-400 hover:text-white flex items-center justify-center text-[9px] font-bold transition-all shadow-sm cursor-pointer z-10 print:hidden border border-slate-300 hover:border-red-500"
+                          title="Delete certification"
+                          aria-label="Delete certification"
+                        >
+                          ✕
+                        </button>
+                      )}
+                      <div className="font-bold pr-3">
                         {editable ? <RichText html={cert.name} placeholder="Certification" onCommit={(v) => setCert(i, { name: v })} onEmptyBackspace={() => certEmptyBackspace(i)} /> : <Html html={cert.name} />}
                       </div>
                       {editable ? (
