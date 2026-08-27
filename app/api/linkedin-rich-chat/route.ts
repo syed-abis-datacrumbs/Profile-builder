@@ -252,13 +252,18 @@ The ONLY fields to leave untouched are literal contact details you have no real 
     }
 
     const proposedCoverFieldValues = (parsedObj.profile as { coverFieldValues?: unknown }).coverFieldValues;
+    const userMentionsCover = /\b(cover|banner|header\s+image|banner\s+text|cover\s+tagline|cover\s+headline)\b/i.test(userMessage);
+    const finalCoverFieldValues = userMentionsCover
+      ? mergeCoverFieldValues(fullProfile.coverTemplateId, fullProfile.coverFieldValues ?? {}, proposedCoverFieldValues)
+      : (fullProfile.coverFieldValues ?? {});
+
     const mergedProfile: LinkedinRichProfile = {
       ...fullProfile,
       ...parsedObj.profile,
       coverTemplateId: fullProfile.coverTemplateId,
       pfpGradientId: fullProfile.pfpGradientId,
       headshotUrl: fullProfile.headshotUrl,
-      coverFieldValues: mergeCoverFieldValues(fullProfile.coverTemplateId, fullProfile.coverFieldValues ?? {}, proposedCoverFieldValues),
+      coverFieldValues: finalCoverFieldValues,
     };
 
     const reply = typeof parsedObj.reply === 'string' ? parsedObj.reply : 'Done — updated your profile.';

@@ -41,7 +41,7 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Profile Architect — AI Career & Resume Builder",
+  title: "Momentum — AI Career & Resume Builder",
   description: "Build ATS-optimized resumes, GitHub profile READMEs, LinkedIn cover art, and practice AI mock interviews.",
   icons: {
     icon: "/logo.png",

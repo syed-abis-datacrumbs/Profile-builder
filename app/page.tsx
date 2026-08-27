@@ -529,7 +529,13 @@ export default function Home() {
                           <ResumeLandingView
                             userName={firstName}
                             clerkFullName={displayFullName}
-                            onSelectField={loadResumeField}
+                            onSelectField={(sample) => {
+                              if (!isLoggedIn) {
+                                setIsAuthOpen(true);
+                                return;
+                              }
+                              loadResumeField(sample);
+                            }}
                           onSelectTemplate={(sample) => {
                             setResumePreviewSample(sample);
                             setResumeMode('preview');
@@ -623,9 +629,17 @@ export default function Home() {
                       <GithubLandingView
                         userName={firstName || undefined}
                         onOpenRolePicker={() => {
+                          if (!isLoggedIn) {
+                            setIsAuthOpen(true);
+                            return;
+                          }
                           setShowGithubTemplatePicker(true);
                         }}
                         onSelectPreset={(preset, theme, avatarUrl, bannerUrl) => {
+                          if (!isLoggedIn) {
+                            setIsAuthOpen(true);
+                            return;
+                          }
                           if (typeof window !== 'undefined') {
                             localStorage.removeItem('profile_builder_github_chat');
                           }
@@ -638,6 +652,10 @@ export default function Home() {
                           setGithubMode('preview');
                         }}
                         onUsePrompt={(promptText) => {
+                          if (!isLoggedIn) {
+                            setIsAuthOpen(true);
+                            return;
+                          }
                           if (attachedGithubTemplate) {
                             const t = attachedGithubTemplate;
                             const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
@@ -714,16 +732,16 @@ export default function Home() {
                         attachedTemplate={attachedLinkedinTemplate}
                         onClearAttachedTemplate={() => setAttachedLinkedinTemplate(null)}
                         onSelectTemplate={(tid) => {
-                          if (!isAuthorized) {
-                            setShowBlockModal(true);
+                          if (!isLoggedIn) {
+                            setIsAuthOpen(true);
                             return;
                           }
                           setLinkedinPreviewTemplateId(tid);
                           setLinkedinMode('preview');
                         }}
                         onUsePrompt={(promptText) => {
-                          if (!isAuthorized) {
-                            setShowBlockModal(true);
+                          if (!isLoggedIn) {
+                            setIsAuthOpen(true);
                             return;
                           }
                           if (attachedLinkedinTemplate) {
@@ -739,8 +757,8 @@ export default function Home() {
                           setAttachedLinkedinTemplate(null);
                         }}
                         onOpenEditorDirectly={() => {
-                          if (!isAuthorized) {
-                            setShowBlockModal(true);
+                          if (!isLoggedIn) {
+                            setIsAuthOpen(true);
                             return;
                           }
                           setLinkedinMode(linkedinRichProfile ? 'studio' : 'editor');
