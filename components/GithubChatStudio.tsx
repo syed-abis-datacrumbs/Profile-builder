@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo, Bug, Copy } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo, Bug, Copy, LayoutTemplate } from 'lucide-react';
 import toast from '@/lib/toast';
 import { GithubProfileData } from '../types';
 import { GithubIcon } from './icons';
 import { generateGithubMarkdown } from '../lib/githubMarkdown';
+import { GITHUB_ROLE_PRESETS, applyRolePresetToGithub } from '../lib/githubRolePresets';
 
 interface Msg {
   role: 'user' | 'assistant';
@@ -94,6 +95,7 @@ export const GithubChatStudio: React.FC<{
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [showBannerPicker, setShowBannerPicker] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [customBannerInput, setCustomBannerInput] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -482,6 +484,15 @@ export const GithubChatStudio: React.FC<{
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowTemplateModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors text-xs font-bold border border-indigo-200 cursor-pointer shadow-2xs"
+              title="Select another role template"
+            >
+              <LayoutTemplate className="w-3.5 h-3.5" />
+              <span>Templates</span>
+            </button>
           </div>
         </div>
 
@@ -598,6 +609,17 @@ export const GithubChatStudio: React.FC<{
               <div className="w-3 h-3 rounded-full bg-amber-400" />
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
             </div>
+
+            {/* Templates Button */}
+            <button
+              type="button"
+              onClick={() => setShowTemplateModal(true)}
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs font-bold text-slate-800 border border-slate-200/80 cursor-pointer shadow-2xs"
+              title="Change Role Template"
+            >
+              <LayoutTemplate className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden xs:inline">Templates</span>
+            </button>
 
             {/* Tab Title (Save Menu) */}
             <div className="relative">
@@ -1034,6 +1056,88 @@ export const GithubChatStudio: React.FC<{
             setCropSourceUrl(null);
           }}
         />
+      )}
+      {/* Template Selection Modal */}
+      {showTemplateModal && (
+        <div
+          className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowTemplateModal(false);
+          }}
+        >
+          <div className="w-full max-w-4xl max-h-[88vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 border border-slate-200">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 bg-slate-50/90 shrink-0">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <LayoutTemplate className="w-5 h-5 text-indigo-600" />
+                  Choose a GitHub Profile Template
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Select any developer role to apply tailored bio, tech stack badges, and project sections.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {GITHUB_ROLE_PRESETS.map((preset) => {
+                return (
+                  <div
+                    key={preset.id}
+                    onClick={() => {
+                      const updated = applyRolePresetToGithub(preset, github);
+                      recordChange(updated);
+                      setShowTemplateModal(false);
+                      toast.success(`Applied ${preset.label} template!`);
+                    }}
+                    className="group relative rounded-xl border-2 border-slate-200 hover:border-indigo-500 bg-white p-4 cursor-pointer transition-all duration-200 hover:shadow-lg flex flex-col justify-between text-left"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold">
+                          GH
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Preset
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">
+                        {preset.label}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                        {preset.about}
+                      </p>
+                      <div className="mt-2.5 flex flex-wrap gap-1">
+                        {preset.techStack.slice(0, 4).map((tech, ti) => (
+                          <span key={ti} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold truncate max-w-[90px]">
+                            {tech}
+                          </span>
+                        ))}
+                        {preset.techStack.length > 4 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-400 font-medium">
+                            +{preset.techStack.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="mt-4 w-full py-1.5 px-3 rounded-lg text-xs font-bold bg-slate-100 group-hover:bg-indigo-600 group-hover:text-white text-slate-700 transition-colors cursor-pointer"
+                    >
+                      Use This Template
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

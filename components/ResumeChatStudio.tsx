@@ -20,10 +20,12 @@ import {
   Plus,
   Target,
   X,
-  Bug
+  Bug,
+  LayoutTemplate,
 } from 'lucide-react';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { getResumeAccentColor } from '../lib/resumeHelpers';
+import { LMS_RESUME_SAMPLES } from '../lib/resumeSamples';
 import { CvPreview } from './CvPreview';
 import { PaginatedCvPreview } from './PaginatedCvPreview';
 import { measureBlocks, paginateCvSmart, PAGE_WIDTH_PX } from '../lib/cvPagination';
@@ -128,6 +130,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const hasSentInitialPromptRef = useRef(false);
 
   const [revision, setRevision] = useState(0);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   // Real undo/redo history of CvData snapshots. document.execCommand('undo')
   // relies on the browser's native contentEditable edit history, which never
@@ -819,10 +822,18 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               <ArrowLeft className="w-4 h-4" />
             </button>
             <span className="font-bold text-sm text-slate-800 truncate">
-              Creating a Professional...
+              {fieldLabel || 'Resume Studio'}
             </span>
-            {/* <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 hidden lg:block" /> */}
           </div>
+          <button
+            type="button"
+            onClick={() => setShowTemplateModal(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors text-xs font-bold border border-blue-200 cursor-pointer shadow-2xs shrink-0"
+            title="Select another resume template"
+          >
+            <LayoutTemplate className="w-3.5 h-3.5" />
+            <span>Templates</span>
+          </button>
         </div>
 
         {/* Chat Scroll Container */}
@@ -973,6 +984,17 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               <div className="w-3 h-3 rounded-full bg-amber-400" />
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
             </div>
+
+            {/* Resume Templates Button */}
+            <button
+              type="button"
+              onClick={() => setShowTemplateModal(true)}
+              className="h-7 px-1.5 sm:px-2 rounded-lg bg-slate-100 text-[11px] sm:text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1 leading-none cursor-pointer"
+              title="Change Resume Template"
+            >
+              <LayoutTemplate className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="leading-none hidden xs:inline">Templates</span>
+            </button>
 
             {/* Resume Save/Load Dropdown */}
             <div className="relative">
@@ -1584,6 +1606,100 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Template Selection Modal */}
+      {showTemplateModal && (
+        <div
+          className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowTemplateModal(false);
+          }}
+        >
+          <div className="w-full max-w-4xl max-h-[88vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 border border-slate-200">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 bg-slate-50/90 shrink-0">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <LayoutTemplate className="w-5 h-5 text-blue-600" />
+                  Choose a Resume Template
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Select any career-track sample to apply tailored work experiences, bullet points, skills, and projects.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {LMS_RESUME_SAMPLES.map((sample, idx) => {
+                const sampleCv = cvMarkdownToHtml(sample.data);
+                const roleTitle = sample.label;
+                const sampleName = sampleCv.personalInfo?.fullName || 'Sample User';
+                const skillsText = sampleCv.additional?.skills || '';
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      const newCv = cvMarkdownToHtml(sample.data);
+                      if (cv.personalInfo.fullName && cv.personalInfo.fullName !== 'Zoya Siddiqui') {
+                        newCv.personalInfo.fullName = cv.personalInfo.fullName;
+                      }
+                      if (cv.personalInfo.email && !cv.personalInfo.email.includes('example.com')) {
+                        newCv.personalInfo.email = cv.personalInfo.email;
+                      }
+                      if (cv.personalInfo.phone && !cv.personalInfo.phone.includes('1234567')) {
+                        newCv.personalInfo.phone = cv.personalInfo.phone;
+                      }
+                      external(newCv);
+                      setShowTemplateModal(false);
+                      showToast(`Applied ${roleTitle} template!`);
+                    }}
+                    className="group relative rounded-xl border-2 border-slate-200 hover:border-blue-500 bg-white p-4 cursor-pointer transition-all duration-200 hover:shadow-lg flex flex-col justify-between text-left"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">
+                          CV
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          1 Page
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">
+                        {roleTitle}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                        Sample by <strong className="text-slate-700">{sampleName}</strong>
+                      </p>
+                      {skillsText && (
+                        <div className="mt-2.5 flex flex-wrap gap-1">
+                          {skillsText.split(',').slice(0, 3).map((s, si) => (
+                            <span key={si} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-medium truncate max-w-[100px]">
+                              {s.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="mt-4 w-full py-1.5 px-3 rounded-lg text-xs font-bold bg-slate-100 group-hover:bg-blue-600 group-hover:text-white text-slate-700 transition-colors cursor-pointer"
+                    >
+                      Use This Template
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

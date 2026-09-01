@@ -22,6 +22,12 @@ import {
   Check,
   ChevronDown,
   Bug,
+  LayoutTemplate,
+  User,
+  Trash2,
+  Upload,
+  Image,
+  Download,
 } from 'lucide-react';
 import toast from '@/lib/toast';
 import {
@@ -30,10 +36,15 @@ import {
   COVER_ART_ORDER,
   PFP_GRADIENT_IDS,
   buildCoverFieldValues,
+  buildInitialRichProfile,
+  buildEmptyRichProfile,
+  DEFAULT_HEADSHOT_URL,
 } from '../lib/linkedinRichProfile';
+import { linkedinCovers } from '../lib/linkedinCovers';
 import { CoverArtField, computeFitScale, coverFontSize, overageCeiling } from '../lib/linkedinCoverArt';
 import { PfpCropModal } from './PfpCropModal';
 import { ShrinkToFitCoverText } from './ShrinkToFitCoverText';
+import { LinkedinTemplateThumbnail } from './LinkedinTemplateThumbnail';
 import { LinkedinTemplateSampleExperience, LinkedinTemplateSampleEducation, LinkedinTemplateSampleCertification, LinkedinTemplateSampleProject } from '../lib/linkedinTemplateSamples';
 
 const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
@@ -162,8 +173,13 @@ export const LinkedinChatStudio: React.FC<{
   const [loading, setLoading] = useState(false);
   const [mobileTab, setMobileTab] = useState<'chat' | 'preview'>('chat');
   const [showCoverPicker, setShowCoverPicker] = useState(false);
+  const [showCoverMenu, setShowCoverMenu] = useState(false);
   const [showPfpPicker, setShowPfpPicker] = useState(false);
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showAllSkills, setShowAllSkills] = useState(false);
+  const [isAddingSkill, setIsAddingSkill] = useState(false);
+  const [newSkillInput, setNewSkillInput] = useState('');
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
 
   // Report Issue State
@@ -224,6 +240,39 @@ export const LinkedinChatStudio: React.FC<{
   }, [isPro]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleHeadshotFile = (file: File | null) => {
+    if (!file) return;
+    setCropSourceUrl(URL.createObjectURL(file));
+  };
+
+  const handleCoverFile = (file: File | null) => {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    set({ customCoverUrl: url });
+    setShowCoverMenu(false);
+    toast.success('Custom cover photo uploaded!');
+  };
+
+  const handleDownloadImage = async (url: string, filename: string) => {
+    if (!url) return;
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      toast.success(`Downloaded ${filename}`);
+    } catch {
+      window.open(url, '_blank');
+    }
+  };
   const sessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -327,11 +376,6 @@ export const LinkedinChatStudio: React.FC<{
   const selectPfpGradient = (id: string) => {
     set({ pfpGradientId: id });
     setShowPfpPicker(false);
-  };
-
-  const handleHeadshotFile = (file: File | null) => {
-    if (!file) return;
-    setCropSourceUrl(URL.createObjectURL(file));
   };
 
   interface SavedProfileMeta { id: string; name: string; createdAt: string }
@@ -510,14 +554,20 @@ export const LinkedinChatStudio: React.FC<{
 
           <div className="flex items-center gap-2 shrink-0">
             <button
+              type="button"
+              onClick={() => setShowTemplateModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#0A66C2] transition-colors text-xs font-bold border border-blue-200 cursor-pointer shadow-2xs"
+              title="Select another template"
+            >
+              <LayoutTemplate className="w-3.5 h-3.5" />
+              <span>Templates</span>
+            </button>
+            <button
               onClick={() => setMobileTab('preview')}
               className="lg:hidden px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
             >
               View Profile
             </button>
-            <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-200 text-xs font-bold">
-              Interface
-            </span>
             <button
               onClick={() => setMessages([{ role: 'assistant', content: 'Started a new chat session. How can I optimize your LinkedIn profile?' }])}
               className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
@@ -631,6 +681,18 @@ export const LinkedinChatStudio: React.FC<{
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                updateProfile(buildEmptyRichProfile());
+                toast.success('Template removed. Profile cleared to blank slate.');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors text-xs font-semibold cursor-pointer shadow-2xs"
+              title="Remove template and clear profile data"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Remove Template</span>
+            </button>
             <span className="hidden sm:block text-xs font-bold text-slate-700">Live Profile Editor</span>
           </div>
         </div>
@@ -644,12 +706,16 @@ export const LinkedinChatStudio: React.FC<{
                 className="relative w-full bg-slate-900 overflow-hidden group"
                 style={{ aspectRatio: '1584/396', containerType: 'inline-size' } as React.CSSProperties}
               >
-                {art && (
+                {profile.customCoverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.customCoverUrl} alt="custom cover" className="absolute inset-0 w-full h-full object-cover" />
+                ) : art ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={art.backgroundUrl} alt="cover" className="absolute inset-0 w-full h-full object-cover" />
-                )}
+                ) : null}
 
-                {art?.fields && art.fields.map((field: CoverArtField) => {
+                {/* Cover Field Text Overlay (only when no custom cover photo is uploaded) */}
+                {!profile.customCoverUrl && art?.fields && art.fields.map((field: CoverArtField) => {
                   const value = profile.coverFieldValues[field.id] ?? field.placeholder;
                   const align = field.geometry.align;
                   const left = field.geometry.xPct;
@@ -748,18 +814,88 @@ export const LinkedinChatStudio: React.FC<{
                   );
                 })}
 
-                {/* Cover edit affordance. Always visible rather than
-                    hover-revealed: a touch device has no hover, so on a phone
-                    the old pill was unreachable and the cover template could
-                    not be changed at all. */}
-                <button
-                  onClick={() => setShowCoverPicker(true)}
-                  title="Change cover template"
-                  aria-label="Change cover template"
-                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/95 hover:bg-white text-slate-700 flex items-center justify-center shadow-md ring-1 ring-black/10 transition-colors"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
+                {/* Cover photo menu controls */}
+                <div className="absolute top-2 right-2 flex items-center gap-1.5 z-20">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowCoverMenu((prev) => !prev)}
+                      className="h-8 px-3 rounded-full bg-white/95 hover:bg-white text-slate-700 flex items-center gap-1.5 shadow-md ring-1 ring-black/10 transition-colors text-xs font-semibold cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-[#0A66C2]" />
+                      <span>Edit Cover</span>
+                      <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showCoverMenu ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {showCoverMenu && (
+                      <>
+                        <div className="fixed inset-0 z-30" onClick={() => setShowCoverMenu(false)} />
+                        <div className="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-xl border border-slate-200 shadow-xl p-1 z-40 text-xs font-semibold text-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowCoverMenu(false);
+                              coverFileInputRef.current?.click();
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-left cursor-pointer"
+                          >
+                            <Upload className="w-4 h-4 text-blue-600 shrink-0" />
+                            <span>Upload custom cover photo</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowCoverMenu(false);
+                              setShowCoverPicker(true);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-left cursor-pointer"
+                          >
+                            <LayoutTemplate className="w-4 h-4 text-indigo-600 shrink-0" />
+                            <span>Choose template cover</span>
+                          </button>
+                          {(profile.customCoverUrl || art?.backgroundUrl) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowCoverMenu(false);
+                                const targetUrl = profile.customCoverUrl || art?.backgroundUrl;
+                                if (targetUrl) {
+                                  handleDownloadImage(targetUrl, 'cover-photo.png');
+                                }
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-left cursor-pointer"
+                            >
+                              <Download className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>Download cover photo</span>
+                            </button>
+                          )}
+                          {(profile.customCoverUrl || profile.coverTemplateId) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowCoverMenu(false);
+                                set({ customCoverUrl: '', coverFieldValues: {} });
+                                toast.success('Cover photo removed.');
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-rose-50 text-rose-600 transition-colors text-left cursor-pointer border-t border-slate-100 mt-1 pt-2"
+                            >
+                              <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+                              <span>Remove cover photo</span>
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <input
+                  ref={coverFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleCoverFile(e.target.files?.[0] ?? null)}
+                />
               </div>
 
               {/* Profile Card Body */}
@@ -769,19 +905,25 @@ export const LinkedinChatStudio: React.FC<{
                   {/* The badge has to live outside the clipped circle, so the
                       avatar is wrapped rather than positioned against itself. */}
                   <div className="relative -mt-14 sm:-mt-20 shrink-0">
-                    <div className="w-[110px] h-[110px] sm:w-[130px] sm:h-[130px] rounded-full border-[4px] border-white overflow-hidden relative bg-slate-200 shadow-md">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={`/images/linkedin-templates/pfp/${profile.pfpGradientId}/background.jpg`}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={profile.headshotUrl}
-                        alt={profile.fullName}
-                        className="absolute inset-0 w-full h-full object-cover object-top"
-                      />
+                    <div className="w-[110px] h-[110px] sm:w-[130px] sm:h-[130px] rounded-full border-[4px] border-white overflow-hidden relative bg-slate-100 shadow-md flex items-center justify-center">
+                      {profile.headshotUrl ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={`/images/linkedin-templates/pfp/${profile.pfpGradientId || 'gradient-1'}/background.jpg`}
+                            alt=""
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={profile.headshotUrl}
+                            alt={profile.fullName}
+                            className="absolute inset-0 w-full h-full object-cover object-top"
+                          />
+                        </>
+                      ) : (
+                        <User className="w-14 h-14 sm:w-16 sm:h-16 text-slate-300 stroke-[1.5]" />
+                      )}
                     </div>
 
                     {/* Same reasoning as the cover pencil: the two actions used
@@ -821,6 +963,31 @@ export const LinkedinChatStudio: React.FC<{
                             <Palette className="w-4 h-4 text-slate-500 shrink-0" />
                             <span>Change photo background</span>
                           </button>
+                          {profile.headshotUrl ? (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setShowPhotoMenu(false);
+                                  handleDownloadImage(profile.headshotUrl, 'profile-photo.png');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-slate-100 transition-colors text-left cursor-pointer"
+                              >
+                                <Download className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span>Download profile photo</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowPhotoMenu(false);
+                                  set({ headshotUrl: '' });
+                                  toast.success('Profile photo removed.');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-rose-50 text-rose-600 transition-colors text-left border-t border-slate-100 mt-1 pt-2 cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+                                <span>Remove photo</span>
+                              </button>
+                            </>
+                          ) : null}
                         </div>
                       </>
                     )}
@@ -1100,30 +1267,120 @@ export const LinkedinChatStudio: React.FC<{
             )}
 
             {/* ── CARD 8: Skills ── */}
-            {profile.skills.length > 0 && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h2 className="text-[18px] font-bold text-[#191919] mb-4">Skills</h2>
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-[18px] font-bold text-[#191919]">Skills</h2>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                      {profile.skills.length}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsAddingSkill(true);
+                      setNewSkillInput('');
+                    }}
+                    className="flex items-center gap-1 text-xs font-semibold text-[#0A66C2] hover:underline cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add skill</span>
+                  </button>
+                </div>
+
+                {isAddingSkill && (
+                  <div className="flex items-center gap-2 p-2.5 bg-blue-50/60 border border-blue-200 rounded-xl mb-4">
+                    <input
+                      type="text"
+                      value={newSkillInput}
+                      onChange={(e) => setNewSkillInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newSkillInput.trim()) {
+                          set({ skills: [...profile.skills, newSkillInput.trim()] });
+                          setNewSkillInput('');
+                          setIsAddingSkill(false);
+                          setShowAllSkills(true);
+                        }
+                        if (e.key === 'Escape') {
+                          setIsAddingSkill(false);
+                          setNewSkillInput('');
+                        }
+                      }}
+                      placeholder="Enter skill name (e.g., React, System Architecture)..."
+                      className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-900 font-medium"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newSkillInput.trim()) {
+                          set({ skills: [...profile.skills, newSkillInput.trim()] });
+                          setNewSkillInput('');
+                          setIsAddingSkill(false);
+                          setShowAllSkills(true);
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-[#0A66C2] text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors cursor-pointer shrink-0"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingSkill(false);
+                        setNewSkillInput('');
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer shrink-0"
+                      title="Cancel"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
                 <div className="space-y-4 divide-y divide-slate-100">
-                  {profile.skills.slice(0, 4).map((skill, i) => (
-                    <div key={i} className={i > 0 ? 'pt-3' : ''}>
-                      <Edit value={skill} onCommit={(v) => setSkill(i, v)} placeholder="Skill" className="text-[15px] font-semibold text-[#191919]" />
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="w-5 h-5 rounded-md bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">DC</div>
-                        <span className="text-[13px] text-slate-600">Endorsed by colleagues at {profile.currentCompany}</span>
+                  {(showAllSkills ? profile.skills : profile.skills.slice(0, 4)).map((skill, i) => (
+                    <div key={i} className={`flex items-start justify-between gap-3 ${i > 0 ? 'pt-3' : ''}`}>
+                      <div className="flex-1 min-w-0">
+                        <Edit value={skill} onCommit={(v) => setSkill(i, v)} placeholder="Skill" className="text-[15px] font-semibold text-[#191919]" />
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="w-5 h-5 rounded-md bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">DC</div>
+                          <span className="text-[13px] text-slate-600">Endorsed by colleagues at {profile.currentCompany || 'DataCrumbs'}</span>
+                        </div>
                       </div>
+                      <button
+                        onClick={() => {
+                          set({ skills: profile.skills.filter((_, idx) => idx !== i) });
+                        }}
+                        className="text-slate-300 hover:text-red-500 p-1 rounded transition-colors cursor-pointer"
+                        title="Remove skill"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   ))}
                 </div>
+
                 {profile.skills.length > 4 && (
                   <div className="border-t border-slate-100 pt-4 mt-5 text-center">
-                    <button className="text-[14px] font-semibold text-[#0A66C2] hover:underline flex items-center justify-center gap-1 w-full">
-                      Show all {profile.skills.length} skills
-                      <ChevronRight className="w-4 h-4" />
+                    <button
+                      onClick={() => setShowAllSkills((prev) => !prev)}
+                      className="text-[14px] font-semibold text-[#0A66C2] hover:underline flex items-center justify-center gap-1 w-full cursor-pointer"
+                    >
+                      {showAllSkills ? (
+                        <>
+                          <span>Show fewer skills</span>
+                          <ChevronDown className="w-4 h-4 rotate-180 transition-transform" />
+                        </>
+                      ) : (
+                        <>
+                          <span>Show all {profile.skills.length} skills</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
               </div>
-            )}
 
             {/* ── CARD 9: Honors & Awards ── */}
             {profile.awards.length > 0 && (
@@ -1294,6 +1551,90 @@ export const LinkedinChatStudio: React.FC<{
                 {isSubmittingIssue && <Loader2 className="w-3 h-3 animate-spin" />}
                 {isSubmittingIssue ? 'Submitting...' : 'Submit Issue'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Template Selection Modal */}
+      {showTemplateModal && (
+        <div
+          className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowTemplateModal(false);
+          }}
+        >
+          <div className="w-full max-w-5xl max-h-[88vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 border border-slate-200">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 bg-slate-50/90 shrink-0">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <LayoutTemplate className="w-5 h-5 text-[#0A66C2]" />
+                  Choose a LinkedIn Profile Template
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Select any career track to apply its professional headline, summary, experience structure, and matching cover banner design.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {linkedinCovers.map((cover) => {
+                const isSelected = profile.coverTemplateId === cover.id;
+                return (
+                  <button
+                    key={cover.id}
+                    type="button"
+                    onClick={() => {
+                      const newProfile = buildInitialRichProfile(cover.id);
+                      if (profile.headshotUrl && profile.headshotUrl !== DEFAULT_HEADSHOT_URL) {
+                        newProfile.headshotUrl = profile.headshotUrl;
+                      }
+                      updateProfile(newProfile);
+                      setShowTemplateModal(false);
+                      toast.success(`Switched to "${cover.name}" template!`);
+                    }}
+                    className={`group relative text-left p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md bg-white flex flex-col justify-between cursor-pointer ${
+                      isSelected
+                        ? 'border-[#0A66C2] bg-blue-50/30 ring-2 ring-[#0A66C2]/20'
+                        : 'border-slate-200 hover:border-[#0A66C2]/60 hover:bg-slate-50/50'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-[#0A66C2] text-xs font-bold border border-blue-100">
+                          <span className="w-3.5 h-3.5 rounded bg-[#0A66C2] text-white flex items-center justify-center text-[9px] font-bold">in</span>
+                          <span>LinkedIn Track</span>
+                        </span>
+                        {isSelected && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0A66C2] bg-blue-100/70 px-2 py-0.5 rounded-full">
+                            <Check className="w-3 h-3" /> Active
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-base font-bold text-slate-900 group-hover:text-[#0A66C2] transition-colors leading-snug">
+                        {cover.name}
+                      </h3>
+                      
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                        {cover.desc}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
+                      <span className={isSelected ? 'text-[#0A66C2]' : 'text-slate-600 group-hover:text-[#0A66C2]'}>
+                        {isSelected ? 'Currently Selected' : 'Apply Template'}
+                      </span>
+                      <ChevronRight className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 ${isSelected ? 'text-[#0A66C2]' : 'text-slate-400 group-hover:text-[#0A66C2]'}`} />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

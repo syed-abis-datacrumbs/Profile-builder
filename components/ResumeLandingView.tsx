@@ -8,7 +8,6 @@ import {
   Folder,
   PenTool,
   Check,
-  ChevronDown,
   Mic,
   ArrowUpRight,
   Sparkles,
@@ -191,13 +190,11 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
 
             {/* Right Controls */}
             <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 flex items-center gap-1 border border-slate-200/80 transition-colors shrink-0"
+              <span
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100/70 border border-slate-200/80 shrink-0 select-none"
               >
-                <span>{selectedModel}</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
-              </button>
+                {selectedModel}
+              </span>
 
               <motion.button
                 whileHover={{ scale: 1.08 }}

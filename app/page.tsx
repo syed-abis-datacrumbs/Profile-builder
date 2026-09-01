@@ -547,6 +547,8 @@ export default function Home() {
                               setIsAuthOpen(true);
                               return;
                             }
+                            const cleanPrompt = promptText.trim();
+                            setResumeInitialPrompt(cleanPrompt);
                             if (attachedResumeTemplate) {
                               loadResumeField(attachedResumeTemplate);
                               if (typeof window !== 'undefined') {
@@ -565,10 +567,8 @@ export default function Home() {
                               if (typeof window !== 'undefined') {
                                 localStorage.removeItem('profile_builder_resume_chat');
                               }
-                              if (promptText.trim()) setResumeInitialPrompt(promptText);
                               setResumeMode('studio');
                             }
-                            if (promptText.trim()) setResumeInitialPrompt(promptText);
                             setAttachedResumeTemplate(null);
                           }}
                           onOpenEditorDirectly={() => {
@@ -656,6 +656,8 @@ export default function Home() {
                             setIsAuthOpen(true);
                             return;
                           }
+                          const cleanPrompt = promptText.trim();
+                          setGithubInitialPrompt(cleanPrompt);
                           if (attachedGithubTemplate) {
                             const t = attachedGithubTemplate;
                             const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
@@ -669,10 +671,8 @@ export default function Home() {
                             const defaultTemplate = GITHUB_TEMPLATES[0];
                             openGithubStudio(defaultPreset, 'dark', '/images/github-profile/git-profile-1.png', defaultTemplate.bannerUrl);
                           } else {
-                            if (promptText.trim()) setGithubInitialPrompt(promptText);
                             setGithubMode('studio');
                           }
-                          if (promptText.trim()) setGithubInitialPrompt(promptText);
                           setAttachedGithubTemplate(null);
                         }}
                         onOpenEditorDirectly={() => {
@@ -744,6 +744,8 @@ export default function Home() {
                             setIsAuthOpen(true);
                             return;
                           }
+                          const cleanPrompt = promptText.trim();
+                          setLinkedinInitialPrompt(cleanPrompt);
                           if (attachedLinkedinTemplate) {
                             setLinkedinRichProfile(buildInitialRichProfile(attachedLinkedinTemplate));
                             if (typeof window !== 'undefined') {
@@ -752,7 +754,6 @@ export default function Home() {
                           } else if (!linkedinRichProfile) {
                             setLinkedinRichProfile(buildInitialRichProfile('linkedin-1'));
                           }
-                          if (promptText.trim()) setLinkedinInitialPrompt(promptText);
                           setLinkedinMode('studio');
                           setAttachedLinkedinTemplate(null);
                         }}
@@ -944,6 +945,10 @@ export default function Home() {
               setAttachedLinkedinTemplate(linkedinPreviewTemplateId);
               setLinkedinMode('landing');
               mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onRemove={() => {
+              setAttachedLinkedinTemplate(null);
+              setLinkedinMode('landing');
             }}
           />
         )}

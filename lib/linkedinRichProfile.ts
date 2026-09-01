@@ -37,6 +37,8 @@ export interface LinkedinRichProfile {
   pfpGradientId: string;
   /** Object URL (user-uploaded) or the shared dummy headshot path. */
   headshotUrl: string;
+  /** Custom user-uploaded cover banner image URL (base64 or blob URL). */
+  customCoverUrl?: string;
 }
 
 export const PFP_GRADIENT_IDS = Array.from({ length: 10 }, (_, i) => `gradient-${i + 1}`);
@@ -105,8 +107,31 @@ export function buildInitialRichProfile(templateId: string): LinkedinRichProfile
     awards: sample.awards.map((a) => ({ ...a })),
     coverTemplateId,
     coverFieldValues: buildCoverFieldValues(coverTemplateId, identity),
-    pfpGradientId,
     headshotUrl: DEFAULT_HEADSHOT_URL,
+  };
+}
+
+/** Returns a completely blank/empty profile with no names, titles, about, skills,
+ *  experiences, headshot photo, or cover text fields. */
+export function buildEmptyRichProfile(): LinkedinRichProfile {
+  return {
+    fullName: '',
+    title: '',
+    headline: '',
+    location: '',
+    currentCompany: '',
+    school: '',
+    about: '',
+    skills: [],
+    experience: [],
+    education: [],
+    certifications: [],
+    projects: [],
+    awards: [],
+    coverTemplateId: 'linkedin-1',
+    coverFieldValues: {},
+    pfpGradientId: 'gradient-1',
+    headshotUrl: '',
   };
 }
 

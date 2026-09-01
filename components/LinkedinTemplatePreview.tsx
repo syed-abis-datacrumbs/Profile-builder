@@ -14,6 +14,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   ChevronRight,
+  X,
 } from 'lucide-react';
 import { linkedinCovers, getDefaultPfpGradientId } from '../lib/linkedinCovers';
 import { linkedinTemplateSamples, LinkedinTemplateSample, LinkedinTemplateFeaturedItem } from '../lib/linkedinTemplateSamples';
@@ -26,6 +27,7 @@ interface LinkedinTemplatePreviewProps {
   templateId: string;
   onBack: () => void;
   onEdit: () => void;
+  onRemove?: () => void;
 }
 
 /** px is tuned against the LMS's 1584px-wide canvas — cqw keeps it
@@ -49,7 +51,7 @@ const DUMMY_THUMBNAILS = [
   '/images/linkedin-templates/thumbnails/sixth.png',
 ];
 
-export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = ({ templateId, onBack, onEdit }) => {
+export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = ({ templateId, onBack, onEdit, onRemove }) => {
   const coverIndex = linkedinCovers.findIndex((c) => c.id === templateId);
   const validIndex = Math.max(0, coverIndex);
   const template = linkedinCovers[validIndex];
@@ -119,7 +121,7 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
             </span>
             <button
               onClick={onEdit}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0A66C2] hover:bg-[#0958A8] text-white text-sm font-bold transition-colors shadow-sm whitespace-nowrap"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0A66C2] hover:bg-[#0958A8] text-white text-sm font-bold transition-colors shadow-sm whitespace-nowrap cursor-pointer"
             >
               <PenSquare className="w-3.5 h-3.5" />
               <span>Use Template</span>
