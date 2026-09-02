@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, Image as ImageIcon, X, Download, Pencil } from 'lucide-react';
+import { Loader2, Image as ImageIcon, X, Download, Pencil, Camera, Palette, Trash2 } from 'lucide-react';
 import { GithubProfileData } from '../types';
+import toast from '@/lib/toast';
 
 const BADGE_COLORS: Record<string, string> = {
   python: '3776AB', typescript: '3178C6', javascript: 'F7DF1E', react: '61DAFB',
@@ -78,6 +79,15 @@ export function Edit({
   readOnly?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (ref.current && document.activeElement !== ref.current) {
+      if (ref.current.innerHTML !== (value || '')) {
+        ref.current.innerHTML = value || '';
+      }
+    }
+  }, [value]);
+
   const Tag = (block ? 'div' : 'span') as 'div';
   
   if (readOnly) {
@@ -225,6 +235,14 @@ function InlineField({
 }) {
   const ref = useRef<HTMLSpanElement>(null);
 
+  useEffect(() => {
+    if (ref.current && document.activeElement !== ref.current) {
+      if (ref.current.innerHTML !== (value || '')) {
+        ref.current.innerHTML = value || '';
+      }
+    }
+  }, [value]);
+
   if (!editable) {
     return <span className={className}>{value}</span>;
   }
@@ -288,9 +306,13 @@ export const GithubReadmePreview: React.FC<{
   onSet?: (patch: Partial<GithubProfileData>) => void;
   onSetSection?: (index: number, patch: Partial<GithubProfileData['customSections'][number]>) => void;
   onShowBannerPicker?: () => void;
-  onDownloadImage?: (url: string) => void;
+  onDownloadImage?: (url: string, filename?: string) => void;
   onUploadAvatarClick?: () => void;
-}> = ({ github, editable = false, onSet, onSetSection, onShowBannerPicker, onDownloadImage, onUploadAvatarClick }) => {
+  onUploadBannerClick?: () => void;
+}> = ({ github, editable = false, onSet, onSetSection, onShowBannerPicker, onDownloadImage, onUploadAvatarClick, onUploadBannerClick }) => {
+  const [showCoverMenu, setShowCoverMenu] = useState(false);
+  const [showPhotoMenu, setShowPhotoMenu] = useState(false);
+
   // Link Edit Modal state
   const [editingLink, setEditingLink] = useState<{
     type: 'markdown' | 'social';
@@ -379,7 +401,7 @@ export const GithubReadmePreview: React.FC<{
       <div className="relative">
         {/* Banner */}
         {github.bannerUrl ? (
-          <div className="relative group">
+          <div className="relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={github.bannerUrl}
@@ -387,44 +409,96 @@ export const GithubReadmePreview: React.FC<{
               className="w-full object-cover"
               style={{ height: 200 }}
             />
-            {/* Banner Controls */}
-            {editable && (
-              <>
-                {/* Edit Pencil Badge (Top Right) */}
-                <button
-                  onClick={onShowBannerPicker}
-                  className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur rounded-full border border-white/30 shadow-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors z-10"
-                  title="Change Cover Photo"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-
-                {/* Download Overlay on Hover */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-default pointer-events-none">
-                  {onDownloadImage && (
-                    <button
-                      onClick={() => github.bannerUrl && onDownloadImage(github.bannerUrl)}
-                      className="px-3 py-1.5 rounded-lg bg-white/20 backdrop-blur text-white text-xs font-bold hover:bg-white/30 transition-colors drop-shadow-md pointer-events-auto"
-                    >
-                      <Download className="w-3.5 h-3.5 inline mr-1" />
-                      Download
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
           </div>
         ) : (
           /* Placeholder when no banner */
-          <div className="h-32 bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 flex items-center justify-center">
+          <div className="h-36 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center border-b border-slate-800/60">
             {editable && (
               <button
-                onClick={onShowBannerPicker}
-                className="px-4 py-2 border-2 border-dashed border-slate-600 rounded-lg text-slate-500 hover:text-slate-300 hover:border-slate-400 transition-colors text-xs font-semibold flex items-center gap-2"
+                type="button"
+                onClick={() => setShowCoverMenu(true)}
+                className="px-4 py-2 border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-lg text-slate-400 hover:text-slate-200 transition-colors text-xs font-semibold flex items-center gap-2 cursor-pointer bg-slate-950/40"
               >
                 <ImageIcon className="w-4 h-4" />
                 Add a cover banner
               </button>
+            )}
+          </div>
+        )}
+
+        {/* Persistent Cover Controls (Top Right) */}
+        {editable && (
+          <div className="absolute top-4 right-4 z-20">
+            {/* Edit Pencil Badge */}
+            <button
+              type="button"
+              onClick={() => setShowCoverMenu((v) => !v)}
+              className="w-8 h-8 bg-slate-900/80 hover:bg-slate-900 backdrop-blur rounded-full border border-white/20 shadow-md flex items-center justify-center text-white transition-colors cursor-pointer"
+              title="Edit Cover Banner"
+              aria-label="Edit Cover Banner"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+
+            {showCoverMenu && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setShowCoverMenu(false)} />
+                <div className="absolute z-30 top-full right-0 mt-1.5 w-56 bg-white rounded-xl border border-slate-200 shadow-xl p-1 text-xs font-semibold text-slate-700">
+                  {onUploadBannerClick && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCoverMenu(false);
+                        onUploadBannerClick();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-left cursor-pointer"
+                    >
+                      <Camera className="w-4 h-4 text-slate-500 shrink-0" />
+                      <span>Upload custom banner</span>
+                    </button>
+                  )}
+                  {onShowBannerPicker && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCoverMenu(false);
+                        onShowBannerPicker();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-left cursor-pointer"
+                    >
+                      <Palette className="w-4 h-4 text-slate-500 shrink-0" />
+                      <span>Choose banner preset</span>
+                    </button>
+                  )}
+                  {github.bannerUrl && onDownloadImage && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCoverMenu(false);
+                        onDownloadImage(github.bannerUrl!, 'github-banner.png');
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-left cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Download cover banner</span>
+                    </button>
+                  )}
+                  {github.bannerUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCoverMenu(false);
+                        onSet?.({ bannerUrl: undefined });
+                        toast.success('Cover banner removed.');
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-rose-50 text-rose-600 transition-colors text-left cursor-pointer border-t border-slate-100 mt-1 pt-2"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>Remove cover banner</span>
+                    </button>
+                  )}
+                </div>
+              </>
             )}
           </div>
         )}
@@ -446,30 +520,68 @@ export const GithubReadmePreview: React.FC<{
                 </div>
               )}
             </div>
-            {/* Camera overlay on hover (Download only) */}
-            {editable && (
-              <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center cursor-default pointer-events-none">
-                {onDownloadImage && (
-                  <button
-                    onClick={() => github.avatarUrl && onDownloadImage(github.avatarUrl)}
-                    className="text-white hover:text-slate-200 transition-colors drop-shadow-md pointer-events-auto"
-                    title="Download Profile Photo"
-                  >
-                    <Download className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-            )}
             
             {/* LinkedIn-style Edit Badge */}
-            {editable && onUploadAvatarClick && (
-              <button
-                onClick={onUploadAvatarClick}
-                className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors z-10"
-                title="Change Profile Photo"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
+            {editable && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowPhotoMenu((v) => !v)}
+                  className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors z-10 cursor-pointer"
+                  title="Edit Profile Photo"
+                  aria-label="Edit Profile Photo"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+
+                {showPhotoMenu && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setShowPhotoMenu(false)} />
+                    <div className="absolute z-30 top-full left-0 mt-1.5 w-56 bg-white rounded-xl border border-slate-200 shadow-xl p-1 text-xs font-semibold text-slate-700">
+                      {onUploadAvatarClick && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPhotoMenu(false);
+                            onUploadAvatarClick();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-slate-100 transition-colors text-left cursor-pointer"
+                        >
+                          <Camera className="w-4 h-4 text-slate-500 shrink-0" />
+                          <span>Upload a photo</span>
+                        </button>
+                      )}
+                      {github.avatarUrl && onDownloadImage && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPhotoMenu(false);
+                            onDownloadImage(github.avatarUrl!, 'profile-photo.png');
+                          }}
+                          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-slate-100 transition-colors text-left cursor-pointer"
+                        >
+                          <Download className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Download profile photo</span>
+                        </button>
+                      )}
+                      {github.avatarUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPhotoMenu(false);
+                            onSet?.({ avatarUrl: undefined });
+                            toast.success('Profile photo removed.');
+                          }}
+                          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-rose-50 text-rose-600 transition-colors text-left border-t border-slate-100 mt-1 pt-2 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>Remove photo</span>
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>

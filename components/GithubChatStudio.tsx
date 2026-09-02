@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo, Bug, Copy, LayoutTemplate } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo, Bug, Copy, LayoutTemplate, Trash2 } from 'lucide-react';
 import toast from '@/lib/toast';
 import { GithubProfileData } from '../types';
 import { GithubIcon } from './icons';
@@ -428,28 +428,39 @@ export const GithubChatStudio: React.FC<{
     }
   };
 
+  const bannerFileInputRef = useRef<HTMLInputElement>(null);
+
   const handleHeadshotFile = (file: File | null) => {
     if (!file) return;
     setCropSourceUrl(URL.createObjectURL(file));
   };
 
-  const handleDownloadImage = async (url: string) => {
+  const handleBannerFile = (file: File | null) => {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    set({ bannerUrl: url });
+    toast.success('Custom banner uploaded!');
+  };
+
+  const handleDownloadImage = async (url: string, filename?: string) => {
     if (unlocked === false) {
       setShowPaymentModal(true);
       return;
     }
+    const downloadName = filename || (url.includes('banner') || url.includes('capsule-render') ? 'cover-photo.png' : 'profile-photo.jpg');
     try {
       const response = await fetch(url);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = url.includes('banner') || url.includes('capsule-render') ? 'cover-photo.png' : 'profile-photo.jpg';
+      link.download = downloadName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
-    } catch (e) {
+      toast.success(`Downloaded ${downloadName}`);
+    } catch {
       window.open(url, '_blank');
     }
   };
@@ -483,17 +494,6 @@ export const GithubChatStudio: React.FC<{
             {/* <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 hidden lg:block" /> */}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowTemplateModal(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors text-xs font-bold border border-indigo-200 cursor-pointer shadow-2xs"
-              title="Select another role template"
-            >
-              <LayoutTemplate className="w-3.5 h-3.5" />
-              <span>Templates</span>
-            </button>
-          </div>
         </div>
 
         {/* Chat Scroll Container */}
@@ -619,6 +619,33 @@ export const GithubChatStudio: React.FC<{
             >
               <LayoutTemplate className="w-3.5 h-3.5 text-indigo-600" />
               <span className="hidden xs:inline">Templates</span>
+            </button>
+
+            {/* Remove Template Button */}
+            <button
+              type="button"
+              onClick={() => {
+                recordChange({
+                  username: '',
+                  title: '',
+                  about: '',
+                  bannerUrl: undefined,
+                  avatarUrl: undefined,
+                  techStack: [],
+                  showStatsCard: false,
+                  showStreakCard: false,
+                  showTopLangsCard: false,
+                  theme: 'dark',
+                  socialLinks: {},
+                  customSections: [],
+                });
+                toast.success('Template removed. Profile cleared to blank slate.');
+              }}
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors text-xs font-semibold cursor-pointer shadow-2xs"
+              title="Remove template and clear profile data"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden xs:inline">Remove Template</span>
             </button>
 
             {/* Tab Title (Save Menu) */}
@@ -917,6 +944,7 @@ export const GithubChatStudio: React.FC<{
             onShowBannerPicker={() => setShowBannerPicker(true)}
             onDownloadImage={handleDownloadImage}
             onUploadAvatarClick={() => fileInputRef.current?.click()}
+            onUploadBannerClick={() => bannerFileInputRef.current?.click()}
           />
         </div>
 
@@ -1043,6 +1071,15 @@ export const GithubChatStudio: React.FC<{
         accept="image/*"
         className="hidden"
         onChange={(e) => handleHeadshotFile(e.target.files?.[0] ?? null)}
+      />
+
+      {/* Hidden file input for Banner Upload */}
+      <input
+        ref={bannerFileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => handleBannerFile(e.target.files?.[0] ?? null)}
       />
 
       {cropSourceUrl && (

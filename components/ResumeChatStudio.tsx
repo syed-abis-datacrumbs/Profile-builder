@@ -31,6 +31,7 @@ import { PaginatedCvPreview } from './PaginatedCvPreview';
 import { measureBlocks, paginateCvSmart, PAGE_WIDTH_PX } from '../lib/cvPagination';
 import { PaymentModal } from './PaymentModal';
 import { MobileChatWidget } from './MobileChatWidget';
+import toast from '@/lib/toast';
 
 // Blank breathing room reserved at the BOTTOM of every page and the TOP of
 // every continuation page (page 2+), so content never runs flush to a page
@@ -119,11 +120,12 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const [issueImage, setIssueImage] = useState<string | null>(null);
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
 
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  
-  const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
+  const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success', duration = 1750) => {
+    if (type === 'error') {
+      toast.error(msg, duration);
+    } else {
+      toast.success(msg, duration);
+    }
   }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -275,9 +277,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     fetch('/api/resumes/name')
       .then((r) => r.json())
       .then(async (data) => {
-        // Auto-seed: first-time user has no locked name yet, but we have the
-        // Clerk registration name — apply it silently so their first resume has a name.
-        if (!data.fullName && clerkName) {
+        if (!data.fullName && !cv.personalInfo?.fullName && clerkName) {
           onChange({ ...cv, personalInfo: { ...cv.personalInfo, fullName: clerkName } });
         }
       })
@@ -825,15 +825,6 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               {fieldLabel || 'Resume Studio'}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowTemplateModal(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors text-xs font-bold border border-blue-200 cursor-pointer shadow-2xs shrink-0"
-            title="Select another resume template"
-          >
-            <LayoutTemplate className="w-3.5 h-3.5" />
-            <span>Templates</span>
-          </button>
         </div>
 
         {/* Chat Scroll Container */}
@@ -974,7 +965,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       <div className="w-full h-full lg:flex-1 shrink-0 lg:h-full flex flex-col bg-slate-100/90 overflow-hidden relative">
 
         {/* MacOS Window Single Unified Toolbar Header */}
-        <div className="shrink-0 bg-white border-b border-slate-200 px-2.5 py-1.5 flex items-center justify-between gap-1 text-xs shadow-2xs overflow-x-auto hide-scrollbar z-30 whitespace-nowrap min-w-0">
+        <div className="shrink-0 bg-white border-b border-slate-200 px-2 sm:px-4 py-2 flex items-center justify-between gap-1 text-xs shadow-2xs z-30 whitespace-nowrap min-w-0">
 
           {/* Left Controls Group */}
           <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
@@ -996,6 +987,42 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               <span className="leading-none hidden xs:inline">Templates</span>
             </button>
 
+            {/* Remove Template Button */}
+            <button
+              type="button"
+              onClick={() => {
+                external({
+                  cvType: cv.cvType || 'professional',
+                  personalInfo: {
+                    fullName: '',
+                    phone: '',
+                    email: '',
+                    linkedin: '',
+                    linkedinLabel: '',
+                    github: '',
+                    githubLabel: '',
+                    kaggle: '',
+                    kaggleLabel: '',
+                  },
+                  education: [],
+                  workExperience: [],
+                  workshops: [],
+                  projects: [],
+                  certifications: [],
+                  additional: {
+                    skills: '',
+                    interests: '',
+                  },
+                });
+                showToast('Template removed. Resume cleared to blank slate.');
+              }}
+              className="h-7 px-1.5 sm:px-2 rounded-lg bg-rose-50 text-[11px] sm:text-xs font-semibold text-rose-600 hover:bg-rose-100 transition-colors border border-rose-200 flex items-center justify-center gap-1 leading-none cursor-pointer shadow-2xs"
+              title="Remove template and clear resume data"
+            >
+              <Trash2 className="w-3.5 h-3.5 shrink-0" />
+              <span className="leading-none hidden xs:inline">Remove Template</span>
+            </button>
+
             {/* Resume Save/Load Dropdown */}
             <div className="relative">
               <button
@@ -1010,7 +1037,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               {resumeMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setResumeMenuOpen(false)} />
-                  <div className="fixed top-12 left-3 sm:left-auto w-[285px] max-w-[90vw] bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden text-xs">
+                  <div className="absolute top-full left-0 mt-2 w-[285px] max-w-[90vw] bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden text-xs">
                     {/* Top Action Header */}
                     <div className="p-3 bg-slate-50/90 border-b border-slate-100 space-y-2">
                       <div className="flex items-center justify-between">
@@ -1201,10 +1228,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               </button>
             </div>
 
-            <div className="h-4 w-px bg-slate-200 mx-0.5" />
+            <div className="hidden sm:block h-4 w-px bg-slate-200 mx-0.5" />
 
             {/* Formatting Icons */}
-            <div className="flex items-center gap-0">
+            <div className="hidden sm:flex items-center gap-0">
               {([
                 { cmd: 'bold', Icon: Bold, label: 'Bold' },
                 { cmd: 'italic', Icon: Italic, label: 'Italic' },
@@ -1265,7 +1292,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               {dlMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setDlMenu(false)} />
-                  <div className="fixed top-12 right-4 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden text-xs">
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden text-xs">
                     <button
                       onClick={() => download('pdf')}
                       disabled={!!downloading}
@@ -1641,7 +1668,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               {LMS_RESUME_SAMPLES.map((sample, idx) => {
                 const sampleCv = cvMarkdownToHtml(sample.data);
                 const roleTitle = sample.label;
-                const sampleName = sampleCv.personalInfo?.fullName || 'Sample User';
+                const sampleName = sampleCv.personalInfo?.fullName || 'Zoya Siddiqui';
                 const skillsText = sampleCv.additional?.skills || '';
 
                 return (
@@ -1649,15 +1676,6 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                     key={idx}
                     onClick={() => {
                       const newCv = cvMarkdownToHtml(sample.data);
-                      if (cv.personalInfo.fullName && cv.personalInfo.fullName !== 'Zoya Siddiqui') {
-                        newCv.personalInfo.fullName = cv.personalInfo.fullName;
-                      }
-                      if (cv.personalInfo.email && !cv.personalInfo.email.includes('example.com')) {
-                        newCv.personalInfo.email = cv.personalInfo.email;
-                      }
-                      if (cv.personalInfo.phone && !cv.personalInfo.phone.includes('1234567')) {
-                        newCv.personalInfo.phone = cv.personalInfo.phone;
-                      }
                       external(newCv);
                       setShowTemplateModal(false);
                       showToast(`Applied ${roleTitle} template!`);
@@ -1700,16 +1718,6 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 );
               })}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed top-6 right-6 sm:top-8 sm:right-8 z-[9999] animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className={`px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-bold text-white max-w-sm border ${toast.type === 'success' ? 'bg-emerald-600 border-emerald-500' : 'bg-rose-600 border-rose-500'}`}>
-            {toast.type === 'success' ? <Check className="w-5 h-5 shrink-0 text-white" /> : <X className="w-5 h-5 shrink-0 text-white" />}
-            <p className="leading-snug">{toast.msg}</p>
           </div>
         </div>
       )}

@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import confetti from 'canvas-confetti';
 import { ImagineSidebar, MobileNavBar } from '../components/ImagineSidebar';
-import { ImagineHeader } from '../components/ImagineHeader';
 import { ResumeLandingView } from '../components/ResumeLandingView';
 import { ResumeEditor } from '../components/ResumeEditor';
 import { GithubLandingView, GithubTemplateCard, GITHUB_TEMPLATES } from '../components/GithubLandingView';
@@ -424,20 +423,14 @@ export default function Home() {
         <MobileNavBar
           onOpenMenu={() => setIsMobileNavOpen(true)}
           onOpenAuth={() => setIsAuthOpen(true)}
+          onGoHome={() => {
+            setResumeMode('landing');
+            setGithubMode('landing');
+            setLinkedinMode('landing');
+            mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
           rightContent={mobileHeaderRight}
         />
-
-        {/* Top Header - hidden in full-bleed Studio mode */}
-        {!(
-          (activeTab === 'resume' && resumeMode === 'studio') ||
-          (activeTab === 'linkedin' && linkedinMode === 'studio') ||
-          (activeTab === 'github' && githubMode === 'studio')
-        ) && (
-            <ImagineHeader
-              onOpenUpgrade={() => setIsPaymentModalOpen(true)}
-              onOpenAuth={() => setIsAuthOpen(true)}
-            />
-          )}
 
         {/* Studio Workspace View */}
         <AnimatePresence mode="wait">

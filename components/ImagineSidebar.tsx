@@ -509,8 +509,9 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
 export const MobileNavBar: React.FC<{
   onOpenMenu: () => void;
   onOpenAuth: () => void;
+  onGoHome?: () => void;
   rightContent?: React.ReactNode;
-}> = ({ onOpenMenu, onOpenAuth, rightContent }) => {
+}> = ({ onOpenMenu, onOpenAuth, onGoHome, rightContent }) => {
   const { user } = useUser();
   const { signOut } = useClerk();
   const isLoggedIn = !!user;
@@ -528,9 +529,17 @@ export const MobileNavBar: React.FC<{
     }
   };
 
+  const handleGoHome = () => {
+    if (onGoHome) {
+      onGoHome();
+    } else {
+      window.location.href = '/';
+    }
+  };
+
   return (
     <div className="md:hidden shrink-0 flex items-center justify-between px-3 py-2 border-b border-slate-200 bg-[#FAFAFA] relative z-[45]">
-      <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex items-center gap-2 min-w-0">
         <button
           onClick={onOpenMenu}
           className="p-1.5 -ml-1 rounded-lg text-slate-700 hover:bg-slate-200/70 transition-colors cursor-pointer shrink-0"
@@ -538,52 +547,24 @@ export const MobileNavBar: React.FC<{
         >
           <Menu className="w-5 h-5" />
         </button>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="" className="w-6 h-6 object-contain rounded shrink-0" />
-        <span className="font-extrabold text-sm tracking-tight text-slate-900 uppercase truncate">
-          MOMENTUM
-        </span>
+        <button
+          type="button"
+          onClick={handleGoHome}
+          className="flex items-center gap-2 cursor-pointer group hover:opacity-85 transition-opacity text-left min-w-0"
+          title="MOMENTUM - Home"
+          aria-label="MOMENTUM Home"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="MOMENTUM Logo" className="w-6 h-6 object-contain rounded shrink-0 group-hover:scale-105 transition-transform" />
+          <span className="font-extrabold text-sm tracking-tight text-slate-900 uppercase truncate">
+            MOMENTUM
+          </span>
+        </button>
       </div>
 
       {rightContent ? (
         <div className="shrink-0 flex items-center gap-1.5">{rightContent}</div>
-      ) : (
-        /* Auth Account Button inside Mobile NavBar */
-        <div className="relative shrink-0">
-        <button
-          onClick={handleButtonClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 hover:border-slate-300 text-[11px] sm:text-xs font-semibold transition-all shadow-2xs cursor-pointer"
-        >
-          <UserCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-          <span>{isLoggedIn ? firstName : 'Sign In'}</span>
-        </button>
-
-        {isLoggedIn && isMenuOpen && (
-          <>
-            {/* Click Outside Overlay */}
-            <div className="fixed inset-0 z-30" onClick={() => setIsMenuOpen(false)} />
-            
-            {/* Dropdown Menu */}
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl p-2 shadow-lg z-45 flex flex-col space-y-1">
-              <div className="px-2.5 py-2 border-b border-slate-100 text-[10px] text-slate-400 font-medium truncate">
-                {userEmail}
-              </div>
-              <button
-                onClick={async () => {
-                  setIsMenuOpen(false);
-                  await signOut();
-                  window.location.href = '/';
-                }}
-                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors text-left text-xs font-semibold cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5 shrink-0" />
-                <span>Log out</span>
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-      )}
+      ) : null}
     </div>
   );
 };

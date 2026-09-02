@@ -314,14 +314,30 @@ export function applyRolePresetToGithub(
     ...preset.techStack.map((id) => TECH_NAME_MAP[id] ?? id),
     ...(preset.extraBadges?.map((b) => b.label) ?? []),
   ];
+  const resolvedUsername = data.username || (preset.id === 'custom' ? 'your-github-username' : 'alexrivera-ai');
   const projectsMd = preset.projects
-    .map((p) => `• [${p.name}](https://github.com/${data.username || 'your-github-username'}/${p.slug}): ${p.desc}`)
+    .map((p) => `• [${p.name}](https://github.com/${resolvedUsername}/${p.slug}): ${p.desc}`)
     .join('\n\n');
   return {
     ...data,
-    username: preset.id === 'custom' ? 'your-github-username' : data.username,
+    username: preset.id === 'custom' ? 'your-github-username' : (data.username || 'alexrivera-ai'),
     title: preset.id === 'custom' ? 'Hi 👋' : preset.label,
-    socialLinks: preset.id === 'custom' ? { linkedin: '', twitter: '', email: '', website: '' } : data.socialLinks,
+    bannerUrl: data.bannerUrl || 'https://res.cloudinary.com/dnqk2jlds/image/upload/f_auto,q_auto,w_1400/v1784892308/lms-assets/github-builder-banner.png',
+    avatarUrl: data.avatarUrl || '/images/github-profile/git-profile-1.png',
+    showStatsCard: true,
+    showTopLangsCard: true,
+    showStreakCard: data.showStreakCard ?? false,
+    theme: data.theme || 'dark',
+    socialLinks: (data.socialLinks && Object.values(data.socialLinks).some(Boolean))
+      ? data.socialLinks
+      : (preset.id === 'custom'
+          ? { linkedin: '', twitter: '', email: '', website: '' }
+          : {
+              linkedin: 'https://linkedin.com/in/alex-rivera-dev',
+              twitter: 'https://x.com/alexrivera_tech',
+              email: 'alex.rivera@techcraft.io',
+              website: 'https://alexrivera.dev',
+            }),
     about: preset.about,
     techStack,
     customSections: preset.id === 'custom' ? [] : [

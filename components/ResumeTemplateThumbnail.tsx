@@ -37,9 +37,6 @@ export const ResumeTemplateThumbnail: React.FC<{ sample: LmsResumeSample; accent
   }, [measure]);
 
   const cv = cvMarkdownToHtml(sample.data as CvData);
-  if (clerkFullName && cv.personalInfo) {
-    cv.personalInfo.fullName = clerkFullName;
-  }
 
   return (
     <div

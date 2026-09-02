@@ -31,9 +31,6 @@ interface ResumeTemplatePreviewProps {
 // always matches what's actually on screen.
 export const ResumeTemplatePreview: React.FC<ResumeTemplatePreviewProps> = ({ sample, clerkFullName, onUse, onClose }) => {
   const cv = cvMarkdownToHtml(sample.data as CvData);
-  if (clerkFullName && cv.personalInfo) {
-    cv.personalInfo.fullName = clerkFullName;
-  }
   const accent = getResumeAccentColor(sample);
 
   const panelRef = useRef<HTMLDivElement>(null);

@@ -1,32 +1,32 @@
 // Lightweight, zero-dependency toast notification helper
 
 export const toast = {
-  success: (msg: string) => {
+  success: (msg: string, duration = 1750) => {
     if (typeof window !== 'undefined') {
-      showDOMToast(msg, 'success');
+      showDOMToast(msg, 'success', duration);
     }
   },
-  error: (msg: string) => {
+  error: (msg: string, duration = 2500) => {
     if (typeof window !== 'undefined') {
-      showDOMToast(msg, 'error');
+      showDOMToast(msg, 'error', duration);
     }
   },
-  loading: (msg: string) => {
+  loading: (msg: string, duration = 1750) => {
     if (typeof window !== 'undefined') {
-      showDOMToast(msg, 'loading');
+      showDOMToast(msg, 'loading', duration);
     }
   },
 };
 
 export default toast;
 
-function showDOMToast(message: string, type: 'success' | 'error' | 'loading') {
+function showDOMToast(message: string, type: 'success' | 'error' | 'loading', duration = 1750) {
   if (typeof document === 'undefined') return;
   let container = document.getElementById('app-toast-container');
   if (!container) {
     container = document.createElement('div');
     container.id = 'app-toast-container';
-    container.className = 'fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none';
+    container.className = 'fixed bottom-5 right-4 sm:right-5 z-[9999] flex flex-col gap-2 pointer-events-none max-w-[90vw]';
     document.body.appendChild(container);
   }
 
@@ -51,6 +51,6 @@ function showDOMToast(message: string, type: 'success' | 'error' | 'loading') {
     toastEl.classList.add('opacity-0', 'translate-y-2');
     setTimeout(() => {
       if (toastEl.parentNode) toastEl.parentNode.removeChild(toastEl);
-    }, 250);
-  }, 3500);
+    }, 200);
+  }, duration);
 }
