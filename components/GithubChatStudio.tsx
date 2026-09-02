@@ -1090,7 +1090,7 @@ export const GithubChatStudio: React.FC<{
                   <div
                     key={preset.id}
                     onClick={() => {
-                      const updated = applyRolePresetToGithub(preset, github);
+                      const updated = applyRolePresetToGithub(github, preset);
                       recordChange(updated);
                       setShowTemplateModal(false);
                       toast.success(`Applied ${preset.label} template!`);

@@ -107,6 +107,7 @@ export function buildInitialRichProfile(templateId: string): LinkedinRichProfile
     awards: sample.awards.map((a) => ({ ...a })),
     coverTemplateId,
     coverFieldValues: buildCoverFieldValues(coverTemplateId, identity),
+    pfpGradientId,
     headshotUrl: DEFAULT_HEADSHOT_URL,
   };
 }
