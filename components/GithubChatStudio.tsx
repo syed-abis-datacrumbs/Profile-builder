@@ -636,7 +636,7 @@ export const GithubChatStudio: React.FC<{
               {profileMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
-                  <div className="fixed top-12 left-3 sm:left-auto sm:absolute sm:top-full sm:left-0 mt-1 w-[285px] max-w-[90vw] bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col">
+                  <div className="absolute top-full left-0 mt-2 w-[285px] max-w-[90vw] bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col">
                     <div className="p-3 border-b border-slate-100 bg-slate-50/50 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="font-extrabold text-[10px] text-slate-500 uppercase tracking-wider">

@@ -45,6 +45,7 @@ import { CoverArtField, computeFitScale, coverFontSize, overageCeiling } from '.
 import { PfpCropModal } from './PfpCropModal';
 import { ShrinkToFitCoverText } from './ShrinkToFitCoverText';
 import { LinkedinTemplateThumbnail } from './LinkedinTemplateThumbnail';
+import { MobileChatWidget } from './MobileChatWidget';
 import { LinkedinTemplateSampleExperience, LinkedinTemplateSampleEducation, LinkedinTemplateSampleCertification, LinkedinTemplateSampleProject } from '../lib/linkedinTemplateSamples';
 
 const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
@@ -171,7 +172,7 @@ export const LinkedinChatStudio: React.FC<{
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<'chat' | 'preview'>('chat');
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [showCoverPicker, setShowCoverPicker] = useState(false);
   const [showCoverMenu, setShowCoverMenu] = useState(false);
   const [showPfpPicker, setShowPfpPicker] = useState(false);
@@ -461,10 +462,10 @@ export const LinkedinChatStudio: React.FC<{
   const primarySchool = profile.education[0]?.school ?? profile.school;
 
   return (
-    <div className="flex h-screen w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none">
+    <div className="flex h-screen w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none relative">
       
       {/* COLUMN 2 (AI CHAT - LEFT) */}
-      <div className={`${mobileTab === 'chat' ? 'flex' : 'hidden'} lg:flex w-full lg:w-[420px] xl:w-[480px] 2xl:w-[520px] flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden`}>
+      <div className={`hidden lg:flex w-full lg:w-[420px] xl:w-[480px] 2xl:w-[520px] flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden`}>
         
         {/* Top Header of Chat Column */}
         <div className="shrink-0 flex items-center justify-between px-2.5 sm:px-4 py-2 sm:py-2.5 border-b border-slate-200 bg-white gap-1.5 sm:gap-2">
@@ -476,80 +477,9 @@ export const LinkedinChatStudio: React.FC<{
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            {/* Tab Title (Save Menu) */}
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                onClick={toggleProfileMenu}
-                className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs sm:text-sm font-bold text-slate-800 border border-slate-200/80 cursor-pointer"
-              >
-                <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm bg-[#0A66C2] flex items-center justify-center shrink-0">
-                  <span className="text-white text-[9px] sm:text-[10px] font-bold leading-none">in</span>
-                </div>
-                <span>Profiles</span>
-                <ChevronDown className={`w-3 sm:w-3.5 h-3 sm:h-3.5 text-slate-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {profileMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
-                  <div className="fixed top-12 left-3 sm:left-auto sm:absolute sm:top-full sm:left-0 mt-1 w-[285px] max-w-[90vw] bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col">
-                    <div className="p-3 border-b border-slate-100 bg-slate-50/50">
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={saveNameInput}
-                          onChange={(e) => setSaveNameInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveProfile(); }}
-                          placeholder="My LinkedIn Profile"
-                          className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
-                        />
-                        <button
-                          onClick={handleSaveProfile}
-                          disabled={saving}
-                          className="px-3.5 py-1.5 rounded-lg bg-[#0A66C2] text-white text-sm font-bold hover:bg-[#004182] disabled:opacity-50 transition-colors"
-                        >
-                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
-                        </button>
-                      </div>
-                      {saveError && <div className="mt-2 text-xs text-red-500 font-medium">{saveError}</div>}
-                    </div>
-
-                    <div className="max-h-64 overflow-y-auto p-2 space-y-1">
-                      {savedProfiles === null ? (
-                        <div className="p-4 flex justify-center"><Loader2 className="w-5 h-5 text-slate-400 animate-spin" /></div>
-                      ) : savedProfiles.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-slate-500">No saved profiles yet.</div>
-                      ) : (
-                        savedProfiles.map((s) => (
-                          <div key={s.id} className="group relative rounded-lg border border-transparent hover:bg-slate-50 hover:border-slate-200 transition-colors">
-                            <button
-                              onClick={() => handleLoadSavedProfile(s.id)}
-                              disabled={loadingSavedId !== null || deletingSavedId !== null}
-                              className="w-full text-left px-3 py-2.5 flex flex-col"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-slate-800 text-sm truncate">{s.name}</span>
-                                {loadingSavedId === s.id && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
-                              </div>
-                              <span className="text-xs text-slate-400">{new Date(s.createdAt).toLocaleDateString()}</span>
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteSavedProfile(s.id); }}
-                              disabled={deletingSavedId !== null}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
-                              title="Delete this save"
-                            >
-                              {deletingSavedId === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+            <span className="font-bold text-sm text-slate-800 truncate">
+              Optimizing LinkedIn Profile...
+            </span>
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -561,13 +491,6 @@ export const LinkedinChatStudio: React.FC<{
             >
               <LayoutTemplate className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden xs:inline">Templates</span>
-            </button>
-            <button
-              onClick={() => setMobileTab('preview')}
-              className="lg:hidden px-2 sm:px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors shrink-0"
-            >
-              <span className="hidden xs:inline">View Profile</span>
-              <span className="xs:hidden">Preview</span>
             </button>
             <button
               onClick={() => setMessages([{ role: 'assistant', content: 'Started a new chat session. How can I optimize your LinkedIn profile?' }])}
@@ -656,17 +579,11 @@ export const LinkedinChatStudio: React.FC<{
       </div>
 
       {/* COLUMN 3 (LINKEDIN PREVIEW - RIGHT) */}
-      <div className={`${mobileTab === 'preview' ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-[#F3F2EF] h-full overflow-hidden relative`}>
+      <div className={`flex-1 flex flex-col bg-[#F3F2EF] h-full overflow-hidden relative`}>
         
         {/* Header */}
         <div className="shrink-0 bg-white border-b border-slate-200/80 px-4 py-2.5 flex items-center justify-between shadow-2xs z-30">
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setMobileTab('chat')}
-              className="lg:hidden px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors mr-1"
-            >
-              ← Chat
-            </button>
             {/* MacOS Traffic Light Dots */}
             <div className="hidden sm:flex items-center gap-1.5 pr-2">
               <div className="w-3 h-3 rounded-full bg-red-500" />
@@ -674,12 +591,91 @@ export const LinkedinChatStudio: React.FC<{
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
             </div>
 
-            {/* Tab Title */}
-            <button className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-xs font-bold text-slate-800 border border-slate-200/80">
-              <span className="w-3.5 h-3.5 rounded bg-[#0A66C2] text-white flex items-center justify-center text-[9px] font-bold">in</span>
-              <span>LinkedIn Profile</span>
-              {/* <ChevronDown className="w-3 h-3 text-slate-400" /> */}
+            {/* Templates Button */}
+            <button
+              type="button"
+              onClick={() => setShowTemplateModal(true)}
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs font-bold text-slate-800 border border-slate-200/80 cursor-pointer shadow-2xs"
+              title="Change Template"
+            >
+              <LayoutTemplate className="w-3.5 h-3.5 text-[#0A66C2]" />
+              <span className="hidden xs:inline">Templates</span>
             </button>
+
+            {/* Tab Title (Save Menu) */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={toggleProfileMenu}
+                className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs sm:text-sm font-bold text-slate-800 border border-slate-200/80 cursor-pointer"
+              >
+                <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm bg-[#0A66C2] flex items-center justify-center shrink-0">
+                  <span className="text-white text-[9px] sm:text-[10px] font-bold leading-none">in</span>
+                </div>
+                <span>Profiles</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {profileMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
+                  <div className="absolute top-full left-0 mt-2 w-[285px] max-w-[90vw] bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col">
+                    <div className="p-3 border-b border-slate-100 bg-slate-50/50">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={saveNameInput}
+                          onChange={(e) => setSaveNameInput(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveProfile(); }}
+                          placeholder="My LinkedIn Profile"
+                          className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                        />
+                        <button
+                          onClick={handleSaveProfile}
+                          disabled={saving}
+                          className="px-3.5 py-1.5 rounded-lg bg-[#0A66C2] text-white text-sm font-bold hover:bg-[#004182] disabled:opacity-50 transition-colors"
+                        >
+                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+                        </button>
+                      </div>
+                      {saveError && <div className="mt-2 text-xs text-red-500 font-medium">{saveError}</div>}
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto p-2 space-y-1">
+                      {savedProfiles === null ? (
+                        <div className="p-4 flex justify-center"><Loader2 className="w-5 h-5 text-slate-400 animate-spin" /></div>
+                      ) : savedProfiles.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-slate-500">No saved profiles yet.</div>
+                      ) : (
+                        savedProfiles.map((s) => (
+                          <div key={s.id} className="group relative rounded-lg border border-transparent hover:bg-slate-50 hover:border-slate-200 transition-colors">
+                            <button
+                              onClick={() => handleLoadSavedProfile(s.id)}
+                              disabled={loadingSavedId !== null || deletingSavedId !== null}
+                              className="w-full text-left px-3 py-2.5 flex flex-col"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-slate-800 text-sm truncate">{s.name}</span>
+                                {loadingSavedId === s.id && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />}
+                              </div>
+                              <span className="text-xs text-slate-400">{new Date(s.createdAt).toLocaleDateString()}</span>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteSavedProfile(s.id); }}
+                              disabled={deletingSavedId !== null}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+                              title="Delete this save"
+                            >
+                              {deletingSavedId === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -1644,6 +1640,28 @@ export const LinkedinChatStudio: React.FC<{
           </div>
         </div>
       )}
+
+      {/* Mobile Floating Chat Widget */}
+      <MobileChatWidget
+        isOpen={isMobileChatOpen}
+        onToggle={() => setIsMobileChatOpen((prev) => !prev)}
+        messages={messages}
+        input={input}
+        setInput={setInput}
+        loading={loading}
+        onSend={send}
+        title="Optimizing LinkedIn Profile..."
+        suggestions={[
+          'Add a compelling summary',
+          'Make my headline more keyword-rich',
+          'Add bullet points to my experience',
+        ]}
+        onBack={() => setIsMobileChatOpen(false)}
+        unlocked={unlocked === true}
+        aiMessagesUsed={aiMessagesUsed}
+        isLoggedIn={isLoggedIn}
+        onRequireAuth={onRequireAuth}
+      />
     </div>
   );
 };
