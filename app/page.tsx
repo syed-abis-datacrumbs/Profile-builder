@@ -28,7 +28,7 @@ import { AskExpertModal } from '../components/AskExpertModal';
 import { PaymentModal } from '../components/PaymentModal';
 import { GithubChatStudio } from '../components/GithubChatStudio';
 import { LinkedinChatStudio } from '../components/LinkedinChatStudio';
-import { LinkedinRichProfile, buildInitialRichProfile } from '../lib/linkedinRichProfile';
+import { LinkedinRichProfile, buildInitialRichProfile, buildEmptyRichProfile } from '../lib/linkedinRichProfile';
 import BlockScreen from '../components/BlockScreen';
 import { BUILDER_ACCESS_EMAILS } from '../lib/accessConfig';
 
@@ -709,9 +709,9 @@ export default function Home() {
                           }}
                         />
                       </div>
-                    ) : linkedinMode === 'studio' && linkedinRichProfile ? (
+                    ) : linkedinMode === 'studio' ? (
                       <LinkedinChatStudio
-                        profile={linkedinRichProfile}
+                        profile={linkedinRichProfile || buildEmptyRichProfile()}
                         onChange={setLinkedinRichProfile}
                         onBack={() => setLinkedinMode('landing')}
                         isLoggedIn={isLoggedIn}
@@ -745,7 +745,7 @@ export default function Home() {
                               localStorage.removeItem('profile_builder_linkedin_chat');
                             }
                           } else if (!linkedinRichProfile) {
-                            setLinkedinRichProfile(buildInitialRichProfile('linkedin-1'));
+                            setLinkedinRichProfile(buildEmptyRichProfile());
                           }
                           setLinkedinMode('studio');
                           setAttachedLinkedinTemplate(null);
@@ -755,7 +755,10 @@ export default function Home() {
                             setIsAuthOpen(true);
                             return;
                           }
-                          setLinkedinMode(linkedinRichProfile ? 'studio' : 'editor');
+                          if (!linkedinRichProfile) {
+                            setLinkedinRichProfile(buildEmptyRichProfile());
+                          }
+                          setLinkedinMode('studio');
                         }}
                       />
                     )}
