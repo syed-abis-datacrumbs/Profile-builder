@@ -17,7 +17,9 @@ import {
   X,
   Sparkles,
   User,
-  UserCheck
+  UserCheck,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GithubIcon, LinkedinIcon } from './icons';
@@ -63,6 +65,8 @@ interface SidebarBodyProps {
       active-pill layout animation needs a distinct id per instance — sharing
       one would make framer-motion try to tween between the two sidebars. */
   layoutIdSuffix: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 // The nav itself, rendered identically in the desktop rail and the mobile
@@ -80,7 +84,9 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
   onOpenAskExpert,
   onOpenRemoveWatermark,
   unlocked,
-  layoutIdSuffix
+  layoutIdSuffix,
+  isCollapsed = false,
+  onToggleCollapse
 }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { signOut } = useClerk();
@@ -104,35 +110,86 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
     <>
       <div className="space-y-4">
 
-        {/* Brand Header (click resets the current builder to its landing view) */}
-        <div
-          onClick={onNewChat}
-          className="flex items-center justify-between px-2 pt-1 pb-1 cursor-pointer group hover:bg-slate-200/50 rounded-xl transition-all"
-          title="Reset to landing"
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
+        {/* Brand Header */}
+        {isCollapsed ? (
+          <div className="flex flex-col items-center gap-2 pt-1 pb-1">
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              title="Expand sidebar"
+            >
+              <PanelLeftOpen className="w-5 h-5 text-blue-600" />
+            </button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo.png"
               alt="MOMENTUM Logo"
-              className="w-8 h-8 object-contain shrink-0 rounded-md group-hover:scale-105 transition-transform"
+              onClick={onNewChat}
+              className="w-7 h-7 object-contain shrink-0 rounded-md cursor-pointer hover:scale-105 transition-transform"
+              title="MOMENTUM - Reset to landing"
             />
-            <div className="flex flex-col min-w-0">
-              <span className="font-extrabold text-base tracking-tight text-slate-900 leading-tight uppercase group-hover:text-blue-600 transition-colors">
-                MOMENTUM
-              </span>
-              <span className="text-[10px] text-slate-500 font-medium tracking-tight truncate">
-                Accelerate your career journey.
-              </span>
-            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center justify-between px-2 pt-1 pb-1">
+            <div
+              onClick={onNewChat}
+              className="flex items-center gap-2.5 min-w-0 cursor-pointer group hover:bg-slate-200/50 rounded-xl p-1 transition-all"
+              title="Reset to landing"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="MOMENTUM Logo"
+                className="w-8 h-8 object-contain shrink-0 rounded-md group-hover:scale-105 transition-transform"
+              />
+              <div className="flex flex-col min-w-0">
+                <span className="font-extrabold text-base tracking-tight text-slate-900 leading-tight uppercase group-hover:text-blue-600 transition-colors">
+                  MOMENTUM
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium tracking-tight truncate">
+                  Accelerate your career journey.
+                </span>
+              </div>
+            </div>
+            {onToggleCollapse && (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer shrink-0"
+                title="Collapse sidebar"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Main Nav Items */}
-        <nav className="space-y-0.5 text-xs font-medium px-1">
+        <nav className={`space-y-0.5 text-xs font-medium ${isCollapsed ? 'px-0 flex flex-col items-center space-y-1' : 'px-1'}`}>
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+
+            if (isCollapsed) {
+              return (
+                <motion.button
+                  key={item.id}
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => onSelectTab(item.id as ActiveTab)}
+                  title={item.label}
+                  className={`relative w-10 h-10 flex items-center justify-center rounded-xl transition-colors cursor-pointer ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-600 border border-blue-200/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                  }`}
+                >
+                  <Icon className={`w-4.5 h-4.5 ${item.color}`} />
+                </motion.button>
+              );
+            }
+
             return (
               <motion.button
                 key={item.id}
@@ -166,42 +223,12 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
       {/* Bottom Ask Expert Card & User Footer */}
       <div className="space-y-3 pt-3 border-t border-slate-200">
 
-        {/* Ask Expert Card */}
-        {/* <div className="p-3.5 rounded-2xl bg-gradient-to-b from-blue-50/50 to-indigo-50/50 border border-blue-100 space-y-2">
-          <div>
-            <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-              <span>Ask Expert</span>
-            </div>
-            <p className="text-[11px] text-slate-500 leading-snug mt-0.5">
-              Get 1-on-1 AI advice & live review on your career assets
-            </p>
-          </div>
-          <button
-            onClick={onOpenAskExpert || onOpenUpgrade}
-            className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition-all text-center"
-          >
-            Ask Expert
-          </button>
-        </div> */}
-
-        {/* Progress Bar */}
-        {/* <div className="px-1 space-y-1">
-          <div className="flex justify-between items-center text-[11px] font-medium text-slate-500">
-            <span>Get started</span>
-            <span>8% done</span>
-          </div>
-          <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div className="w-[8%] h-full bg-blue-600 rounded-full" />
-          </div>
-        </div> */}
-
         {/* User Profile Bar & Popover */}
         <div className="relative w-full" ref={popoverRef}>
 
           {/* Settings Popover Dropdown (Width set to w-full matching sidebar padding) */}
           {isSettingsOpen && (
-            <div className="absolute bottom-full mb-2 left-0 right-0 w-full bg-white rounded-2xl border border-slate-200 shadow-2xl p-3 space-y-3 z-50 animate-in fade-in slide-in-from-bottom-2 text-slate-900">
+            <div className={`absolute bottom-full mb-2 ${isCollapsed ? 'left-12 w-56' : 'left-0 right-0 w-full'} bg-white rounded-2xl border border-slate-200 shadow-2xl p-3 space-y-3 z-50 animate-in fade-in slide-in-from-bottom-2 text-slate-900`}>
 
               {/* Account Info Header */}
               <div>
@@ -222,7 +249,6 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                       </div>
                     </div>
                   </div>
-                  {/* <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" /> */}
                 </div>
               </div>
 
@@ -265,32 +291,6 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                   </button>
                 )}
 
-                {/* <button
-                  onClick={() => {
-                    setIsSettingsOpen(false);
-                  }}
-                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-slate-100/80 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Palette className="w-4 h-4 text-slate-600 shrink-0" />
-                    <span>Theme</span>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsSettingsOpen(false);
-                  }}
-                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-slate-100/80 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <HelpCircle className="w-4 h-4 text-slate-600 shrink-0" />
-                    <span>Help Center</span>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button> */}
-
                 <button
                   onClick={() => {
                     setIsSettingsOpen(false);
@@ -321,38 +321,56 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
           )}
 
           {/* User Profile Bar (Trigger) */}
-          <div
-            onClick={() => {
-              if (!isLoggedIn && onOpenAuth) {
-                onOpenAuth();
-              } else {
-                setIsSettingsOpen(!isSettingsOpen);
-              }
-            }}
-            className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 cursor-pointer hover:bg-slate-100/80 transition-colors"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
-                {!isLoggedIn ? <User className="w-4 h-4 text-white" /> : initials}
-              </div>
-              <div className="truncate">
-                <div className="font-bold text-xs text-slate-900 truncate">
-                  {!isLoggedIn ? "Sign in to save" : userName}
-                </div>
-                <div className="text-[10px] text-slate-400 font-medium">
-                  {!isLoggedIn ? "Create a free account" : planName}
-                </div>
+          {isCollapsed ? (
+            <div
+              onClick={() => {
+                if (!isLoggedIn && onOpenAuth) {
+                  onOpenAuth();
+                } else {
+                  setIsSettingsOpen(!isSettingsOpen);
+                }
+              }}
+              title={isLoggedIn ? `${userName} (${planName})` : "Sign in to save"}
+              className="w-10 h-10 rounded-xl bg-white border border-slate-200 cursor-pointer hover:bg-slate-100 flex items-center justify-center mx-auto transition-colors shadow-2xs"
+            >
+              <div className="w-7 h-7 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                {!isLoggedIn ? <User className="w-3.5 h-3.5 text-white" /> : initials}
               </div>
             </div>
-            {isLoggedIn && (
-              <button
-                type="button"
-                className="text-slate-400 hover:text-slate-700 p-1 transition-colors"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+          ) : (
+            <div
+              onClick={() => {
+                if (!isLoggedIn && onOpenAuth) {
+                  onOpenAuth();
+                } else {
+                  setIsSettingsOpen(!isSettingsOpen);
+                }
+              }}
+              className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 cursor-pointer hover:bg-slate-100/80 transition-colors"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-teal-700 text-white font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                  {!isLoggedIn ? <User className="w-4 h-4 text-white" /> : initials}
+                </div>
+                <div className="truncate">
+                  <div className="font-bold text-xs text-slate-900 truncate">
+                    {!isLoggedIn ? "Sign in to save" : userName}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-medium">
+                    {!isLoggedIn ? "Create a free account" : planName}
+                  </div>
+                </div>
+              </div>
+              {isLoggedIn && (
+                <button
+                  type="button"
+                  className="text-slate-400 hover:text-slate-700 p-1 transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
 
         </div>
 
@@ -377,6 +395,23 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   const isLoggedIn = !!user;
   const userEmail = user?.primaryEmailAddress?.emailAddress || undefined;
   
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('profile_builder_sidebar_collapsed') === 'true';
+    }
+    return false;
+  });
+
+  const toggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('profile_builder_sidebar_collapsed', String(next));
+      }
+      return next;
+    });
+  };
+
   // Prioritize first name: user.firstName -> first word of user.fullName -> email prefix -> default
   const firstName = user?.firstName || user?.fullName?.split(' ')[0] || userEmail?.split('@')[0] || "User";
   const userName = isLoggedIn ? firstName : "Sign in to save";
@@ -415,8 +450,14 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   return (
     <>
       {/* Desktop rail */}
-      <aside className="w-64 shrink-0 hidden md:flex flex-col h-screen border-r border-slate-200 bg-[#FAFAFA] p-3 text-slate-800 justify-between select-none">
-        <SidebarBody {...shared} onSelectTab={setActiveTab} layoutIdSuffix="desktop" />
+      <aside className={`shrink-0 hidden md:flex flex-col h-screen border-r border-slate-200 bg-[#FAFAFA] text-slate-800 justify-between select-none transition-all duration-300 ease-in-out ${isCollapsed ? 'w-16 p-2' : 'w-64 p-3'}`}>
+        <SidebarBody
+          {...shared}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={toggleCollapse}
+          onSelectTab={setActiveTab}
+          layoutIdSuffix="desktop"
+        />
       </aside>
 
       {/* Mobile drawer — same nav, slid in over the content */}
