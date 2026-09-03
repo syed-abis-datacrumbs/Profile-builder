@@ -12,6 +12,10 @@ import {
   LinkedinTemplateSampleCertification,
   LinkedinTemplateSampleProject,
   LinkedinTemplateSampleAward,
+  LinkedinActivityPost,
+  LinkedinRecommendation,
+  DEFAULT_SAMPLE_ACTIVITY,
+  DEFAULT_SAMPLE_RECOMMENDATIONS,
 } from './linkedinTemplateSamples';
 import { COVER_ART, COVER_ART_ORDER, CoverArtField, getCoverArtId } from './linkedinCoverArt';
 
@@ -29,6 +33,9 @@ export interface LinkedinRichProfile {
   certifications: LinkedinTemplateSampleCertification[];
   projects: LinkedinTemplateSampleProject[];
   awards: LinkedinTemplateSampleAward[];
+  followersCount: string;
+  activity: LinkedinActivityPost[];
+  recommendations: LinkedinRecommendation[];
   /** One of COVER_ART_ORDER — which of the 8 real LMS cover designs is active. */
   coverTemplateId: string;
   /** Editable copy of that cover's baked-on text, keyed by CoverArtField.id. */
@@ -105,6 +112,9 @@ export function buildInitialRichProfile(templateId: string): LinkedinRichProfile
     certifications: sample.certifications.map((c) => ({ ...c })),
     projects: sample.projects.map((p) => ({ ...p })),
     awards: sample.awards.map((a) => ({ ...a })),
+    followersCount: '1,280',
+    activity: sample.activity ? sample.activity.map((a) => ({ ...a })) : [...DEFAULT_SAMPLE_ACTIVITY],
+    recommendations: sample.recommendations ? sample.recommendations.map((r) => ({ ...r })) : [...DEFAULT_SAMPLE_RECOMMENDATIONS],
     coverTemplateId,
     coverFieldValues: buildCoverFieldValues(coverTemplateId, identity),
     pfpGradientId,
@@ -156,6 +166,27 @@ export const PLACEHOLDER_PROJECTS = [
   },
 ];
 
+export const PLACEHOLDER_ACTIVITY: LinkedinActivityPost[] = [
+  {
+    id: 'post-ph-1',
+    timeAgo: 'Just now',
+    content: '',
+    likes: 0,
+    comments: 0,
+  },
+];
+
+export const PLACEHOLDER_RECOMMENDATIONS: LinkedinRecommendation[] = [
+  {
+    id: 'rec-ph-1',
+    recommenderName: '',
+    recommenderAvatar: '/images/featured-thumbnail/mutual connection.png',
+    recommenderTitle: '',
+    relationship: '',
+    text: '',
+  },
+];
+
 export const LOREM_IPSUM_ABOUT =
   'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.';
 
@@ -176,6 +207,9 @@ export function removeTemplateFromRichProfile(_profile?: LinkedinRichProfile): L
     certifications: [{ name: '', organization: '', date: '' }],
     projects: [{ title: '', description: '' }],
     awards: [],
+    followersCount: '500+',
+    activity: [{ id: 'post-ph-1', timeAgo: 'Just now', content: '', likes: 0, comments: 0 }],
+    recommendations: [{ id: 'rec-ph-1', recommenderName: '', recommenderAvatar: '/images/featured-thumbnail/mutual connection.png', recommenderTitle: '', relationship: '', text: '' }],
     coverTemplateId: '',
     coverFieldValues: {},
     pfpGradientId: 'gradient-1',

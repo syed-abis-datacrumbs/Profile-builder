@@ -30,6 +30,7 @@ import {
   Download,
   Edit2,
   Bell,
+  Globe,
 } from 'lucide-react';
 import toast from '@/lib/toast';
 import { LinkedinPremiumBadge } from './icons';
@@ -46,6 +47,8 @@ import {
   PLACEHOLDER_EDUCATION,
   PLACEHOLDER_CERTIFICATIONS,
   PLACEHOLDER_PROJECTS,
+  PLACEHOLDER_ACTIVITY,
+  PLACEHOLDER_RECOMMENDATIONS,
   DEFAULT_HEADSHOT_URL,
 } from '../lib/linkedinRichProfile';
 import { linkedinCovers } from '../lib/linkedinCovers';
@@ -54,7 +57,14 @@ import { PfpCropModal } from './PfpCropModal';
 import { ShrinkToFitCoverText } from './ShrinkToFitCoverText';
 import { LinkedinTemplateThumbnail } from './LinkedinTemplateThumbnail';
 import { MobileChatWidget } from './MobileChatWidget';
-import { LinkedinTemplateSampleExperience, LinkedinTemplateSampleEducation, LinkedinTemplateSampleCertification, LinkedinTemplateSampleProject } from '../lib/linkedinTemplateSamples';
+import {
+  LinkedinTemplateSampleExperience,
+  LinkedinTemplateSampleEducation,
+  LinkedinTemplateSampleCertification,
+  LinkedinTemplateSampleProject,
+  LinkedinActivityPost,
+  LinkedinRecommendation,
+} from '../lib/linkedinTemplateSamples';
 
 const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
 
@@ -409,6 +419,26 @@ export const LinkedinChatStudio: React.FC<{
     set({ projects: list });
   };
 
+  const setActivityPost = (i: number, patch: Partial<LinkedinActivityPost>) => {
+    const list = profile.activity && profile.activity.length > 0 ? [...profile.activity] : [{ id: 'post-ph-1', timeAgo: 'Just now', content: '', likes: 0, comments: 0 }];
+    if (i >= list.length) {
+      list.push({ id: `post-${Date.now()}`, timeAgo: 'Just now', content: '', likes: 0, comments: 0, ...patch });
+    } else {
+      list[i] = { ...list[i], ...patch };
+    }
+    set({ activity: list });
+  };
+
+  const setRecommendation = (i: number, patch: Partial<LinkedinRecommendation>) => {
+    const list = profile.recommendations && profile.recommendations.length > 0 ? [...profile.recommendations] : [{ id: 'rec-ph-1', recommenderName: '', recommenderAvatar: '/images/featured-thumbnail/mutual connection.png', recommenderTitle: '', relationship: '', text: '' }];
+    if (i >= list.length) {
+      list.push({ id: `rec-${Date.now()}`, recommenderName: '', recommenderAvatar: '/images/featured-thumbnail/mutual connection.png', recommenderTitle: '', relationship: '', text: '', ...patch });
+    } else {
+      list[i] = { ...list[i], ...patch };
+    }
+    set({ recommendations: list });
+  };
+
   const setCoverFieldValue = (fieldId: string, v: string | string[]) =>
     set({ coverFieldValues: { ...profile.coverFieldValues, [fieldId]: v } });
 
@@ -548,6 +578,8 @@ export const LinkedinChatStudio: React.FC<{
   const educationList = profile.education.length > 0 ? profile.education : PLACEHOLDER_EDUCATION;
   const certificationsList = profile.certifications.length > 0 ? profile.certifications : PLACEHOLDER_CERTIFICATIONS;
   const projectsList = profile.projects.length > 0 ? profile.projects : PLACEHOLDER_PROJECTS;
+  const activityList = profile.activity && profile.activity.length > 0 ? profile.activity : PLACEHOLDER_ACTIVITY;
+  const recommendationsList = profile.recommendations && profile.recommendations.length > 0 ? profile.recommendations : PLACEHOLDER_RECOMMENDATIONS;
   const primarySchool = educationList[0]?.school || profile.school;
 
   return (
@@ -1336,6 +1368,106 @@ export const LinkedinChatStudio: React.FC<{
               </div>
             </div>
 
+            {/* ── CARD: Activity (Directly after Featured) ── */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-1">
+                <div>
+                  <h2 className="text-[18px] font-bold text-[#191919]">Activity</h2>
+                  <div className="text-[13px] text-[#0A66C2] font-semibold flex items-center gap-1 mt-0.5">
+                    <Edit
+                      value={profile.followersCount || '1,280'}
+                      onCommit={(v) => set({ followersCount: v })}
+                      placeholder="Followers"
+                      className="hover:underline cursor-pointer"
+                    />
+                    <span>followers</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="px-3.5 py-1.5 rounded-full border border-[#0A66C2] text-[#0A66C2] hover:bg-blue-50/60 font-semibold text-xs sm:text-sm transition shadow-2xs cursor-pointer"
+                >
+                  Create a post
+                </button>
+              </div>
+
+              {/* Filter pills */}
+              <div className="flex items-center gap-2 mt-3 mb-4">
+                <span className="px-3.5 py-1 rounded-full bg-[#01754F] text-white text-xs font-bold">
+                  Posts
+                </span>
+                <span className="px-3.5 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer">
+                  Comments
+                </span>
+                <span className="px-3.5 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer">
+                  Images
+                </span>
+              </div>
+
+              {/* Example Post Preview with Image */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 relative bg-slate-100 shrink-0 flex items-center justify-center">
+                    {profile.headshotUrl ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`/images/linkedin-templates/pfp/${profile.pfpGradientId || 'gradient-1'}/background.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={profile.headshotUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
+                      </>
+                    ) : (
+                      <User className="w-5 h-5 text-slate-400" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[14px] font-bold text-[#191919] leading-tight flex items-center gap-1.5 flex-wrap">
+                      <Edit
+                        value={profile.fullName}
+                        onCommit={(v) => set({ fullName: v })}
+                        placeholder="Your name"
+                        className="truncate"
+                      />
+                      <span className="text-slate-400 font-normal text-xs">• You</span>
+                    </div>
+                    <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-1">
+                      <span>2w • Edited</span>
+                      <span>•</span>
+                      <Globe className="w-3 h-3 text-slate-400" />
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[13px] text-slate-800 leading-relaxed whitespace-pre-wrap">
+                  Excited to share insights from our latest milestone! Designing robust, production-grade systems and prioritizing modular architecture always delivers long-term impact. Here is a preview of the latest deployment pipeline:
+                </p>
+
+                <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-900 max-h-64">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/images/featured-thumbnail/project thumbnail.png" alt="example post media" className="w-full h-full object-cover" />
+                </div>
+
+                {/* Reaction metrics */}
+                <div className="flex items-center justify-between text-[12px] text-slate-500 pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex items-center -space-x-1">
+                      <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px]">👍</span>
+                      <span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[9px]">❤️</span>
+                      <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[9px]">💡</span>
+                    </span>
+                    <span className="ml-1 font-medium">142</span>
+                  </div>
+                  <span>28 comments · 6 reposts</span>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-3.5 mt-4 text-center">
+                <button className="text-[14px] font-semibold text-[#0A66C2] hover:underline flex items-center justify-center gap-1 w-full cursor-pointer">
+                  <span>Show all posts</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
             {/* ── CARD 4: Experience ── */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-5">
@@ -1366,7 +1498,23 @@ export const LinkedinChatStudio: React.FC<{
                         <img src="/images/featured-thumbnail/company logo.jfif" alt="" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Edit block value={exp.title} onCommit={(v) => setExperience(i, { title: v })} placeholder="Job title (e.g. Senior Software Engineer)" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                        <div className="flex items-start justify-between gap-2">
+                          <Edit block value={exp.title} onCommit={(v) => setExperience(i, { title: v })} placeholder="Job title (e.g. Senior Software Engineer)" className="text-[16px] font-semibold text-[#191919] leading-tight flex-1" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (experiences.length <= 1) {
+                                set({ experience: [{ title: '', company: '', start: '', end: '', description: '' }] });
+                              } else {
+                                set({ experience: experiences.filter((_, idx) => idx !== i) });
+                              }
+                            }}
+                            className="text-slate-300 hover:text-red-500 p-1 rounded transition-colors cursor-pointer shrink-0"
+                            title="Remove position"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                         <Edit block value={exp.company} onCommit={(v) => setExperience(i, { company: v })} placeholder="Company name" className="text-[14px] font-medium text-slate-800 mt-0.5" />
                         <div className="text-[13px] text-slate-500 mt-0.5 flex items-center gap-1">
                           <Edit value={exp.start} onCommit={(v) => setExperience(i, { start: v })} placeholder="Start date" />
@@ -1415,7 +1563,23 @@ export const LinkedinChatStudio: React.FC<{
                       <img src="/images/featured-thumbnail/education logo.jpg" alt="" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <Edit block value={edu.school} onCommit={(v) => setEducation(i, { school: v })} placeholder="School or University name" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                      <div className="flex items-start justify-between gap-2">
+                        <Edit block value={edu.school} onCommit={(v) => setEducation(i, { school: v })} placeholder="School or University name" className="text-[16px] font-semibold text-[#191919] leading-tight flex-1" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (educationList.length <= 1) {
+                              set({ education: [{ school: '', degree: '', fieldOfStudy: '', start: '', end: '' }] });
+                            } else {
+                              set({ education: educationList.filter((_, idx) => idx !== i) });
+                            }
+                          }}
+                          className="text-slate-300 hover:text-red-500 p-1 rounded transition-colors cursor-pointer shrink-0"
+                          title="Remove education"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                       <div className="text-[14px] font-medium text-slate-800 mt-0.5 flex flex-wrap items-center gap-x-1">
                         <Edit value={edu.degree} onCommit={(v) => setEducation(i, { degree: v })} placeholder="Degree" />
                         <span>·</span>
@@ -1464,7 +1628,23 @@ export const LinkedinChatStudio: React.FC<{
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <Edit block value={cert.name} onCommit={(v) => setCertification(idx, { name: v })} placeholder="Certification or License name" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                      <div className="flex items-start justify-between gap-2">
+                        <Edit block value={cert.name} onCommit={(v) => setCertification(idx, { name: v })} placeholder="Certification or License name" className="text-[16px] font-semibold text-[#191919] leading-tight flex-1" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (certificationsList.length <= 1) {
+                              set({ certifications: [{ name: '', organization: '', date: '' }] });
+                            } else {
+                              set({ certifications: certificationsList.filter((_, i) => i !== idx) });
+                            }
+                          }}
+                          className="text-slate-300 hover:text-red-500 p-1 rounded transition-colors cursor-pointer shrink-0"
+                          title="Remove credential"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                       <Edit block value={cert.organization} onCommit={(v) => setCertification(idx, { organization: v })} placeholder="Issuing organization" className="text-[14px] font-medium text-slate-800 mt-0.5" />
                       <div className="text-[13px] text-slate-500 mt-0.5 flex items-center gap-1">
                         <span>Issued</span>
@@ -1507,7 +1687,23 @@ export const LinkedinChatStudio: React.FC<{
                       <FolderGit2 className="w-6 h-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <Edit block value={proj.title} onCommit={(v) => setProject(i, { title: v })} placeholder="Project title" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                      <div className="flex items-start justify-between gap-2">
+                        <Edit block value={proj.title} onCommit={(v) => setProject(i, { title: v })} placeholder="Project title" className="text-[16px] font-semibold text-[#191919] leading-tight flex-1" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (projectsList.length <= 1) {
+                              set({ projects: [{ title: '', description: '' }] });
+                            } else {
+                              set({ projects: projectsList.filter((_, idx) => idx !== i) });
+                            }
+                          }}
+                          className="text-slate-300 hover:text-red-500 p-1 rounded transition-colors cursor-pointer shrink-0"
+                          title="Remove project"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                       <Edit block value={proj.description} onCommit={(v) => setProject(i, { description: v })} placeholder="Brief project description and achievements" className="text-[14px] text-slate-700 mt-1 leading-relaxed" />
 
                       {/* Attached Project Media Thumbnail Card */}
@@ -1644,6 +1840,110 @@ export const LinkedinChatStudio: React.FC<{
                   </div>
                 )}
               </div>
+
+            {/* ── CARD: Recommendations (Directly after Skills) ── */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[18px] font-bold text-[#191919]">Recommendations</h2>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0A66C2] border border-blue-100">
+                    Received ({recommendationsList.length})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    set({
+                      recommendations: [
+                        ...recommendationsList,
+                        {
+                          id: `rec-${Date.now()}`,
+                          recommenderName: '',
+                          recommenderAvatar: '/images/featured-thumbnail/mutual connection.png',
+                          recommenderTitle: '',
+                          relationship: '',
+                          text: '',
+                        },
+                      ],
+                    })
+                  }
+                  className="flex items-center gap-1 text-xs font-semibold text-[#0A66C2] hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Ask for a recommendation</span>
+                </button>
+              </div>
+
+              <div className="space-y-6 divide-y divide-slate-100">
+                {recommendationsList.map((rec, idx) => (
+                  <div key={rec.id || idx} className={`${idx > 0 ? 'pt-5' : ''}`}>
+                    <div className="flex gap-3.5 items-start">
+                      <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 shadow-2xs border border-slate-200 bg-slate-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={rec.recommenderAvatar || '/images/featured-thumbnail/mutual connection.png'}
+                          alt={rec.recommenderName}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Edit
+                              value={rec.recommenderName}
+                              onCommit={(v) => setRecommendation(idx, { recommenderName: v })}
+                              placeholder="Recommender name (e.g. Sarah Jenkins)"
+                              className="text-[15px] font-bold text-[#191919] leading-tight"
+                            />
+                            <span className="text-[12px] text-slate-500 font-normal">· 1st</span>
+                          </div>
+                          {recommendationsList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                set({
+                                  recommendations: recommendationsList.filter((_, i) => i !== idx),
+                                });
+                              }}
+                              className="text-slate-300 hover:text-red-500 p-1 rounded transition-colors cursor-pointer"
+                              title="Remove recommendation"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        <Edit
+                          block
+                          value={rec.recommenderTitle}
+                          onCommit={(v) => setRecommendation(idx, { recommenderTitle: v })}
+                          placeholder="Recommender title & company (e.g. VP of Engineering at TechCorp)"
+                          className="text-[13px] text-slate-600 leading-snug mt-0.5"
+                        />
+
+                        <Edit
+                          block
+                          value={rec.relationship}
+                          onCommit={(v) => setRecommendation(idx, { relationship: v })}
+                          placeholder="Date & relationship (e.g. March 2024, Sarah managed Alex directly)"
+                          className="text-[12px] text-slate-400 mt-0.5"
+                        />
+
+                        <div className="mt-2.5 bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+                          <Edit
+                            block
+                            value={rec.text}
+                            onCommit={(v) => setRecommendation(idx, { text: v })}
+                            placeholder="Write the recommendation testimonial letter or quote…"
+                            className="text-[13px] text-slate-800 leading-relaxed italic"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* ── CARD 9: Honors & Awards ── */}
             {profile.awards.length > 0 && (

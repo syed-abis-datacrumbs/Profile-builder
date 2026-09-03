@@ -31,6 +31,24 @@ export interface LinkedinTemplateSampleAward {
   date: string;
 }
 
+export interface LinkedinActivityPost {
+  id: string;
+  timeAgo: string;
+  content: string;
+  image?: string;
+  likes: number;
+  comments: number;
+}
+
+export interface LinkedinRecommendation {
+  id: string;
+  recommenderName: string;
+  recommenderAvatar?: string;
+  recommenderTitle: string;
+  relationship: string;
+  text: string;
+}
+
 export interface LinkedinTemplateFeaturedItem {
   type: string;
   title: string;
@@ -56,7 +74,46 @@ export interface LinkedinTemplateSample {
   projects: LinkedinTemplateSampleProject[];
   awards: LinkedinTemplateSampleAward[];
   featured?: LinkedinTemplateFeaturedItem[];
+  activity?: LinkedinActivityPost[];
+  recommendations?: LinkedinRecommendation[];
 }
+
+export const DEFAULT_SAMPLE_ACTIVITY: LinkedinActivityPost[] = [
+  {
+    id: 'post-1',
+    timeAgo: '2w • Edited',
+    content: "Excited to share that our team just completed a major system migration, cutting API response times by 40%! Proud of what we've built and the engineering milestones achieved.",
+    image: '/images/featured-thumbnail/project thumbnail.png',
+    likes: 128,
+    comments: 24,
+  },
+  {
+    id: 'post-2',
+    timeAgo: '1mo',
+    content: "Architecture decisions compound over time. Prioritizing observability, clean modular contracts, and automated testing early on always pays massive dividends down the road.",
+    likes: 85,
+    comments: 11,
+  },
+];
+
+export const DEFAULT_SAMPLE_RECOMMENDATIONS: LinkedinRecommendation[] = [
+  {
+    id: 'rec-1',
+    recommenderName: 'Sarah Jenkins',
+    recommenderAvatar: '/images/featured-thumbnail/mutual connection.png',
+    recommenderTitle: 'VP of Engineering • Tech Leader & Strategic Advisor',
+    relationship: 'March 14, 2024, Sarah managed directly',
+    text: 'One of the most talented, dedicated professionals I have had the privilege to work with. Consistently demonstrated exceptional technical leadership, clear communication, and an ability to deliver high-impact results in fast-paced environments.',
+  },
+  {
+    id: 'rec-2',
+    recommenderName: 'David Chen',
+    recommenderAvatar: '/images/featured-thumbnail/mutual connection 2.png',
+    recommenderTitle: 'Principal Architect & Technology Strategist',
+    relationship: 'November 28, 2023, David worked with on the same team',
+    text: 'A brilliant team player with phenomenal problem-solving capabilities. Their deep expertise and collaborative spirit elevated our entire engineering department. Any team would be lucky to have them!',
+  },
+];
 
 // Sample profile copy for the template preview screen — sourced directly from
 // the DataCrumbs LMS's sampleLinkedInProfiles.ts (src/app/student/

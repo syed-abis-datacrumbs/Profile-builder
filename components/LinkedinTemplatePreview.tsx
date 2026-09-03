@@ -14,13 +14,21 @@ import {
   MessageSquare,
   MoreHorizontal,
   ChevronRight,
+  ChevronDown,
   X,
   Bell,
   Trash2,
+  Globe,
 } from 'lucide-react';
 import { LinkedinPremiumBadge } from './icons';
 import { linkedinCovers, getDefaultPfpGradientId } from '../lib/linkedinCovers';
-import { linkedinTemplateSamples, LinkedinTemplateSample, LinkedinTemplateFeaturedItem } from '../lib/linkedinTemplateSamples';
+import {
+  linkedinTemplateSamples,
+  LinkedinTemplateSample,
+  LinkedinTemplateFeaturedItem,
+  DEFAULT_SAMPLE_ACTIVITY,
+  DEFAULT_SAMPLE_RECOMMENDATIONS,
+} from '../lib/linkedinTemplateSamples';
 import { COVER_ART, CoverArtField, getCoverArtId, computeFitScale, coverFontSize } from '../lib/linkedinCoverArt';
 import { ShrinkToFitCoverText } from './ShrinkToFitCoverText';
 
@@ -404,6 +412,89 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
             </div>
           </div>
 
+          {/* ── CARD: Activity (Directly after Featured) ── */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-1">
+              <div>
+                <h2 className="text-[18px] font-bold text-[#191919]">Activity</h2>
+                <p className="text-[13px] text-[#0A66C2] font-semibold hover:underline cursor-pointer">
+                  {sample.fullName ? `${sample.fullName.split(' ')[0]}'s 1,280 followers` : '1,280 followers'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="px-4 py-1.5 rounded-full border border-[#0A66C2] text-[#0A66C2] hover:bg-blue-50/60 font-semibold text-xs sm:text-sm transition shadow-2xs"
+              >
+                Create a post
+              </button>
+            </div>
+
+            {/* Filter pills */}
+            <div className="flex items-center gap-2 mt-3 mb-4">
+              <span className="px-3.5 py-1 rounded-full bg-[#01754F] text-white text-xs font-bold">
+                Posts
+              </span>
+              <span className="px-3.5 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer">
+                Comments
+              </span>
+              <span className="px-3.5 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer">
+                Images
+              </span>
+            </div>
+
+            {/* Example Post Preview with Image */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 relative bg-slate-200 shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/images/linkedin-templates/pfp/${gradientId}/background.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/images/linkedin-templates/pfp/sample-headshot.png" alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
+                </div>
+                <div>
+                  <div className="text-[14px] font-bold text-[#191919] leading-tight flex items-center gap-1.5">
+                    <span>{sample.fullName}</span>
+                    <span className="text-slate-400 font-normal text-xs">• You</span>
+                  </div>
+                  <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-1">
+                    <span>2w • Edited</span>
+                    <span>•</span>
+                    <Globe className="w-3 h-3 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[13px] text-slate-800 leading-relaxed whitespace-pre-wrap">
+                Excited to share insights from our latest milestone! Designing robust, production-grade systems and prioritizing modular architecture always delivers long-term impact. Here is a preview of the latest deployment pipeline:
+              </p>
+
+              <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-900 max-h-64">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/images/featured-thumbnail/project thumbnail.png" alt="example post" className="w-full h-full object-cover" />
+              </div>
+
+              {/* Reaction metrics */}
+              <div className="flex items-center justify-between text-[12px] text-slate-500 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center -space-x-1">
+                    <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px]">👍</span>
+                    <span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[9px]">❤️</span>
+                    <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[9px]">💡</span>
+                  </span>
+                  <span className="ml-1 font-medium">142</span>
+                </div>
+                <span>28 comments · 6 reposts</span>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-3.5 mt-4 text-center">
+              <button className="text-[14px] font-semibold text-[#0A66C2] hover:underline flex items-center justify-center gap-1 w-full cursor-pointer">
+                <span>Show all posts</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
           {/* ── CARD 4: Experience ── */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <h2 className="text-[18px] font-bold text-[#191919] mb-5">Experience</h2>
@@ -542,6 +633,52 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
               )}
             </div>
           )}
+
+          {/* ── CARD: Recommendations (Directly after Skills) ── */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-[18px] font-bold text-[#191919]">Recommendations</h2>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0A66C2] border border-blue-100">
+                  Received ({(sample.recommendations || DEFAULT_SAMPLE_RECOMMENDATIONS).length})
+                </span>
+              </div>
+              <button
+                type="button"
+                className="text-xs sm:text-sm font-semibold text-[#0A66C2] hover:underline cursor-pointer"
+              >
+                Ask for a recommendation
+              </button>
+            </div>
+
+            <div className="space-y-6 divide-y divide-slate-100">
+              {(sample.recommendations || DEFAULT_SAMPLE_RECOMMENDATIONS).map((rec, idx) => (
+                <div key={rec.id || idx} className={`${idx > 0 ? 'pt-5' : ''}`}>
+                  <div className="flex gap-3.5 items-start">
+                    <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 shadow-2xs border border-slate-200 bg-slate-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={rec.recommenderAvatar || '/images/featured-thumbnail/mutual connection.png'}
+                        alt={rec.recommenderName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[15px] font-bold text-[#191919] leading-tight">{rec.recommenderName}</span>
+                        <span className="text-[12px] text-slate-500 font-normal">· 1st</span>
+                      </div>
+                      <p className="text-[13px] text-slate-600 leading-snug mt-0.5">{rec.recommenderTitle}</p>
+                      <p className="text-[12px] text-slate-400 mt-0.5">{rec.relationship}</p>
+                      <p className="text-[13px] text-slate-800 mt-2.5 leading-relaxed italic bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+                        &ldquo;{rec.text}&rdquo;
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* ── CARD 9: Honors & Awards ── */}
           {sample.awards.length > 0 && (
