@@ -29,8 +29,10 @@ import {
   Image,
   Download,
   Edit2,
+  Bell,
 } from 'lucide-react';
 import toast from '@/lib/toast';
+import { LinkedinPremiumBadge } from './icons';
 import {
   LinkedinRichProfile,
   COVER_ART,
@@ -214,6 +216,7 @@ export const LinkedinChatStudio: React.FC<{
   const [unlocked, setUnlocked] = useState<boolean | null>(isPro ?? null);
   const [aiMessagesUsed, setAiMessagesUsed] = useState<number>(0);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [notificationsActive, setNotificationsActive] = useState(false);
 
   const refreshPaymentStatus = useCallback(() => {
     fetch('/api/payment/status')
@@ -1138,6 +1141,24 @@ export const LinkedinChatStudio: React.FC<{
                       className="hidden"
                       onChange={(e) => handleHeadshotFile(e.target.files?.[0] ?? null)}
                     />
+                  </div>
+
+                  {/* Top-right actions: LinkedIn Premium badge + Notification Bell */}
+                  <div className="flex items-center gap-2 pt-3 sm:pt-4">
+                    <LinkedinPremiumBadge className="w-6 h-6 sm:w-7 sm:h-7" />
+                    <button
+                      type="button"
+                      onClick={() => setNotificationsActive((prev) => !prev)}
+                      title={notificationsActive ? 'Notifications turned on' : 'Notify on all posts'}
+                      aria-label="Notifications"
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center transition shadow-2xs cursor-pointer ${
+                        notificationsActive
+                          ? 'border-[#0A66C2] bg-blue-50/60 text-[#0A66C2]'
+                          : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-600'
+                      }`}
+                    >
+                      <Bell className={`w-4 h-4 sm:w-5 sm:h-5 ${notificationsActive ? 'fill-[#0A66C2]' : ''}`} />
+                    </button>
                   </div>
                 </div>
 

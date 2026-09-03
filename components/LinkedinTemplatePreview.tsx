@@ -15,7 +15,9 @@ import {
   MoreHorizontal,
   ChevronRight,
   X,
+  Bell,
 } from 'lucide-react';
+import { LinkedinPremiumBadge } from './icons';
 import { linkedinCovers, getDefaultPfpGradientId } from '../lib/linkedinCovers';
 import { linkedinTemplateSamples, LinkedinTemplateSample, LinkedinTemplateFeaturedItem } from '../lib/linkedinTemplateSamples';
 import { COVER_ART, CoverArtField, getCoverArtId, computeFitScale, coverFontSize } from '../lib/linkedinCoverArt';
@@ -52,6 +54,7 @@ const DUMMY_THUMBNAILS = [
 ];
 
 export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = ({ templateId, onBack, onEdit, onRemove }) => {
+  const [notificationsActive, setNotificationsActive] = React.useState(false);
   const coverIndex = linkedinCovers.findIndex((c) => c.id === templateId);
   const validIndex = Math.max(0, coverIndex);
   const template = linkedinCovers[validIndex];
@@ -246,6 +249,24 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
                     alt={sample.fullName}
                     className="absolute inset-0 w-full h-full object-cover object-top"
                   />
+                </div>
+
+                {/* Top-right actions: LinkedIn Premium badge + Notification Bell */}
+                <div className="flex items-center gap-2 pt-3 sm:pt-4">
+                  <LinkedinPremiumBadge className="w-6 h-6 sm:w-7 sm:h-7" />
+                  <button
+                    type="button"
+                    onClick={() => setNotificationsActive((prev) => !prev)}
+                    title={notificationsActive ? 'Notifications turned on' : 'Notify on all posts'}
+                    aria-label="Notifications"
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center transition shadow-2xs cursor-pointer ${
+                      notificationsActive
+                        ? 'border-[#0A66C2] bg-blue-50/60 text-[#0A66C2]'
+                        : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <Bell className={`w-4 h-4 sm:w-5 sm:h-5 ${notificationsActive ? 'fill-[#0A66C2]' : ''}`} />
+                  </button>
                 </div>
               </div>
 

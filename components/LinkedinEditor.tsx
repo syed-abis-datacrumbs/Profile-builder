@@ -13,9 +13,10 @@ import {
   MessageSquare,
   ThumbsUp,
   Globe,
-  Zap
+  Zap,
+  Bell,
 } from 'lucide-react';
-import { LinkedinIcon } from './icons';
+import { LinkedinIcon, LinkedinPremiumBadge } from './icons';
 import { LinkedinProfileData } from '../types';
 
 interface LinkedinEditorProps {
@@ -204,7 +205,11 @@ export const LinkedinEditor: React.FC<LinkedinEditorProps> = ({
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
+                  <LinkedinPremiumBadge className="w-5 h-5" />
+                  <button className="w-8 h-8 rounded-full border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition" title="Notifications">
+                    <Bell className="w-4 h-4" />
+                  </button>
                   <button className="px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md">
                     Connect
                   </button>

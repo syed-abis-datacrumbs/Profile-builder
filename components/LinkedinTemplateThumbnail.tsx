@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { Bell } from 'lucide-react';
+import { LinkedinPremiumBadge } from './icons';
 import { linkedinCovers, getDefaultPfpGradientId } from '../lib/linkedinCovers';
 import { linkedinTemplateSamples } from '../lib/linkedinTemplateSamples';
 import { COVER_ART, CoverArtField, getCoverArtId, computeFitScale, coverFontSize } from '../lib/linkedinCoverArt';
@@ -165,11 +167,19 @@ export const LinkedinTemplateThumbnail: React.FC<{ templateId: string; index: nu
 
         {/* Profile header body */}
         <div className="px-6 pb-5">
-          <div className="-mt-12 w-[104px] h-[104px] rounded-full border-4 border-white overflow-hidden relative bg-slate-200 shadow-md">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/images/linkedin-templates/pfp/${gradientId}/background.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/linkedin-templates/pfp/sample-headshot.png" alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
+          <div className="flex items-start justify-between">
+            <div className="-mt-12 w-[104px] h-[104px] rounded-full border-4 border-white overflow-hidden relative bg-slate-200 shadow-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/images/linkedin-templates/pfp/${gradientId}/background.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/linkedin-templates/pfp/sample-headshot.png" alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
+            </div>
+            <div className="flex items-center gap-1.5 pt-2.5">
+              <LinkedinPremiumBadge className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-full border border-slate-300 flex items-center justify-center text-slate-600 bg-white shadow-2xs">
+                <Bell className="w-4 h-4" />
+              </div>
+            </div>
           </div>
 
           <div className="flex items-start justify-between gap-4 mt-2.5">
