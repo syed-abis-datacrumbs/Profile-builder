@@ -51,12 +51,12 @@ Respond with ONLY a JSON object (no markdown fences, no prose outside it):
 Profile JSON schema (keep this exact shape and keys):
 {
   "fullName": "",
-  "title": "",                  // short current job title, e.g. "Full Stack Developer"
+  "title": "",                  // short current job title, e.g. "AI Engineer" or "Data Engineer"
   "headline": "",                // ~220-char keyword-rich LinkedIn headline
   "location": "",
   "currentCompany": "",
   "school": "",
-  "about": "",                   // About section, first person, 2 short paragraphs
+  "about": "",                   // About section, first person, concise 1 punchy paragraph
   "skills": ["", ...],
   "experience": [{ "title": "", "company": "", "start": "", "end": "", "description": "" }, ...],
   "education": [{ "school": "", "degree": "", "fieldOfStudy": "", "start": "", "end": "" }, ...],
@@ -68,11 +68,16 @@ Profile JSON schema (keep this exact shape and keys):
 
 Rules:
 - Return the WHOLE profile object every time; preserve every field and array item the user did not ask to change.
-- "experience[].description" is a set of bullet points joined with "\\n" (one sentence per line) — when asked to add a bullet to a role, append a new "\\n"-joined line; when rewriting, keep it as short punchy lines, not a paragraph.
-- Write "about" in a confident, professional first-person voice; quantify achievements where possible; keep it to 2 short paragraphs separated by "\\n\\n".
+- CRITICAL — EXPERIENCE BULLET POINTS GENERATION:
+  Whenever the user asks to add an experience role (e.g. "add experience as an AI Engineer at XYZ", "Data Engineer at ABC", "Software Engineer at ..."), YOU MUST NEVER leave "description" empty or with just one generic sentence.
+  Always generate 3 to 4 domain-relevant, highly professional accomplishment bullet points separated by "\\n" (one impactful sentence per line). Highlight key technical skills, architectural workflows, tools, and quantified impact (e.g. for AI Engineer: designing LLM/RAG pipelines, model fine-tuning with PyTorch/HuggingFace, reducing inference latency by 35%, deploying Dockerized ML APIs; for Data Engineer: building ETL/ELT pipelines in Airflow/Spark, data warehousing in Snowflake/BigQuery, reducing query runtimes, data modeling with dbt).
+  If the experience list contains a blank placeholder entry (empty title/company), replace it with this new position instead of keeping an empty placeholder.
+- CRITICAL — ABOUT SECTION UPDATES & HALF-CAPACITY LENGTH:
+  Whenever the user asks to add or change an experience role, or states their profession/field (e.g. AI Engineer, Data Engineer), YOU MUST ALSO update the "about" section to align with this field, even if they did not explicitly mention "about".
+  Keep the "about" section at roughly HALF the capacity of a traditional long multi-paragraph biography — exactly ONE crisp, punchy, engaging paragraph (~45–65 words / ~300–450 characters) in a confident first-person voice summarizing their core domain expertise, technologies, and the business/engineering value they deliver. Always overwrite any existing Lorem Ipsum or generic placeholder text.
+- When the user mentions their current company or role (e.g. "I work at DataCrumbs as an AI Engineer"), update "title", "currentCompany", and "headline", AND ALSO ensure there is a corresponding entry in "experience" with 3-4 professional bullet points as described above.
 - "add a skill" -> append to skills (dedupe against existing skills, case-insensitively). "add an education / certification / project / award" -> append a new well-formed entry to that array; if the user replaces their whole background in one message, replace the array's contents to match rather than appending duplicates of old placeholder entries.
 - Every project the user describes becomes its own entry in "projects" with a clear title and a 1-2 sentence description covering what it does and the tech used.
-- When the user mentions their current company or role (e.g. "I work at DataCrumbs as an AI Engineer"), update "title" and "currentCompany", AND ALSO ensure there is a corresponding entry in "experience" for that role/company (updating the primary experience item or adding it if missing). If existing experience entries are placeholders, replace the placeholder with this real experience.
 - When the user mentions their school or university, update "school" AND ALSO ensure there is a corresponding entry in "education" for that school.
 - Keep the headline within ~220 characters. Output valid JSON only.`;
 
@@ -269,7 +274,8 @@ The ONLY fields to leave untouched are literal contact details you have no real 
     for (const key of ['fullName', 'title', 'headline', 'location', 'currentCompany', 'school', 'about'] as const) {
       const next = preserved[key];
       const prev = (fullProfile as unknown as Record<string, unknown>)[key];
-      if ((typeof next !== 'string' || !next.trim()) && typeof prev === 'string' && prev.trim()) {
+      const isPlaceholderLorem = key === 'about' && typeof prev === 'string' && prev.includes('Lorem ipsum');
+      if (!isPlaceholderLorem && (typeof next !== 'string' || !next.trim()) && typeof prev === 'string' && prev.trim()) {
         preserved[key] = prev;
       }
     }
