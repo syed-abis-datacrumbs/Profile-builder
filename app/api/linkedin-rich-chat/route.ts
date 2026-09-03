@@ -19,7 +19,7 @@ export const runtime = 'nodejs';
 // mergeCoverFieldValues below.
 type LinkedinContentProfile = Omit<
   LinkedinRichProfile,
-  'coverTemplateId' | 'pfpGradientId' | 'headshotUrl' | 'customCoverUrl' | 'activity' | 'recommendations' | 'followersCount'
+  'coverTemplateId' | 'pfpGradientId' | 'headshotUrl' | 'customCoverUrl' | 'activity' | 'followersCount'
 >;
 
 const PROTECTED_KEYS = [
@@ -28,7 +28,6 @@ const PROTECTED_KEYS = [
   'headshotUrl',
   'customCoverUrl',
   'activity',
-  'recommendations',
   'followersCount',
 ] as const;
 
@@ -38,7 +37,7 @@ function toContentProfile(profile: Partial<LinkedinRichProfile>): Partial<Linked
   return copy;
 }
 
-const SYSTEM_PROMPT_BASE = `You are an expert LinkedIn coach helping a professional optimize their full LinkedIn profile (headline, about, experience, education, certifications, projects, skills, awards) AND the wording on their cover banner image, in a live editor. You are given the current profile as JSON plus a conversation. Apply the user's request, then reply.
+const SYSTEM_PROMPT_BASE = `You are an expert LinkedIn coach helping a professional optimize their full LinkedIn profile (headline, about, experience, education, certifications, projects, skills, awards, recommendations) AND the wording on their cover banner image, in a live editor. You are given the current profile as JSON plus a conversation. Apply the user's request, then reply.
 
 The user will often paste in raw, unstructured facts about themselves (job history, projects, education, location) all at once, expecting you to restructure ALL of it into the right fields in one pass — do not skip or summarize away any fact they gave you; if they describe multiple projects, add ALL of them as separate entries in "projects", not just one.
 
@@ -63,6 +62,7 @@ Profile JSON schema (keep this exact shape and keys):
   "certifications": [{ "name": "", "organization": "", "date": "" }, ...],
   "projects": [{ "title": "", "description": "" }, ...],
   "awards": [{ "title": "", "issuer": "", "date": "" }, ...],
+  "recommendations": [{ "id": "rec-1", "recommenderName": "", "recommenderAvatar": "/images/featured-thumbnail/mutual connection.png", "recommenderTitle": "", "relationship": "", "text": "" }, ...],
   "coverFieldValues": { }         // OPTIONAL — see the cover-banner section below
 }
 
@@ -75,11 +75,97 @@ Rules:
 - CRITICAL — ABOUT SECTION UPDATES & HALF-CAPACITY LENGTH:
   Whenever the user asks to add or change an experience role, or states their profession/field (e.g. AI Engineer, Data Engineer), YOU MUST ALSO update the "about" section to align with this field, even if they did not explicitly mention "about".
   Keep the "about" section at roughly HALF the capacity of a traditional long multi-paragraph biography — exactly ONE crisp, punchy, engaging paragraph (~45–65 words / ~300–450 characters) in a confident first-person voice summarizing their core domain expertise, technologies, and the business/engineering value they deliver. Always overwrite any existing Lorem Ipsum or generic placeholder text.
-- When the user mentions their current company or role (e.g. "I work at DataCrumbs as an AI Engineer"), update "title", "currentCompany", and "headline", AND ALSO ensure there is a corresponding entry in "experience" with 3-4 professional bullet points as described above.
-- "add a skill" -> append to skills (dedupe against existing skills, case-insensitively). "add an education / certification / project / award" -> append a new well-formed entry to that array; if the user replaces their whole background in one message, replace the array's contents to match rather than appending duplicates of old placeholder entries.
+- CRITICAL — LICENSES & CERTIFICATIONS POPULATION:
+  Whenever the user adds a role/experience or specifies their domain (e.g. AI Engineer, Data Engineer, Cloud Architect), YOU MUST ALSO populate "certifications" with 2–3 authentic, prestigious industry certifications matching their field (e.g. for AI Engineer: "AWS Certified Machine Learning - Specialty" from "Amazon Web Services (AWS)", "Deep Learning Specialization" from "DeepLearning.AI", "TensorFlow Developer Certificate" from "Google"; for Data Engineer: "Databricks Certified Data Engineer Professional" from "Databricks", "AWS Certified Data Analytics - Specialty" from "Amazon Web Services (AWS)", "SnowPro Core Certification" from "Snowflake"). If existing certifications are empty or blank placeholders (empty name), replace them with these domain-specific credentials.
+- CRITICAL — RECOMMENDATIONS POPULATION:
+  Whenever the user adds a role/experience or specifies their domain, YOU MUST ALSO populate "recommendations" with 1–2 authentic, glowing professional testimonials from a supervisor or tech lead (e.g. Director of Engineering, VP of Technology, or Principal Architect) specifically praising the user's technical accomplishments, delivery, and problem-solving impact in that target domain. Set "recommenderAvatar" to "/images/featured-thumbnail/mutual connection.png" and "relationship" to a realistic supervisor or colleague note (e.g. "Managed directly" or "Worked together on the core engineering team"). If existing recommendations are empty or blank placeholders, replace them with this tailored recommendation.
+- MANDATORY FULL-PROFILE ROLE SYNCHRONIZATION:
+  When the user mentions their current company or role (e.g. "I work as an AI Engineer at DataCrumbs starting 1-2-25", "Data Engineer at XYZ", "Full Stack Developer at ..."):
+  YOU MUST SYNCHRONIZE AND POPULATE ALL 5 OF THE FOLLOWING SECTIONS SIMULTANEOUSLY IN THE RETURNED JSON:
+  1. "title" (e.g. "AI Engineer"), "currentCompany" (e.g. "DataCrumbs"), and "headline" (e.g. "AI Engineer at DataCrumbs | Building Production ML & LLM Systems").
+  2. "experience": 1st entry with the role title, company ("DataCrumbs"), start date (e.g. "Feb 2025" or "1-2-25"), end date ("Present"), and 3-4 professional domain accomplishment bullet points in "description" separated by "\\n".
+  3. "about": 1 crisp, punchy first-person paragraph (~45–65 words) summarizing their domain expertise and tech stack.
+  4. "certifications": 2-3 prestigious domain credentials (e.g. for AI Engineer: AWS Certified Machine Learning, Deep Learning Specialization).
+  5. "recommendations": 1-2 glowing supervisor/director recommendations praising their work in this field.
+  NEVER return empty certifications or empty recommendations when the user has provided a job role!
+- "add a skill" -> append to skills (dedupe against existing skills, case-insensitively). "add an education / certification / project / award / recommendation" -> append a new well-formed entry to that array; if the user replaces their whole background in one message, replace the array's contents to match rather than appending duplicates of old placeholder entries.
 - Every project the user describes becomes its own entry in "projects" with a clear title and a 1-2 sentence description covering what it does and the tech used.
 - When the user mentions their school or university, update "school" AND ALSO ensure there is a corresponding entry in "education" for that school.
 - Keep the headline within ~220 characters. Output valid JSON only.`;
+
+const DOMAIN_CERTIFICATIONS: Record<string, { name: string; organization: string; date: string }[]> = {
+  ai: [
+    { name: 'AWS Certified Machine Learning - Specialty', organization: 'Amazon Web Services (AWS)', date: '2024' },
+    { name: 'Deep Learning Specialization', organization: 'DeepLearning.AI', date: '2023' },
+    { name: 'TensorFlow Developer Certificate', organization: 'Google', date: '2023' },
+  ],
+  data: [
+    { name: 'Databricks Certified Data Engineer Professional', organization: 'Databricks', date: '2024' },
+    { name: 'AWS Certified Data Analytics - Specialty', organization: 'Amazon Web Services (AWS)', date: '2023' },
+    { name: 'SnowPro Core Certification', organization: 'Snowflake', date: '2023' },
+  ],
+  software: [
+    { name: 'AWS Certified Solutions Architect - Associate', organization: 'Amazon Web Services (AWS)', date: '2024' },
+    { name: 'Meta Full-Stack Engineer Certificate', organization: 'Meta', date: '2023' },
+    { name: 'Docker Certified Associate (DCA)', organization: 'Docker', date: '2023' },
+  ],
+  devops: [
+    { name: 'Certified Kubernetes Administrator (CKA)', organization: 'Cloud Native Computing Foundation (CNCF)', date: '2024' },
+    { name: 'AWS Certified DevOps Engineer - Professional', organization: 'Amazon Web Services (AWS)', date: '2023' },
+    { name: 'HashiCorp Certified: Terraform Associate', organization: 'HashiCorp', date: '2023' },
+  ],
+};
+
+const DOMAIN_RECOMMENDATIONS: Record<string, { id: string; recommenderName: string; recommenderAvatar: string; recommenderTitle: string; relationship: string; text: string }[]> = {
+  ai: [
+    {
+      id: 'rec-1',
+      recommenderName: 'Sarah Jenkins',
+      recommenderAvatar: '/images/featured-thumbnail/mutual connection.png',
+      recommenderTitle: 'Director of Engineering • AI Systems & Research',
+      relationship: 'Sarah managed directly',
+      text: 'An exceptional AI Engineer with a rare ability to bridge cutting-edge research models with resilient production systems. Their work optimizing model inference, fine-tuning LLMs, and building robust retrieval pipelines delivered remarkable performance gains for our team.',
+    },
+    {
+      id: 'rec-2',
+      recommenderName: 'David Chen',
+      recommenderAvatar: '/images/featured-thumbnail/mutual connection 2.png',
+      recommenderTitle: 'Principal Architect & Technology Strategist',
+      relationship: 'David worked with on the same team',
+      text: 'A brilliant team player with phenomenal problem-solving capabilities in machine learning and distributed systems. Their deep expertise in MLOps and collaborative spirit elevated our entire engineering department.',
+    },
+  ],
+  data: [
+    {
+      id: 'rec-1',
+      recommenderName: 'Sarah Jenkins',
+      recommenderAvatar: '/images/featured-thumbnail/mutual connection.png',
+      recommenderTitle: 'Head of Data & Analytics Platform',
+      relationship: 'Sarah managed directly',
+      text: 'A top-tier Data Engineer who architected distributed data pipelines with pristine reliability and zero downtime. Outstanding technical mastery across distributed systems, streaming architectures, and data modeling.',
+    },
+  ],
+  software: [
+    {
+      id: 'rec-1',
+      recommenderName: 'Marcus Vance',
+      recommenderAvatar: '/images/featured-thumbnail/mutual connection.png',
+      recommenderTitle: 'VP of Engineering',
+      relationship: 'Marcus managed directly',
+      text: 'One of the most driven and talented software engineers I have worked alongside. Consistently delivers clean, maintainable, and high-performance architecture on critical project deadlines.',
+    },
+  ],
+  devops: [
+    {
+      id: 'rec-1',
+      recommenderName: 'Marcus Vance',
+      recommenderAvatar: '/images/featured-thumbnail/mutual connection.png',
+      recommenderTitle: 'Head of Cloud Infrastructure & SRE',
+      relationship: 'Marcus managed directly',
+      text: 'An outstanding DevOps engineer who spearheaded our Kubernetes migration and automated CI/CD workflows, boosting developer velocity while maintaining 99.99% system availability.',
+    },
+  ],
+};
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -96,7 +182,9 @@ function isValidContentProfile(value: unknown): value is Partial<LinkedinContent
     typeof v.about === 'string' ||
     Array.isArray(v.skills) ||
     Array.isArray(v.experience) ||
-    Array.isArray(v.education)
+    Array.isArray(v.education) ||
+    Array.isArray(v.certifications) ||
+    Array.isArray(v.recommendations)
   );
 }
 
@@ -282,13 +370,24 @@ The ONLY fields to leave untouched are literal contact details you have no real 
 
     // Preserve arrays if the model returned an empty list or omitted them,
     // unless the user specifically asked to clear/delete them.
-    for (const key of ['experience', 'education', 'certifications', 'projects', 'skills', 'awards'] as const) {
+    for (const key of ['experience', 'education', 'certifications', 'projects', 'skills', 'awards', 'recommendations'] as const) {
       const next = preserved[key];
       const prev = (fullProfile as unknown as Record<string, unknown>)[key];
       const userAskedToClear = /\b(clear|remove|delete|reset|wipe)\b/i.test(userMessage) &&
         new RegExp(`\\b(${key}|all|everything)\\b`, 'i').test(userMessage);
 
-      if (!userAskedToClear && Array.isArray(prev) && prev.length > 0 && (!Array.isArray(next) || next.length === 0)) {
+      // Check if prev was purely blank placeholders
+      const isBlankPlaceholderArray = Array.isArray(prev) && prev.length > 0 && prev.every((item: any) => {
+        if (!item || typeof item !== 'object') return true;
+        if (key === 'certifications') return !item.name?.trim();
+        if (key === 'recommendations') return !item.recommenderName?.trim() && !item.text?.trim();
+        if (key === 'experience') return !item.title?.trim() && !item.company?.trim();
+        if (key === 'education') return !item.school?.trim();
+        if (key === 'projects') return !item.title?.trim();
+        return false;
+      });
+
+      if (!userAskedToClear && Array.isArray(prev) && prev.length > 0 && !isBlankPlaceholderArray && (!Array.isArray(next) || next.length === 0)) {
         preserved[key] = prev;
       }
     }
@@ -299,6 +398,40 @@ The ONLY fields to leave untouched are literal contact details you have no real 
       ? mergeCoverFieldValues(coverTemplateId, fullProfile.coverFieldValues ?? {}, proposedCoverFieldValues)
       : (fullProfile.coverFieldValues ?? {});
 
+    // If user specified or works in a domain, ensure certifications and recommendations are never left empty or placeholder
+    const effectiveRoleText = [
+      typeof preserved.title === 'string' ? preserved.title : '',
+      Array.isArray(preserved.experience) && preserved.experience[0]?.title ? preserved.experience[0].title : '',
+      userMessage,
+    ].join(' ').toLowerCase();
+
+    let detectedDomain: 'ai' | 'data' | 'software' | 'devops' | null = null;
+    if (/\b(ai|machine\s+learning|ml|deep\s+learning|nlp|llm|computer\s+vision|artificial\s+intelligence)\b/i.test(effectiveRoleText)) {
+      detectedDomain = 'ai';
+    } else if (/\b(data\s+engineer|data\s+science|data\s+scientist|data\s+analyst|etl|big\s+data|analytics)\b/i.test(effectiveRoleText)) {
+      detectedDomain = 'data';
+    } else if (/\b(devops|cloud|sre|kubernetes|platform|infrastructure)\b/i.test(effectiveRoleText)) {
+      detectedDomain = 'devops';
+    } else if (/\b(full\s+stack|software|frontend|backend|developer|web|engineer)\b/i.test(effectiveRoleText)) {
+      detectedDomain = 'software';
+    }
+
+    if (detectedDomain) {
+      // Auto-populate certifications if empty or purely placeholder
+      const currentCerts = Array.isArray(preserved.certifications) ? preserved.certifications : [];
+      const certsAreEmpty = currentCerts.length === 0 || currentCerts.every((c: any) => !c?.name?.trim());
+      if (certsAreEmpty) {
+        preserved.certifications = DOMAIN_CERTIFICATIONS[detectedDomain];
+      }
+
+      // Auto-populate recommendations if empty or purely placeholder
+      const currentRecs = Array.isArray(preserved.recommendations) ? preserved.recommendations : [];
+      const recsAreEmpty = currentRecs.length === 0 || currentRecs.every((r: any) => !r?.recommenderName?.trim() && !r?.text?.trim());
+      if (recsAreEmpty) {
+        preserved.recommendations = DOMAIN_RECOMMENDATIONS[detectedDomain];
+      }
+    }
+
     const mergedProfile: LinkedinRichProfile = {
       ...fullProfile,
       ...(preserved as unknown as Partial<LinkedinRichProfile>),
@@ -308,7 +441,9 @@ The ONLY fields to leave untouched are literal contact details you have no real 
       customCoverUrl: fullProfile.customCoverUrl ?? '',
       followersCount: fullProfile.followersCount || '500+',
       activity: fullProfile.activity ?? [],
-      recommendations: fullProfile.recommendations ?? [],
+      recommendations: (Array.isArray(preserved.recommendations) && preserved.recommendations.length > 0)
+        ? (preserved.recommendations as any)
+        : (fullProfile.recommendations ?? []),
       coverFieldValues: finalCoverFieldValues,
     };
 

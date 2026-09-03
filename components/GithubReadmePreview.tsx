@@ -444,19 +444,6 @@ export const GithubReadmePreview: React.FC<{
               <>
                 <div className="fixed inset-0 z-20" onClick={() => setShowCoverMenu(false)} />
                 <div className="absolute z-30 top-full right-0 mt-1.5 w-56 bg-white rounded-xl border border-slate-200 shadow-xl p-1 text-xs font-semibold text-slate-700">
-                  {onUploadBannerClick && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowCoverMenu(false);
-                        onUploadBannerClick();
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-left cursor-pointer"
-                    >
-                      <Camera className="w-4 h-4 text-slate-500 shrink-0" />
-                      <span>Upload custom banner</span>
-                    </button>
-                  )}
                   {onShowBannerPicker && (
                     <button
                       type="button"
@@ -489,7 +476,7 @@ export const GithubReadmePreview: React.FC<{
                       onClick={() => {
                         setShowCoverMenu(false);
                         onSet?.({ bannerUrl: undefined });
-                        toast.success('Cover banner removed.');
+                        toast.success('Cover banner removed');
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-rose-50 text-rose-600 transition-colors text-left cursor-pointer border-t border-slate-100 mt-1 pt-2"
                     >
@@ -570,7 +557,7 @@ export const GithubReadmePreview: React.FC<{
                           onClick={() => {
                             setShowPhotoMenu(false);
                             onSet?.({ avatarUrl: undefined });
-                            toast.success('Profile photo removed.');
+                            toast.success('Profile photo removed');
                           }}
                           className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-rose-50 text-rose-600 transition-colors text-left border-t border-slate-100 mt-1 pt-2 cursor-pointer"
                         >

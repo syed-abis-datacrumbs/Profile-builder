@@ -99,6 +99,7 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
 - **DO** verify all imported constants (e.g., `DEFAULT_HEADSHOT_URL`, `COVER_ART`) are explicitly imported at the top of route files.
 - **DO** preserve empty strings (`headshotUrl: fullProfile.headshotUrl ?? ''`) when merging AI responses so blank profiles do not have sample images forcibly injected.
 - **DO** generate 3-4 domain-specific accomplishment bullets separated by `\n` when the user adds experience (e.g., AI Engineer, Data Engineer), and update the `about` section to roughly half-capacity (one punchy paragraph of ~45–65 words / ~300–450 characters).
+- **DO** automatically populate Licenses & Certifications (2-3 domain-relevant industry credentials) and Recommendations (1-2 authentic supervisor testimonials) when the user adds experience or states their target role, replacing empty placeholders.
 - **DO** log errors with `console.error('[Service Error]:', err)` and return readable error messages so local development failures are easily diagnosed in terminal logs.
 
 ---
