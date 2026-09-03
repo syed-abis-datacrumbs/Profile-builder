@@ -28,7 +28,8 @@ import { AskExpertModal } from '../components/AskExpertModal';
 import { PaymentModal } from '../components/PaymentModal';
 import { GithubChatStudio } from '../components/GithubChatStudio';
 import { LinkedinChatStudio } from '../components/LinkedinChatStudio';
-import { LinkedinRichProfile, buildInitialRichProfile, buildEmptyRichProfile } from '../lib/linkedinRichProfile';
+import { LinkedinRichProfile, buildInitialRichProfile, buildDefaultRichProfile, buildEmptyRichProfile, removeTemplateFromRichProfile } from '../lib/linkedinRichProfile';
+import { toast } from '../lib/toast';
 import BlockScreen from '../components/BlockScreen';
 import { BUILDER_ACCESS_EMAILS } from '../lib/accessConfig';
 
@@ -106,10 +107,15 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('profile_builder_linkedin_profile');
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && ((parsed.experience?.length ?? 0) > 0 || parsed.headline || parsed.about)) {
+            return parsed;
+          }
+        }
       } catch {}
     }
-    return null;
+    return buildDefaultRichProfile();
   });
 
   const [selectedModel, setSelectedModel] = useState('Flash');
@@ -711,7 +717,7 @@ export default function Home() {
                       </div>
                     ) : linkedinMode === 'studio' ? (
                       <LinkedinChatStudio
-                        profile={linkedinRichProfile || buildEmptyRichProfile()}
+                        profile={linkedinRichProfile || buildDefaultRichProfile(firstName || undefined)}
                         onChange={setLinkedinRichProfile}
                         onBack={() => setLinkedinMode('landing')}
                         isLoggedIn={isLoggedIn}
@@ -723,7 +729,10 @@ export default function Home() {
                       <LinkedinLandingView
                         userName={firstName || undefined}
                         attachedTemplate={attachedLinkedinTemplate}
-                        onClearAttachedTemplate={() => setAttachedLinkedinTemplate(null)}
+                        onClearAttachedTemplate={() => {
+                          setAttachedLinkedinTemplate(null);
+                          setLinkedinRichProfile((prev) => (prev ? removeTemplateFromRichProfile(prev) : buildEmptyRichProfile()));
+                        }}
                         onSelectTemplate={(tid) => {
                           if (!isLoggedIn) {
                             setIsAuthOpen(true);
@@ -745,7 +754,7 @@ export default function Home() {
                               localStorage.removeItem('profile_builder_linkedin_chat');
                             }
                           } else if (!linkedinRichProfile) {
-                            setLinkedinRichProfile(buildEmptyRichProfile());
+                            setLinkedinRichProfile(buildDefaultRichProfile(firstName || undefined));
                           }
                           setLinkedinMode('studio');
                           setAttachedLinkedinTemplate(null);
@@ -755,8 +764,10 @@ export default function Home() {
                             setIsAuthOpen(true);
                             return;
                           }
-                          if (!linkedinRichProfile) {
-                            setLinkedinRichProfile(buildEmptyRichProfile());
+                          if (attachedLinkedinTemplate) {
+                            setLinkedinRichProfile(buildInitialRichProfile(attachedLinkedinTemplate));
+                          } else if (!linkedinRichProfile) {
+                            setLinkedinRichProfile(buildDefaultRichProfile(firstName || undefined));
                           }
                           setLinkedinMode('studio');
                         }}
@@ -936,15 +947,23 @@ export default function Home() {
           <LinkedinTemplatePreview
             key="preview-modal-linkedin"
             templateId={linkedinPreviewTemplateId}
+            isApplied={
+              attachedLinkedinTemplate === linkedinPreviewTemplateId ||
+              (linkedinRichProfile?.coverTemplateId === linkedinPreviewTemplateId &&
+                (linkedinRichProfile?.experience?.length ?? 0) > 0)
+            }
             onBack={() => setLinkedinMode('landing')}
             onEdit={() => {
               setAttachedLinkedinTemplate(linkedinPreviewTemplateId);
+              setLinkedinRichProfile(buildInitialRichProfile(linkedinPreviewTemplateId));
               setLinkedinMode('landing');
               mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onRemove={() => {
               setAttachedLinkedinTemplate(null);
+              setLinkedinRichProfile((prev) => (prev ? removeTemplateFromRichProfile(prev) : buildEmptyRichProfile()));
               setLinkedinMode('landing');
+              toast.success('Template removed.');
             }}
           />
         )}

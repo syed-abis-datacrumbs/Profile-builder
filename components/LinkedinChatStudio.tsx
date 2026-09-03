@@ -41,6 +41,11 @@ import {
   buildCoverFieldValues,
   buildInitialRichProfile,
   buildEmptyRichProfile,
+  removeTemplateFromRichProfile,
+  PLACEHOLDER_EXPERIENCE,
+  PLACEHOLDER_EDUCATION,
+  PLACEHOLDER_CERTIFICATIONS,
+  PLACEHOLDER_PROJECTS,
   DEFAULT_HEADSHOT_URL,
 } from '../lib/linkedinRichProfile';
 import { linkedinCovers } from '../lib/linkedinCovers';
@@ -96,7 +101,7 @@ function Edit({
       contentEditable
       suppressContentEditableWarning
       data-ph={placeholder}
-      className={`${className || ''} outline-none rounded hover:bg-blue-50/60 focus:bg-blue-50 cursor-text whitespace-pre-wrap empty:before:content-[attr(data-ph)] empty:before:text-slate-300`}
+      className={`${className || ''} outline-none rounded hover:bg-blue-50/60 focus:bg-blue-50 cursor-text whitespace-pre-wrap empty:before:content-[attr(data-ph)] empty:before:text-slate-400 empty:before:font-normal`}
       onBlur={(e) => {
         const v = e.currentTarget.textContent ?? '';
         if (v !== value) onCommit(v);
@@ -352,23 +357,57 @@ export const LinkedinChatStudio: React.FC<{
 
   const setSkill = (i: number, v: string) => set({ skills: profile.skills.map((s, j) => (j === i ? v : s)) });
 
-  const setExperience = (i: number, patch: Partial<LinkedinTemplateSampleExperience>) =>
-    set({ experience: profile.experience.map((e, j) => (j === i ? { ...e, ...patch } : e)) });
+  const setExperience = (i: number, patch: Partial<LinkedinTemplateSampleExperience>) => {
+    const list = profile.experience.length > 0 ? [...profile.experience] : [{ title: '', company: '', start: '', end: '', description: '' }];
+    if (i >= list.length) {
+      list.push({ title: '', company: '', start: '', end: '', description: '', ...patch });
+    } else {
+      list[i] = { ...list[i], ...patch };
+    }
+    set({ experience: list });
+  };
 
   const setExperienceBullet = (expIdx: number, bulletIdx: number, v: string) => {
-    const bullets = profile.experience[expIdx].description.split('\n').filter(Boolean);
-    bullets[bulletIdx] = v;
+    const list = profile.experience.length > 0 ? [...profile.experience] : [{ title: '', company: '', start: '', end: '', description: '' }];
+    const target = list[expIdx] || { title: '', company: '', start: '', end: '', description: '' };
+    const bullets = target.description ? target.description.split('\n').filter(Boolean) : [];
+    if (bulletIdx >= bullets.length) {
+      bullets.push(v);
+    } else {
+      bullets[bulletIdx] = v;
+    }
     setExperience(expIdx, { description: bullets.join('\n') });
   };
 
-  const setEducation = (i: number, patch: Partial<LinkedinTemplateSampleEducation>) =>
-    set({ education: profile.education.map((e, j) => (j === i ? { ...e, ...patch } : e)) });
+  const setEducation = (i: number, patch: Partial<LinkedinTemplateSampleEducation>) => {
+    const list = profile.education.length > 0 ? [...profile.education] : [{ school: '', degree: '', fieldOfStudy: '', start: '', end: '' }];
+    if (i >= list.length) {
+      list.push({ school: '', degree: '', fieldOfStudy: '', start: '', end: '', ...patch });
+    } else {
+      list[i] = { ...list[i], ...patch };
+    }
+    set({ education: list });
+  };
 
-  const setCertification = (i: number, patch: Partial<LinkedinTemplateSampleCertification>) =>
-    set({ certifications: profile.certifications.map((c, j) => (j === i ? { ...c, ...patch } : c)) });
+  const setCertification = (i: number, patch: Partial<LinkedinTemplateSampleCertification>) => {
+    const list = profile.certifications.length > 0 ? [...profile.certifications] : [{ name: '', organization: '', date: '' }];
+    if (i >= list.length) {
+      list.push({ name: '', organization: '', date: '', ...patch });
+    } else {
+      list[i] = { ...list[i], ...patch };
+    }
+    set({ certifications: list });
+  };
 
-  const setProject = (i: number, patch: Partial<LinkedinTemplateSampleProject>) =>
-    set({ projects: profile.projects.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
+  const setProject = (i: number, patch: Partial<LinkedinTemplateSampleProject>) => {
+    const list = profile.projects.length > 0 ? [...profile.projects] : [{ title: '', description: '' }];
+    if (i >= list.length) {
+      list.push({ title: '', description: '', ...patch });
+    } else {
+      list[i] = { ...list[i], ...patch };
+    }
+    set({ projects: list });
+  };
 
   const setCoverFieldValue = (fieldId: string, v: string | string[]) =>
     set({ coverFieldValues: { ...profile.coverFieldValues, [fieldId]: v } });
@@ -505,7 +544,11 @@ export const LinkedinChatStudio: React.FC<{
   };
 
   const art = COVER_ART[profile.coverTemplateId];
-  const primarySchool = profile.education[0]?.school ?? profile.school;
+  const experiences = profile.experience.length > 0 ? profile.experience : PLACEHOLDER_EXPERIENCE;
+  const educationList = profile.education.length > 0 ? profile.education : PLACEHOLDER_EDUCATION;
+  const certificationsList = profile.certifications.length > 0 ? profile.certifications : PLACEHOLDER_CERTIFICATIONS;
+  const projectsList = profile.projects.length > 0 ? profile.projects : PLACEHOLDER_PROJECTS;
+  const primarySchool = educationList[0]?.school || profile.school;
 
   return (
     <div className="flex h-screen w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none relative">
@@ -823,11 +866,11 @@ export const LinkedinChatStudio: React.FC<{
             <button
               type="button"
               onClick={() => {
-                updateProfile(buildEmptyRichProfile());
-                toast.success('Template removed. Profile cleared to blank slate.');
+                updateProfile(removeTemplateFromRichProfile(profile));
+                toast.success('Template removed. Experience, education, certifications, and projects removed.');
               }}
               className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors text-xs font-semibold cursor-pointer shadow-2xs"
-              title="Remove template and clear profile data"
+              title="Remove template and clear experience, education, certifications, and projects"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Remove Template</span>
@@ -1294,137 +1337,197 @@ export const LinkedinChatStudio: React.FC<{
             </div>
 
             {/* ── CARD 4: Experience ── */}
-            {profile.experience.length > 0 && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h2 className="text-[18px] font-bold text-[#191919] mb-5">Experience</h2>
-                <div className="space-y-6">
-                  {profile.experience.map((exp, i) => (
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-[18px] font-bold text-[#191919]">Experience</h2>
+                <button
+                  type="button"
+                  onClick={() =>
+                    set({
+                      experience: [
+                        ...experiences,
+                        { title: '', company: '', start: '', end: '', description: '' },
+                      ],
+                    })
+                  }
+                  className="flex items-center gap-1 text-xs font-semibold text-[#0A66C2] hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add position</span>
+                </button>
+              </div>
+              <div className="space-y-6">
+                {experiences.map((exp, i) => {
+                  const bullets = exp.description ? exp.description.split('\n').filter(Boolean) : [''];
+                  return (
                     <div key={i} className="flex gap-4 items-start">
                       <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-slate-100 border border-slate-200">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src="/images/featured-thumbnail/company logo.jfif" alt="" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Edit block value={exp.title} onCommit={(v) => setExperience(i, { title: v })} placeholder="Job title" className="text-[16px] font-semibold text-[#191919] leading-tight" />
-                        <Edit block value={exp.company} onCommit={(v) => setExperience(i, { company: v })} placeholder="Company" className="text-[14px] font-medium text-slate-800 mt-0.5" />
+                        <Edit block value={exp.title} onCommit={(v) => setExperience(i, { title: v })} placeholder="Job title (e.g. Senior Software Engineer)" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                        <Edit block value={exp.company} onCommit={(v) => setExperience(i, { company: v })} placeholder="Company name" className="text-[14px] font-medium text-slate-800 mt-0.5" />
                         <div className="text-[13px] text-slate-500 mt-0.5 flex items-center gap-1">
-                          <Edit value={exp.start} onCommit={(v) => setExperience(i, { start: v })} placeholder="Start" />
+                          <Edit value={exp.start} onCommit={(v) => setExperience(i, { start: v })} placeholder="Start date" />
                           <span>–</span>
-                          <Edit value={exp.end} onCommit={(v) => setExperience(i, { end: v })} placeholder="End" />
+                          <Edit value={exp.end} onCommit={(v) => setExperience(i, { end: v })} placeholder="End date" />
                         </div>
                         <ul className="mt-2.5 space-y-1.5 text-[13px] text-slate-700 leading-relaxed list-disc list-outside marker:text-slate-400 pl-4">
-                          {exp.description.split('\n').filter(Boolean).map((bullet, bIdx) => (
+                          {bullets.map((bullet, bIdx) => (
                             <li key={bIdx}>
-                              <Edit value={bullet} onCommit={(v) => setExperienceBullet(i, bIdx, v)} placeholder="Bullet point" />
+                              <Edit value={bullet} onCommit={(v) => setExperienceBullet(i, bIdx, v)} placeholder="Describe key accomplishments and impact…" />
                             </li>
                           ))}
                         </ul>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
 
             {/* ── CARD 5: Education ── */}
-            {profile.education.length > 0 && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h2 className="text-[18px] font-bold text-[#191919] mb-5">Education</h2>
-                <div className="space-y-6">
-                  {profile.education.map((edu, i) => (
-                    <div key={i} className="flex gap-4 items-start">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-slate-100 border border-slate-200">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/images/featured-thumbnail/education logo.jpg" alt="" className="w-full h-full object-cover" />
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-[18px] font-bold text-[#191919]">Education</h2>
+                <button
+                  type="button"
+                  onClick={() =>
+                    set({
+                      education: [
+                        ...educationList,
+                        { school: '', degree: '', fieldOfStudy: '', start: '', end: '' },
+                      ],
+                    })
+                  }
+                  className="flex items-center gap-1 text-xs font-semibold text-[#0A66C2] hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add education</span>
+                </button>
+              </div>
+              <div className="space-y-6">
+                {educationList.map((edu, i) => (
+                  <div key={i} className="flex gap-4 items-start">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-slate-100 border border-slate-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/images/featured-thumbnail/education logo.jpg" alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Edit block value={edu.school} onCommit={(v) => setEducation(i, { school: v })} placeholder="School or University name" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                      <div className="text-[14px] font-medium text-slate-800 mt-0.5 flex flex-wrap items-center gap-x-1">
+                        <Edit value={edu.degree} onCommit={(v) => setEducation(i, { degree: v })} placeholder="Degree" />
+                        <span>·</span>
+                        <Edit value={edu.fieldOfStudy} onCommit={(v) => setEducation(i, { fieldOfStudy: v })} placeholder="Field of study" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <Edit block value={edu.school} onCommit={(v) => setEducation(i, { school: v })} placeholder="School" className="text-[16px] font-semibold text-[#191919] leading-tight" />
-                        {/* flex-wrap so degree and field wrap as whole units;
-                            without it flex shrinks each one and their text
-                            wraps internally, splitting into ragged columns. */}
-                        <div className="text-[14px] font-medium text-slate-800 mt-0.5 flex flex-wrap items-center gap-x-1">
-                          <Edit value={edu.degree} onCommit={(v) => setEducation(i, { degree: v })} placeholder="Degree" />
-                          <span>·</span>
-                          <Edit value={edu.fieldOfStudy} onCommit={(v) => setEducation(i, { fieldOfStudy: v })} placeholder="Field of study" />
-                        </div>
-                        <div className="text-[13px] text-slate-500 mt-0.5 flex items-center gap-1">
-                          <Edit value={edu.start} onCommit={(v) => setEducation(i, { start: v })} placeholder="Start" />
-                          <span>–</span>
-                          <Edit value={edu.end} onCommit={(v) => setEducation(i, { end: v })} placeholder="End" />
-                        </div>
+                      <div className="text-[13px] text-slate-500 mt-0.5 flex items-center gap-1">
+                        <Edit value={edu.start} onCommit={(v) => setEducation(i, { start: v })} placeholder="Start year" />
+                        <span>–</span>
+                        <Edit value={edu.end} onCommit={(v) => setEducation(i, { end: v })} placeholder="End year" />
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
             {/* ── CARD 6: Licenses & Certifications ── */}
-            {profile.certifications.length > 0 && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h2 className="text-[18px] font-bold text-[#191919] mb-5">Licenses &amp; Certifications</h2>
-                <div className="space-y-6">
-                  {profile.certifications.map((cert, idx) => (
-                    <div key={idx} className="flex gap-4 items-start">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-slate-100 border border-slate-200">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={idx % 2 === 0 ? '/images/featured-thumbnail/certificate logo.png' : '/images/featured-thumbnail/certificate logo 2.png'}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <Edit block value={cert.name} onCommit={(v) => setCertification(idx, { name: v })} placeholder="Certification name" className="text-[16px] font-semibold text-[#191919] leading-tight" />
-                        <Edit block value={cert.organization} onCommit={(v) => setCertification(idx, { organization: v })} placeholder="Organization" className="text-[14px] font-medium text-slate-800 mt-0.5" />
-                        <div className="text-[13px] text-slate-500 mt-0.5 flex items-center gap-1">
-                          <span>Issued</span>
-                          <Edit value={cert.date} onCommit={(v) => setCertification(idx, { date: v })} placeholder="Date" />
-                        </div>
-                        <button className="inline-flex items-center gap-1.5 border border-slate-400 text-slate-700 font-semibold text-[13px] px-4 py-1.5 rounded-full mt-3 hover:bg-slate-50 transition">
-                          Show credential
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-[18px] font-bold text-[#191919]">Licenses &amp; Certifications</h2>
+                <button
+                  type="button"
+                  onClick={() =>
+                    set({
+                      certifications: [
+                        ...certificationsList,
+                        { name: '', organization: '', date: '' },
+                      ],
+                    })
+                  }
+                  className="flex items-center gap-1 text-xs font-semibold text-[#0A66C2] hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add credential</span>
+                </button>
               </div>
-            )}
+              <div className="space-y-6">
+                {certificationsList.map((cert, idx) => (
+                  <div key={idx} className="flex gap-4 items-start">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 shadow-2xs bg-slate-100 border border-slate-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={idx % 2 === 0 ? '/images/featured-thumbnail/certificate logo.png' : '/images/featured-thumbnail/certificate logo 2.png'}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Edit block value={cert.name} onCommit={(v) => setCertification(idx, { name: v })} placeholder="Certification or License name" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                      <Edit block value={cert.organization} onCommit={(v) => setCertification(idx, { organization: v })} placeholder="Issuing organization" className="text-[14px] font-medium text-slate-800 mt-0.5" />
+                      <div className="text-[13px] text-slate-500 mt-0.5 flex items-center gap-1">
+                        <span>Issued</span>
+                        <Edit value={cert.date} onCommit={(v) => setCertification(idx, { date: v })} placeholder="Issue date" />
+                      </div>
+                      <button className="inline-flex items-center gap-1.5 border border-slate-400 text-slate-700 font-semibold text-[13px] px-4 py-1.5 rounded-full mt-3 hover:bg-slate-50 transition">
+                        Show credential
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* ── CARD 7: Projects ── */}
-            {profile.projects.length > 0 && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h2 className="text-[18px] font-bold text-[#191919] mb-5">Projects</h2>
-                <div className="space-y-6">
-                  {profile.projects.map((proj, i) => (
-                    <div key={i} className="flex gap-4 items-start">
-                      <div className="w-12 h-12 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                        <FolderGit2 className="w-6 h-6" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <Edit block value={proj.title} onCommit={(v) => setProject(i, { title: v })} placeholder="Project title" className="text-[16px] font-semibold text-[#191919] leading-tight" />
-                        <Edit block value={proj.description} onCommit={(v) => setProject(i, { description: v })} placeholder="Project description" className="text-[14px] text-slate-700 mt-1 leading-relaxed" />
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-[18px] font-bold text-[#191919]">Projects</h2>
+                <button
+                  type="button"
+                  onClick={() =>
+                    set({
+                      projects: [
+                        ...projectsList,
+                        { title: '', description: '' },
+                      ],
+                    })
+                  }
+                  className="flex items-center gap-1 text-xs font-semibold text-[#0A66C2] hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add project</span>
+                </button>
+              </div>
+              <div className="space-y-6">
+                {projectsList.map((proj, i) => (
+                  <div key={i} className="flex gap-4 items-start">
+                    <div className="w-12 h-12 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                      <FolderGit2 className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Edit block value={proj.title} onCommit={(v) => setProject(i, { title: v })} placeholder="Project title" className="text-[16px] font-semibold text-[#191919] leading-tight" />
+                      <Edit block value={proj.description} onCommit={(v) => setProject(i, { description: v })} placeholder="Brief project description and achievements" className="text-[14px] text-slate-700 mt-1 leading-relaxed" />
 
-                        {/* Attached Project Media Thumbnail Card */}
-                        <div className="mt-3.5 border border-slate-200 rounded-xl p-2.5 bg-slate-50/80 flex items-center gap-3 max-w-md">
-                          <div className="w-20 h-14 rounded-lg overflow-hidden bg-slate-900 shrink-0">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src="/images/featured-thumbnail/project thumbnail.png" alt="" className="w-full h-full object-cover" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[13px] font-semibold text-[#191919] line-clamp-1">{proj.title} Demo &amp; Code Repo</p>
-                            <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                              <ExternalLink className="w-3 h-3" /> github.com / live app
-                            </span>
-                          </div>
+                      {/* Attached Project Media Thumbnail Card */}
+                      <div className="mt-3.5 border border-slate-200 rounded-xl p-2.5 bg-slate-50/80 flex items-center gap-3 max-w-md">
+                        <div className="w-20 h-14 rounded-lg overflow-hidden bg-slate-900 shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src="/images/featured-thumbnail/project thumbnail.png" alt="" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-semibold text-[#191919] line-clamp-1">{proj.title || 'Project Demo & Code Repo'}</p>
+                          <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                            <ExternalLink className="w-3 h-3" /> github.com / live app
+                          </span>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
             {/* ── CARD 8: Skills ── */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
@@ -1734,12 +1837,29 @@ export const LinkedinChatStudio: React.FC<{
                   Select any career track to apply its professional headline, summary, experience structure, and matching cover banner design.
                 </p>
               </div>
-              <button
-                onClick={() => setShowTemplateModal(false)}
-                className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {(profile.coverTemplateId || profile.experience.length > 0) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateProfile(removeTemplateFromRichProfile(profile));
+                      setShowTemplateModal(false);
+                      toast.success('Template removed. Experience, education, certifications, and projects removed.');
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-semibold cursor-pointer transition-colors"
+                    title="Remove active template"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Remove Template</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowTemplateModal(false)}
+                  className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="p-4 sm:p-5 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -1750,6 +1870,12 @@ export const LinkedinChatStudio: React.FC<{
                     key={cover.id}
                     type="button"
                     onClick={() => {
+                      if (isSelected) {
+                        updateProfile(removeTemplateFromRichProfile(profile));
+                        setShowTemplateModal(false);
+                        toast.success(`Removed "${cover.name}" template.`);
+                        return;
+                      }
                       const newProfile = buildInitialRichProfile(cover.id);
                       if (profile.headshotUrl && profile.headshotUrl !== DEFAULT_HEADSHOT_URL) {
                         newProfile.headshotUrl = profile.headshotUrl;
@@ -1787,10 +1913,14 @@ export const LinkedinChatStudio: React.FC<{
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
-                      <span className={isSelected ? 'text-[#0A66C2]' : 'text-slate-600 group-hover:text-[#0A66C2]'}>
-                        {isSelected ? 'Currently Selected' : 'Apply Template'}
+                      <span className={isSelected ? 'text-rose-600' : 'text-slate-600 group-hover:text-[#0A66C2]'}>
+                        {isSelected ? 'Click to Remove Template' : 'Apply Template'}
                       </span>
-                      <ChevronRight className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 ${isSelected ? 'text-[#0A66C2]' : 'text-slate-400 group-hover:text-[#0A66C2]'}`} />
+                      {isSelected ? (
+                        <Trash2 className="w-4 h-4 text-rose-600" />
+                      ) : (
+                        <ChevronRight className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 text-slate-400 group-hover:text-[#0A66C2]`} />
+                      )}
                     </div>
                   </button>
                 );

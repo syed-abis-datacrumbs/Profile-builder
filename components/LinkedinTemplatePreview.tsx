@@ -16,6 +16,7 @@ import {
   ChevronRight,
   X,
   Bell,
+  Trash2,
 } from 'lucide-react';
 import { LinkedinPremiumBadge } from './icons';
 import { linkedinCovers, getDefaultPfpGradientId } from '../lib/linkedinCovers';
@@ -27,6 +28,7 @@ const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] }
 
 interface LinkedinTemplatePreviewProps {
   templateId: string;
+  isApplied?: boolean;
   onBack: () => void;
   onEdit: () => void;
   onRemove?: () => void;
@@ -53,7 +55,7 @@ const DUMMY_THUMBNAILS = [
   '/images/linkedin-templates/thumbnails/sixth.png',
 ];
 
-export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = ({ templateId, onBack, onEdit, onRemove }) => {
+export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = ({ templateId, isApplied, onBack, onEdit, onRemove }) => {
   const [notificationsActive, setNotificationsActive] = React.useState(false);
   const coverIndex = linkedinCovers.findIndex((c) => c.id === templateId);
   const validIndex = Math.max(0, coverIndex);
@@ -122,13 +124,25 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
             <span className="text-sm text-slate-500 hidden md:inline-block truncate">
               Template: <span className="font-bold text-slate-900">{template.name}</span>
             </span>
-            <button
-              onClick={onEdit}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0A66C2] hover:bg-[#0958A8] text-white text-sm font-bold transition-colors shadow-sm whitespace-nowrap cursor-pointer"
-            >
-              <PenSquare className="w-3.5 h-3.5" />
-              <span>Use Template</span>
-            </button>
+            {isApplied && onRemove ? (
+              <button
+                type="button"
+                onClick={onRemove}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-sm font-bold transition-colors shadow-sm whitespace-nowrap cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Remove Template</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0A66C2] hover:bg-[#0958A8] text-white text-sm font-bold transition-colors shadow-sm whitespace-nowrap cursor-pointer"
+              >
+                <PenSquare className="w-3.5 h-3.5" />
+                <span>Use Template</span>
+              </button>
+            )}
           </div>
         </div>
 

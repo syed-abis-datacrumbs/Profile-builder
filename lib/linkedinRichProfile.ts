@@ -112,9 +112,56 @@ export function buildInitialRichProfile(templateId: string): LinkedinRichProfile
   };
 }
 
-/** Returns a completely blank/empty profile with no names, titles, about, skills,
- *  experiences, headshot photo, or cover text fields. */
-export function buildEmptyRichProfile(): LinkedinRichProfile {
+/** Returns the default rich profile, seeded with all sections from the first cover template. */
+export function buildDefaultRichProfile(userName?: string): LinkedinRichProfile {
+  const profile = buildInitialRichProfile(linkedinCovers[0].id);
+  if (userName && userName.trim()) {
+    profile.fullName = userName.trim();
+  }
+  return profile;
+}
+
+export const PLACEHOLDER_EXPERIENCE = [
+  {
+    title: '',
+    company: '',
+    start: '',
+    end: '',
+    description: '',
+  },
+];
+
+export const PLACEHOLDER_EDUCATION = [
+  {
+    school: '',
+    degree: '',
+    fieldOfStudy: '',
+    start: '',
+    end: '',
+  },
+];
+
+export const PLACEHOLDER_CERTIFICATIONS = [
+  {
+    name: '',
+    organization: '',
+    date: '',
+  },
+];
+
+export const PLACEHOLDER_PROJECTS = [
+  {
+    title: '',
+    description: '',
+  },
+];
+
+export const LOREM_IPSUM_ABOUT =
+  'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.';
+
+/** Removes the active template from a profile, returning it to the default placeholder state ("Your name", blank avatar, etc.)
+ *  with the About section filled with Lorem Ipsum, and all sections persisting with placeholder text. */
+export function removeTemplateFromRichProfile(_profile?: LinkedinRichProfile): LinkedinRichProfile {
   return {
     fullName: '',
     title: '',
@@ -122,18 +169,24 @@ export function buildEmptyRichProfile(): LinkedinRichProfile {
     location: '',
     currentCompany: '',
     school: '',
-    about: '',
+    about: LOREM_IPSUM_ABOUT,
     skills: [],
-    experience: [],
-    education: [],
-    certifications: [],
-    projects: [],
+    experience: [{ title: '', company: '', start: '', end: '', description: '' }],
+    education: [{ school: '', degree: '', fieldOfStudy: '', start: '', end: '' }],
+    certifications: [{ name: '', organization: '', date: '' }],
+    projects: [{ title: '', description: '' }],
     awards: [],
-    coverTemplateId: 'linkedin-1',
+    coverTemplateId: '',
     coverFieldValues: {},
     pfpGradientId: 'gradient-1',
     headshotUrl: '',
+    customCoverUrl: '',
   };
+}
+
+/** Returns a blank/initial profile with "Your name" placeholder state and Lorem Ipsum in About. */
+export function buildEmptyRichProfile(): LinkedinRichProfile {
+  return removeTemplateFromRichProfile();
 }
 
 export { COVER_ART, COVER_ART_ORDER };
