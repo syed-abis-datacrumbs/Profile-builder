@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import type { LinkedinRichProfile } from '../../../lib/linkedinRichProfile';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
-import { COVER_ART } from '../../../lib/linkedinRichProfile';
+import { COVER_ART, DEFAULT_HEADSHOT_URL } from '../../../lib/linkedinRichProfile';
 import { overageCeiling } from '../../../lib/linkedinCoverArt';
 
 export const runtime = 'nodejs';
@@ -17,13 +17,24 @@ export const runtime = 'nodejs';
 // those right. Constraining it to a known id allowlist per-request, rather
 // than accepting an arbitrary object back, is what keeps this safe — see
 // mergeCoverFieldValues below.
-type LinkedinContentProfile = Omit<LinkedinRichProfile, 'coverTemplateId' | 'pfpGradientId' | 'headshotUrl'>;
+type LinkedinContentProfile = Omit<
+  LinkedinRichProfile,
+  'coverTemplateId' | 'pfpGradientId' | 'headshotUrl' | 'customCoverUrl' | 'activity' | 'recommendations' | 'followersCount'
+>;
 
-const PROTECTED_KEYS = ['coverTemplateId', 'pfpGradientId', 'headshotUrl'] as const;
+const PROTECTED_KEYS = [
+  'coverTemplateId',
+  'pfpGradientId',
+  'headshotUrl',
+  'customCoverUrl',
+  'activity',
+  'recommendations',
+  'followersCount',
+] as const;
 
 function toContentProfile(profile: Partial<LinkedinRichProfile>): Partial<LinkedinContentProfile> {
   const copy: Partial<LinkedinRichProfile> = { ...profile };
-  for (const key of PROTECTED_KEYS) delete copy[key];
+  for (const key of PROTECTED_KEYS) delete (copy as Record<string, unknown>)[key];
   return copy;
 }
 
@@ -61,6 +72,8 @@ Rules:
 - Write "about" in a confident, professional first-person voice; quantify achievements where possible; keep it to 2 short paragraphs separated by "\\n\\n".
 - "add a skill" -> append to skills (dedupe against existing skills, case-insensitively). "add an education / certification / project / award" -> append a new well-formed entry to that array; if the user replaces their whole background in one message, replace the array's contents to match rather than appending duplicates of old placeholder entries.
 - Every project the user describes becomes its own entry in "projects" with a clear title and a 1-2 sentence description covering what it does and the tech used.
+- When the user mentions their current company or role (e.g. "I work at DataCrumbs as an AI Engineer"), update "title" and "currentCompany", AND ALSO ensure there is a corresponding entry in "experience" for that role/company (updating the primary experience item or adding it if missing). If existing experience entries are placeholders, replace the placeholder with this real experience.
+- When the user mentions their school or university, update "school" AND ALSO ensure there is a corresponding entry in "education" for that school.
 - Keep the headline within ~220 characters. Output valid JSON only.`;
 
 interface ChatMessage {
@@ -68,14 +81,16 @@ interface ChatMessage {
   content: string;
 }
 
-function isValidContentProfile(value: unknown): value is LinkedinContentProfile {
+function isValidContentProfile(value: unknown): value is Partial<LinkedinContentProfile> {
   if (!value || typeof value !== 'object') return false;
   const v = value as Record<string, unknown>;
   return (
-    typeof v.fullName === 'string' &&
-    typeof v.about === 'string' &&
-    Array.isArray(v.skills) &&
-    Array.isArray(v.experience) &&
+    typeof v.fullName === 'string' ||
+    typeof v.headline === 'string' ||
+    typeof v.title === 'string' ||
+    typeof v.about === 'string' ||
+    Array.isArray(v.skills) ||
+    Array.isArray(v.experience) ||
     Array.isArray(v.education)
   );
 }
@@ -175,15 +190,23 @@ export async function POST(request: Request) {
       }
     }
 
-    const body = (await request.json()) as { messages?: ChatMessage[]; linkedin?: Partial<LinkedinRichProfile>; userRole?: string; sessionId?: string; builderType?: string };
+    const body = (await request.json()) as {
+      messages?: ChatMessage[];
+      linkedin?: Partial<LinkedinRichProfile>;
+      profile?: Partial<LinkedinRichProfile>;
+      userRole?: string;
+      sessionId?: string;
+      builderType?: string;
+    };
     const messages = Array.isArray(body.messages) ? body.messages : [];
-    const fullProfile = (body.linkedin ?? {}) as LinkedinRichProfile;
+    const fullProfile = ((body.profile ?? body.linkedin) ?? {}) as LinkedinRichProfile;
     const sessionId = body.sessionId || 'unknown';
     const builderType = body.builderType || 'linkedin';
     const userMessage = messages[messages.length - 1]?.content || '';
     const contentProfile = toContentProfile(fullProfile);
 
-    const art = COVER_ART[fullProfile.coverTemplateId];
+    const coverTemplateId = fullProfile.coverTemplateId || 'template-1';
+    const art = COVER_ART[coverTemplateId];
     const editableCoverFields = (art?.fields ?? [])
       .filter((f) => !f.defaultFrom)
       .map((f) => ({
@@ -242,7 +265,7 @@ The ONLY fields to leave untouched are literal contact details you have no real 
     // history). Silently keeping the prior value is always the right call:
     // clearing a field is never something a user asks for implicitly, and an
     // empty scalar renders as a bare placeholder on the profile.
-    const preserved = parsedObj.profile as unknown as Record<string, unknown>;
+    const preserved = { ...(parsedObj.profile as Record<string, unknown>) };
     for (const key of ['fullName', 'title', 'headline', 'location', 'currentCompany', 'school', 'about'] as const) {
       const next = preserved[key];
       const prev = (fullProfile as unknown as Record<string, unknown>)[key];
@@ -251,18 +274,35 @@ The ONLY fields to leave untouched are literal contact details you have no real 
       }
     }
 
+    // Preserve arrays if the model returned an empty list or omitted them,
+    // unless the user specifically asked to clear/delete them.
+    for (const key of ['experience', 'education', 'certifications', 'projects', 'skills', 'awards'] as const) {
+      const next = preserved[key];
+      const prev = (fullProfile as unknown as Record<string, unknown>)[key];
+      const userAskedToClear = /\b(clear|remove|delete|reset|wipe)\b/i.test(userMessage) &&
+        new RegExp(`\\b(${key}|all|everything)\\b`, 'i').test(userMessage);
+
+      if (!userAskedToClear && Array.isArray(prev) && prev.length > 0 && (!Array.isArray(next) || next.length === 0)) {
+        preserved[key] = prev;
+      }
+    }
+
     const proposedCoverFieldValues = (parsedObj.profile as { coverFieldValues?: unknown }).coverFieldValues;
     const userMentionsCover = /\b(cover|banner|header\s+image|banner\s+text|cover\s+tagline|cover\s+headline)\b/i.test(userMessage);
     const finalCoverFieldValues = userMentionsCover
-      ? mergeCoverFieldValues(fullProfile.coverTemplateId, fullProfile.coverFieldValues ?? {}, proposedCoverFieldValues)
+      ? mergeCoverFieldValues(coverTemplateId, fullProfile.coverFieldValues ?? {}, proposedCoverFieldValues)
       : (fullProfile.coverFieldValues ?? {});
 
     const mergedProfile: LinkedinRichProfile = {
       ...fullProfile,
-      ...parsedObj.profile,
-      coverTemplateId: fullProfile.coverTemplateId,
-      pfpGradientId: fullProfile.pfpGradientId,
-      headshotUrl: fullProfile.headshotUrl,
+      ...(preserved as unknown as Partial<LinkedinRichProfile>),
+      coverTemplateId: fullProfile.coverTemplateId ?? '',
+      pfpGradientId: fullProfile.pfpGradientId || 'gradient-1',
+      headshotUrl: fullProfile.headshotUrl ?? '',
+      customCoverUrl: fullProfile.customCoverUrl ?? '',
+      followersCount: fullProfile.followersCount || '500+',
+      activity: fullProfile.activity ?? [],
+      recommendations: fullProfile.recommendations ?? [],
       coverFieldValues: finalCoverFieldValues,
     };
 
@@ -284,7 +324,10 @@ The ONLY fields to leave untouched are literal contact details you have no real 
       reply,
       profile: mergedProfile,
     });
-  } catch (err) {
-    return Response.json({ error: 'The AI request failed. Check your API key / connection and try again.' });
+  } catch (err: any) {
+    console.error('[LinkedIn AI Error]:', err);
+    return Response.json({
+      error: err?.message || 'The AI request failed. Check your API key / connection and try again.',
+    });
   }
 }

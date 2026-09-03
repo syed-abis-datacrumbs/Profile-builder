@@ -639,7 +639,7 @@ export const GithubChatStudio: React.FC<{
                   socialLinks: {},
                   customSections: [],
                 });
-                toast.success('Template removed. Profile cleared to blank slate.');
+                toast.success('Template removed');
               }}
               className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors text-xs font-semibold cursor-pointer shadow-2xs"
               title="Remove template and clear profile data"

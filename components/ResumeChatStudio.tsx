@@ -1014,7 +1014,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                     interests: '',
                   },
                 });
-                showToast('Template removed. Resume cleared to blank slate.');
+                showToast('Template removed');
               }}
               className="h-7 px-1.5 sm:px-2 rounded-lg bg-rose-50 text-[11px] sm:text-xs font-semibold text-rose-600 hover:bg-rose-100 transition-colors border border-rose-200 flex items-center justify-center gap-1 leading-none cursor-pointer shadow-2xs"
               title="Remove template and clear resume data"

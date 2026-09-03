@@ -28,7 +28,7 @@ import { AskExpertModal } from '../components/AskExpertModal';
 import { PaymentModal } from '../components/PaymentModal';
 import { GithubChatStudio } from '../components/GithubChatStudio';
 import { LinkedinChatStudio } from '../components/LinkedinChatStudio';
-import { LinkedinRichProfile, buildInitialRichProfile, buildDefaultRichProfile, buildEmptyRichProfile, removeTemplateFromRichProfile } from '../lib/linkedinRichProfile';
+import { LinkedinRichProfile, buildInitialRichProfile, buildEmptyRichProfile, removeTemplateFromRichProfile } from '../lib/linkedinRichProfile';
 import { toast } from '../lib/toast';
 import BlockScreen from '../components/BlockScreen';
 import { BUILDER_ACCESS_EMAILS } from '../lib/accessConfig';
@@ -115,7 +115,7 @@ export default function Home() {
         }
       } catch {}
     }
-    return buildDefaultRichProfile();
+    return buildEmptyRichProfile();
   });
 
   const [selectedModel, setSelectedModel] = useState('Flash');
@@ -717,7 +717,7 @@ export default function Home() {
                       </div>
                     ) : linkedinMode === 'studio' ? (
                       <LinkedinChatStudio
-                        profile={linkedinRichProfile || buildDefaultRichProfile(firstName || undefined)}
+                        profile={linkedinRichProfile || buildEmptyRichProfile()}
                         onChange={setLinkedinRichProfile}
                         onBack={() => setLinkedinMode('landing')}
                         isLoggedIn={isLoggedIn}
@@ -753,8 +753,8 @@ export default function Home() {
                             if (typeof window !== 'undefined') {
                               localStorage.removeItem('profile_builder_linkedin_chat');
                             }
-                          } else if (!linkedinRichProfile) {
-                            setLinkedinRichProfile(buildDefaultRichProfile(firstName || undefined));
+                          } else {
+                            setLinkedinRichProfile(buildEmptyRichProfile());
                           }
                           setLinkedinMode('studio');
                           setAttachedLinkedinTemplate(null);
@@ -766,8 +766,8 @@ export default function Home() {
                           }
                           if (attachedLinkedinTemplate) {
                             setLinkedinRichProfile(buildInitialRichProfile(attachedLinkedinTemplate));
-                          } else if (!linkedinRichProfile) {
-                            setLinkedinRichProfile(buildDefaultRichProfile(firstName || undefined));
+                          } else {
+                            setLinkedinRichProfile(buildEmptyRichProfile());
                           }
                           setLinkedinMode('studio');
                         }}
@@ -963,7 +963,7 @@ export default function Home() {
               setAttachedLinkedinTemplate(null);
               setLinkedinRichProfile((prev) => (prev ? removeTemplateFromRichProfile(prev) : buildEmptyRichProfile()));
               setLinkedinMode('landing');
-              toast.success('Template removed.');
+              toast.success('Template removed');
             }}
           />
         )}

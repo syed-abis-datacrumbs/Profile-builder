@@ -318,6 +318,7 @@ export const LinkedinChatStudio: React.FC<{
         body: JSON.stringify({ 
           messages: next, 
           profile,
+          linkedin: profile,
           sessionId: sessionIdRef.current,
           builderType: 'linkedin'
         }),
@@ -347,20 +348,22 @@ export const LinkedinChatStudio: React.FC<{
   }, []);
 
   const updateProfile = (next: LinkedinRichProfile) => {
+    const coverId = next.coverTemplateId || profile.coverTemplateId || 'template-1';
+    const resolvedNext = { ...next, coverTemplateId: coverId };
     const identityChanged =
-      next.fullName !== profile.fullName || next.title !== profile.title || next.currentCompany !== profile.currentCompany;
-    const art = COVER_ART[next.coverTemplateId];
+      resolvedNext.fullName !== profile.fullName || resolvedNext.title !== profile.title || resolvedNext.currentCompany !== profile.currentCompany;
+    const art = COVER_ART[coverId];
     if (!identityChanged || !art) {
-      onChange(next);
+      onChange(resolvedNext);
       return;
     }
-    const resyncedCoverFieldValues = { ...next.coverFieldValues };
+    const resyncedCoverFieldValues = { ...resolvedNext.coverFieldValues };
     for (const field of art.fields) {
-      if (field.defaultFrom === 'fullName') resyncedCoverFieldValues[field.id] = next.fullName;
-      else if (field.defaultFrom === 'currentPosition') resyncedCoverFieldValues[field.id] = next.title;
-      else if (field.defaultFrom === 'currentCompany') resyncedCoverFieldValues[field.id] = next.currentCompany;
+      if (field.defaultFrom === 'fullName') resyncedCoverFieldValues[field.id] = resolvedNext.fullName;
+      else if (field.defaultFrom === 'currentPosition') resyncedCoverFieldValues[field.id] = resolvedNext.title;
+      else if (field.defaultFrom === 'currentCompany') resyncedCoverFieldValues[field.id] = resolvedNext.currentCompany;
     }
-    onChange({ ...next, coverFieldValues: resyncedCoverFieldValues });
+    onChange({ ...resolvedNext, coverFieldValues: resyncedCoverFieldValues });
   };
 
   const set = (patch: Partial<LinkedinRichProfile>) => updateProfile({ ...profile, ...patch });
@@ -899,7 +902,7 @@ export const LinkedinChatStudio: React.FC<{
               type="button"
               onClick={() => {
                 updateProfile(removeTemplateFromRichProfile(profile));
-                toast.success('Template removed. Experience, education, certifications, and projects removed.');
+                toast.success('Template removed');
               }}
               className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors text-xs font-semibold cursor-pointer shadow-2xs"
               title="Remove template and clear experience, education, certifications, and projects"
@@ -2144,7 +2147,7 @@ export const LinkedinChatStudio: React.FC<{
                     onClick={() => {
                       updateProfile(removeTemplateFromRichProfile(profile));
                       setShowTemplateModal(false);
-                      toast.success('Template removed. Experience, education, certifications, and projects removed.');
+                      toast.success('Template removed');
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-semibold cursor-pointer transition-colors"
                     title="Remove active template"
@@ -2173,7 +2176,7 @@ export const LinkedinChatStudio: React.FC<{
                       if (isSelected) {
                         updateProfile(removeTemplateFromRichProfile(profile));
                         setShowTemplateModal(false);
-                        toast.success(`Removed "${cover.name}" template.`);
+                        toast.success('Template removed');
                         return;
                       }
                       const newProfile = buildInitialRichProfile(cover.id);

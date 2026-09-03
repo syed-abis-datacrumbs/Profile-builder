@@ -1976,7 +1976,10 @@ export async function POST(request: Request) {
       reply,
       cv: safeCv,
     });
-  } catch (err) {
-    return Response.json({ error: 'The AI request failed. Check your API key / connection and try again.' });
+  } catch (err: any) {
+    console.error('[Resume AI Error]:', err);
+    return Response.json({
+      error: err?.message || 'The AI request failed. Check your API key / connection and try again.',
+    });
   }
 }

@@ -284,7 +284,10 @@ export async function POST(request: Request) {
       reply,
       github: updatedGithub,
     });
-  } catch (err) {
-    return Response.json({ error: 'The AI request failed. Check your API key / connection and try again.' });
+  } catch (err: any) {
+    console.error('[GitHub AI Error]:', err);
+    return Response.json({
+      error: err?.message || 'The AI request failed. Check your API key / connection and try again.',
+    });
   }
 }
