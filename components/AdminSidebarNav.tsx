@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Ticket, CreditCard, Users, ShieldCheck, MessageSquare, UserCheck, Bug } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Ticket, CreditCard, Users, ShieldCheck, MessageSquare, UserCheck, Bug } from 'lucide-react';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/traffic', label: 'Traffic', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/chats', label: 'AI Chats', icon: MessageSquare },
   { href: '/admin/issues', label: 'Issues', icon: Bug },

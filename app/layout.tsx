@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono, Poppins, Bricolage_Grotesque, Dancing_Script, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -67,7 +68,10 @@ export default function RootLayout({
             cz-shortcut-listen, password managers add their own) stamp
             attributes on <body> before React hydrates, which React reports as
             a mismatch even though nothing in this app is at fault. */}
-        <body className="min-h-full flex flex-col" suppressHydrationWarning>{children}</body>
+        <body className="min-h-full flex flex-col" suppressHydrationWarning>
+          <GoogleAnalytics />
+          {children}
+        </body>
       </html>
     </ClerkProvider>
   );

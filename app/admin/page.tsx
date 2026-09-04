@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, CreditCard, Ticket, FileText, Clock, CheckCircle, TrendingUp, ArrowRight } from 'lucide-react';
+import { Users, CreditCard, Ticket, FileText, Clock, CheckCircle, TrendingUp, ArrowRight, BarChart3 } from 'lucide-react';
 
 type Analytics = {
   totalUnlocked: number;
@@ -96,8 +96,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
+          { href: '/admin/traffic', label: 'Traffic & Analytics', desc: 'GA4 live real-time visitors & acquisition', icon: BarChart3, action: 'View Traffic' },
           { href: '/admin/coupons', label: 'Create a Coupon', desc: 'Generate a new coupon code for students', icon: Ticket, action: 'Go to Coupons' },
           { href: '/admin/payments', label: 'Review Payments', desc: 'Approve or reject pending payment proofs', icon: CreditCard, action: 'Review Now' },
           { href: '/admin/unlocked', label: 'View Unlocked Users', desc: 'See all users with full access', icon: CheckCircle, action: 'View Users' },
