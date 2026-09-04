@@ -25,6 +25,7 @@ interface MobileChatWidgetProps {
   aiMessagesUsed?: number;
   onRequireAuth?: () => void;
   badgeAction?: React.ReactNode;
+  onNewChat?: () => void;
 }
 
 function renderMessageText(text: string) {
@@ -53,6 +54,7 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
   aiMessagesUsed = 0,
   onRequireAuth,
   badgeAction,
+  onNewChat,
 }) => {
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
@@ -157,13 +159,24 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
                   </div>
                   <span className="font-bold text-sm text-slate-900 truncate">{title}</span>
                 </div>
-                <button
-                  onClick={onToggle}
-                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
-                  aria-label="Close"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {onNewChat && (
+                    <button
+                      onClick={onNewChat}
+                      className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors shrink-0 cursor-pointer shadow-2xs"
+                      title="New chat"
+                    >
+                      New chat
+                    </button>
+                  )}
+                  <button
+                    onClick={onToggle}
+                    className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                    aria-label="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Chat Scroll Container */}

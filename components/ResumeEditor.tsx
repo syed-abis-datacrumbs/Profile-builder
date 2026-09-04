@@ -563,7 +563,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
                   key={t}
                   onClick={() => onChange({ ...data, resumeType: t })}
                   className={`px-2.5 py-1 rounded-md text-[11px] font-bold capitalize transition-colors ${(data.resumeType ?? 'professional') === t
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-slate-900 text-white shadow-xs'
                       : 'text-slate-400 hover:text-white'
                     }`}
                 >

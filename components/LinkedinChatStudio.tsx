@@ -32,6 +32,9 @@ import {
   Edit2,
   Bell,
   Globe,
+  Undo,
+  Redo,
+  AlertTriangle,
 } from 'lucide-react';
 import toast from '@/lib/toast';
 import { LinkedinPremiumBadge } from './icons';
@@ -207,6 +210,7 @@ export const LinkedinChatStudio: React.FC<{
   const [showPfpPicker, setShowPfpPicker] = useState(false);
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showAllSkills, setShowAllSkills] = useState(false);
   const [isAddingSkill, setIsAddingSkill] = useState(false);
   const [newSkillInput, setNewSkillInput] = useState('');
@@ -358,7 +362,53 @@ export const LinkedinChatStudio: React.FC<{
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Undo / Redo history
+  const [past, setPast] = useState<LinkedinRichProfile[]>([]);
+  const [future, setFuture] = useState<LinkedinRichProfile[]>([]);
+
+  const handleUndo = useCallback(() => {
+    if (past.length === 0) return;
+    const prev = past[past.length - 1];
+    setPast((p) => p.slice(0, -1));
+    setFuture((f) => [profile, ...f]);
+    onChange(prev);
+  }, [past, profile, onChange]);
+
+  const handleRedo = useCallback(() => {
+    if (future.length === 0) return;
+    const next = future[0];
+    setFuture((f) => f.slice(1));
+    setPast((p) => [...p, profile]);
+    onChange(next);
+  }, [future, profile, onChange]);
+
+  // Keyboard shortcut listener (Ctrl+Z / Ctrl+Y / Cmd+Z)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      if (isInput) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
+
   const updateProfile = (next: LinkedinRichProfile) => {
+    setPast((p) => [...p.slice(-99), profile]);
+    setFuture([]);
     const resolvedNext = { ...next };
     const coverId = resolvedNext.coverTemplateId;
     const identityChanged =
@@ -619,11 +669,14 @@ export const LinkedinChatStudio: React.FC<{
 
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <button
-              onClick={() => setMessages([{ role: 'assistant', content: 'Started a new chat session. How can I optimize your LinkedIn profile?' }])}
-              className="px-2 sm:px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors shrink-0"
+              onClick={() => {
+                sessionIdRef.current = crypto.randomUUID();
+                setMessages([{ role: 'assistant', content: 'Started a new chat session. How can I optimize your LinkedIn profile?' }]);
+              }}
+              className="px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors shrink-0 cursor-pointer"
+              title="Start a new chat session"
             >
-              <span className="hidden xs:inline">New chat</span>
-              <span className="xs:hidden">New</span>
+              New chat
             </button>
           </div>
         </div>
@@ -721,12 +774,64 @@ export const LinkedinChatStudio: React.FC<{
             <button
               type="button"
               onClick={() => setShowTemplateModal(true)}
-              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs font-bold text-slate-800 border border-slate-200/80 cursor-pointer shadow-2xs"
+              className="h-7 px-1.5 sm:px-2 rounded-lg bg-slate-100 text-[11px] sm:text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1 leading-none cursor-pointer"
               title="Change Template"
             >
-              <LayoutTemplate className="w-3.5 h-3.5 text-[#0A66C2]" />
-              <span className="hidden xs:inline">Templates</span>
+              <LayoutTemplate className="w-3.5 h-3.5 text-slate-800 shrink-0" />
+              <span className="leading-none hidden xs:inline">Templates</span>
             </button>
+
+            {/* Remove Template Button with Confirmation Popover */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm((v) => !v)}
+                className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors text-xs font-semibold cursor-pointer shadow-2xs"
+                title="Remove template and clear experience, education, certifications, and projects"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">Remove Template</span>
+              </button>
+
+              {showClearConfirm && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowClearConfirm(false)} />
+                  <div className="absolute top-full left-0 mt-2 w-64 sm:w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl z-[100] p-3.5 space-y-3 text-xs whitespace-normal animate-in fade-in zoom-in-95">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <AlertTriangle className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-900 text-xs">Clear everything?</p>
+                        <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
+                          Are you sure you want to clear all sections and reset your content?
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setShowClearConfirm(false)}
+                        className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowClearConfirm(false);
+                          updateProfile(removeTemplateFromRichProfile(profile));
+                          toast.success('Template removed');
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer shadow-xs"
+                      >
+                        Yes, Clear
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Tab Title (Save Menu) */}
             <div className="relative">
@@ -908,20 +1013,28 @@ export const LinkedinChatStudio: React.FC<{
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                updateProfile(removeTemplateFromRichProfile(profile));
-                toast.success('Template removed');
-              }}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors text-xs font-semibold cursor-pointer shadow-2xs"
-              title="Remove template and clear experience, education, certifications, and projects"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Remove Template</span>
-            </button>
-            <span className="hidden sm:block text-xs font-bold text-slate-700">Live Profile Editor</span>
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Undo / Redo */}
+            <div className="flex items-center gap-0.5 border border-slate-200 rounded-lg p-0.5 bg-slate-50">
+              <button
+                type="button"
+                title="Undo (Ctrl+Z)"
+                onMouseDown={(e) => { e.preventDefault(); handleUndo(); }}
+                disabled={past.length === 0}
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${past.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+              >
+                <Undo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              </button>
+              <button
+                type="button"
+                title="Redo (Ctrl+Y)"
+                onMouseDown={(e) => { e.preventDefault(); handleRedo(); }}
+                disabled={future.length === 0}
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${future.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+              >
+                <Redo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -2328,6 +2441,10 @@ export const LinkedinChatStudio: React.FC<{
         aiMessagesUsed={aiMessagesUsed}
         isLoggedIn={isLoggedIn}
         onRequireAuth={onRequireAuth}
+        onNewChat={() => {
+          sessionIdRef.current = crypto.randomUUID();
+          setMessages([{ role: 'assistant', content: 'Started a new chat session. How can I optimize your LinkedIn profile?' }]);
+        }}
       />
     </div>
   );

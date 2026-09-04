@@ -396,7 +396,7 @@ export const GithubReadmePreview: React.FC<{
   };
 
   return (
-    <div className="w-full max-w-[820px] bg-slate-950 text-slate-200 rounded-xl border border-slate-800 overflow-hidden font-sans mx-auto shadow-2xl relative">
+    <div className="w-full max-w-[794px] bg-slate-950 text-slate-200 rounded-xl border border-slate-800 overflow-hidden font-sans mx-auto shadow-2xl relative">
       {/* ── Banner + Avatar (LinkedIn-style) ── */}
       <div className="relative">
         {/* Banner */}
