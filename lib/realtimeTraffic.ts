@@ -110,6 +110,7 @@ let tableInitialized = false;
 export async function ensureTrafficTable() {
   if (tableInitialized) return;
   try {
+    // 1. Create table (single command for PgBouncer pooler compatibility)
     await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS profile_builder_visitor_sessions (
         id VARCHAR(64) PRIMARY KEY,
@@ -125,9 +126,17 @@ export async function ensureTrafficTable() {
         last_active TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+    `);
+
+    // 2. Create indices as separate individual commands
+    await db.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS idx_pb_sessions_last_active ON profile_builder_visitor_sessions(last_active);
+    `);
+
+    await db.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS idx_pb_sessions_tool ON profile_builder_visitor_sessions(tool);
     `);
+
     tableInitialized = true;
   } catch (err) {
     console.error('[Traffic] Failed to ensure visitor sessions table:', err);
