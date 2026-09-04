@@ -19,6 +19,9 @@ import {
   TrendingUp,
   Clock,
   Sparkles,
+  UserPlus,
+  Calendar,
+  ArrowUpRight,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -56,6 +59,20 @@ type RealtimeData = {
   }>;
 };
 
+type SignupData = {
+  totalUsers: number;
+  signups7d: number;
+  signups14d: number;
+  signups30d: number;
+  peakDay: { label: string; count: number };
+  averageDaily: number;
+  days: Array<{
+    date: string;
+    label: string;
+    count: number;
+  }>;
+};
+
 type TrafficApiResponse = {
   gaConfig: {
     streamName: string;
@@ -69,6 +86,7 @@ type TrafficApiResponse = {
     };
   };
   realtime: RealtimeData;
+  signups?: SignupData;
   stats: {
     totalChats: number;
     todayChats: number;
@@ -89,6 +107,8 @@ export default function AdminTrafficPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [signupRange, setSignupRange] = useState<'7d' | '14d' | '30d'>('14d');
+  const [hoveredPoint, setHoveredPoint] = useState<{ label: string; count: number; x: number; y: number } | null>(null);
 
   const fetchTrafficData = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
@@ -159,6 +179,47 @@ export default function AdminTrafficPage() {
   const resumeSavePct = Math.round(((stats?.totalResumes ?? 0) / totalSaves) * 100);
   const githubSavePct = Math.round(((stats?.totalGithubSaves ?? 0) / totalSaves) * 100);
   const linkedinSavePct = Math.round(((stats?.totalLinkedinSaves ?? 0) / totalSaves) * 100);
+
+  // User Signups Graph computations
+  const signups = data?.signups;
+  const allSignupDays = signups?.days || [];
+  const displaySignupDays =
+    signupRange === '7d'
+      ? allSignupDays.slice(-7)
+      : signupRange === '14d'
+      ? allSignupDays.slice(-14)
+      : allSignupDays.slice(-30);
+
+  const rangeSignupsTotal = displaySignupDays.reduce((acc, d) => acc + d.count, 0);
+  const rangeDailyAvg = displaySignupDays.length > 0
+    ? (rangeSignupsTotal / displaySignupDays.length).toFixed(1)
+    : '0.0';
+
+  const maxSignupCount = Math.max(...displaySignupDays.map((d) => d.count), 4);
+  const svgWidth = 900;
+  const svgHeight = 170;
+  const padX = 40;
+  const padTop = 25;
+  const padBottom = 25;
+  const plotWidth = svgWidth - padX * 2;
+  const plotHeight = svgHeight - padTop - padBottom;
+
+  const graphPoints = displaySignupDays.map((d, i) => {
+    const x = padX + (displaySignupDays.length > 1 ? (i / (displaySignupDays.length - 1)) * plotWidth : plotWidth / 2);
+    const y = padTop + plotHeight - (d.count / maxSignupCount) * plotHeight;
+    return { x, y, data: d };
+  });
+
+  const linePath = graphPoints.reduce((acc, pt, i, arr) => {
+    if (i === 0) return `M ${pt.x},${pt.y}`;
+    const prev = arr[i - 1];
+    const cpX = (prev.x + pt.x) / 2;
+    return `${acc} C ${cpX},${prev.y} ${cpX},${pt.y} ${pt.x},${pt.y}`;
+  }, '');
+
+  const areaPath = graphPoints.length > 0
+    ? `${linePath} L ${graphPoints[graphPoints.length - 1].x},${padTop + plotHeight} L ${graphPoints[0].x},${padTop + plotHeight} Z`
+    : '';
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-8">
@@ -460,93 +521,262 @@ export default function AdminTrafficPage() {
         </div>
       </div>
 
-      {/* ── Live Recent Visitor Activity Stream ── */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">
-        <div className="flex items-center justify-between mb-4">
+      {/* ── User Signups Growth Graph ── */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md relative overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute -top-10 right-20 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Radio className="w-4.5 h-4.5 text-emerald-400 animate-pulse" />
-              Live Visitor Activity Stream
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Real-time feed of recent visitor pulses across the platform
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-blue-400" />
+                User Signups & Registration Growth
+              </h3>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                Momentum Users
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Daily new Momentum users and platform adoption momentum over time
             </p>
           </div>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            Realtime Feed
-          </span>
-        </div>
 
-        {loading ? (
-          <div className="space-y-2 py-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-10 bg-slate-800/60 rounded-xl animate-pulse" />
+          {/* Time Range Filter Buttons */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-950 border border-slate-800 rounded-xl">
+            {(['7d', '14d', '30d'] as const).map((range) => (
+              <button
+                key={range}
+                type="button"
+                onClick={() => setSignupRange(range)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  signupRange === range
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                {range === '7d' ? 'Last 7 Days' : range === '14d' ? 'Last 14 Days' : 'Last 30 Days'}
+              </button>
             ))}
           </div>
-        ) : !realtime?.recentVisitors || realtime.recentVisitors.length === 0 ? (
-          <div className="py-8 text-center text-slate-500 text-xs">
-            No visitor pulses recorded yet. Once users visit momentum.datacrumbs.org, they will stream in real-time.
+        </div>
+
+        {/* Metric Highlights Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5">
+            <p className="text-[11px] text-slate-400 font-medium">Total Momentum Users</p>
+            <p className="text-xl font-extrabold text-white font-mono mt-0.5">
+              {loading ? '...' : signups?.totalUsers ?? stats?.totalUsersCount ?? 0}
+            </p>
+          </div>
+
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5">
+            <p className="text-[11px] text-slate-400 font-medium">New in Selected Period</p>
+            <p className="text-xl font-extrabold text-emerald-400 font-mono mt-0.5">
+              +{loading ? '...' : rangeSignupsTotal}
+            </p>
+          </div>
+
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5">
+            <p className="text-[11px] text-slate-400 font-medium">Daily Average</p>
+            <p className="text-xl font-extrabold text-blue-400 font-mono mt-0.5">
+              {loading ? '...' : rangeDailyAvg} <span className="text-xs font-normal text-slate-400">/ day</span>
+            </p>
+          </div>
+
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5">
+            <p className="text-[11px] text-slate-400 font-medium">Peak Day</p>
+            <p className="text-base font-bold text-purple-300 truncate mt-1">
+              {signups?.peakDay?.count ? `${signups.peakDay.count} on ${signups.peakDay.label}` : 'None'}
+            </p>
+          </div>
+        </div>
+
+        {/* SVG Graph Container */}
+        {loading ? (
+          <div className="h-48 bg-slate-950/50 rounded-xl flex items-center justify-center animate-pulse">
+            <div className="h-6 w-32 bg-slate-800 rounded" />
+          </div>
+        ) : displaySignupDays.length === 0 ? (
+          <div className="h-48 bg-slate-950/40 rounded-xl border border-dashed border-slate-800 flex flex-col items-center justify-center text-slate-500 text-xs">
+            <UserPlus className="w-8 h-8 mb-2 opacity-40" />
+            No registration data available in this time window
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-3">Country / Location</th>
-                  <th className="py-2.5 px-3">Active Tool</th>
-                  <th className="py-2.5 px-3">Page / Path</th>
-                  <th className="py-2.5 px-3">Device</th>
-                  <th className="py-2.5 px-3 text-right">Last Seen</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {realtime.recentVisitors.map((v) => {
-                  const isVeryRecent = Date.now() - new Date(v.lastActive).getTime() < 300000;
+          <div className="relative pt-6 pb-2">
+            {/* Tooltip Float Overlay */}
+            {hoveredPoint && (
+              <div
+                style={{
+                  left: `${(hoveredPoint.x / svgWidth) * 100}%`,
+                  top: `${hoveredPoint.y - 15}px`,
+                }}
+                className="absolute -translate-x-1/2 -translate-y-full bg-slate-950 border border-blue-500/60 shadow-2xl rounded-xl px-3 py-2 pointer-events-none z-30 whitespace-nowrap transition-all duration-75"
+              >
+                <p className="text-[10px] text-slate-400 font-medium">{hoveredPoint.label}</p>
+                <p className="text-xs font-bold text-white flex items-center gap-1.5 mt-0.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-400" />
+                  +{hoveredPoint.count} new {hoveredPoint.count === 1 ? 'signup' : 'signups'}
+                </p>
+              </div>
+            )}
+
+            {/* SVG Graph */}
+            <div className="w-full overflow-hidden">
+              <svg
+                viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                className="w-full h-44 sm:h-52 select-none overflow-visible"
+              >
+                <defs>
+                  <linearGradient id="signupAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.35" />
+                    <stop offset="90%" stopColor="#3b82f6" stopOpacity="0.0" />
+                  </linearGradient>
+                  <linearGradient id="signupLineGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="50%" stopColor="#60a5fa" />
+                    <stop offset="100%" stopColor="#a855f7" />
+                  </linearGradient>
+                </defs>
+
+                {/* Horizontal Gridlines */}
+                {[0, 0.33, 0.66, 1].map((ratio) => {
+                  const y = padTop + plotHeight - ratio * plotHeight;
+                  const val = Math.round(ratio * maxSignupCount);
                   return (
-                    <tr key={v.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 font-semibold">
-                          <span
-                            className={`w-2 h-2 rounded-full ${
-                              isVeryRecent ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
-                            }`}
-                          />
-                          <span className={isVeryRecent ? 'text-emerald-300' : 'text-slate-400'}>
-                            {isVeryRecent ? 'Active' : 'Idle'}
-                          </span>
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 font-medium text-slate-200 whitespace-nowrap">
-                        <span className="mr-1.5">{v.flag}</span>
-                        {v.country}
-                      </td>
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/20">
-                          {v.tool}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 font-mono text-slate-400 truncate max-w-[200px]">
-                        {v.path}
-                      </td>
-                      <td className="py-2.5 px-3 text-slate-400 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1">
-                          {v.device === 'Mobile' ? (
-                            <Smartphone className="w-3.5 h-3.5 text-slate-400" />
-                          ) : (
-                            <Laptop className="w-3.5 h-3.5 text-slate-400" />
-                          )}
-                          {v.device}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 text-right text-slate-400 font-mono whitespace-nowrap">
-                        {formatTimeAgo(v.lastActive)}
-                      </td>
-                    </tr>
+                    <g key={ratio}>
+                      <line
+                        x1={padX}
+                        y1={y}
+                        x2={svgWidth - padX}
+                        y2={y}
+                        stroke="#334155"
+                        strokeDasharray="4 4"
+                        strokeOpacity="0.4"
+                      />
+                      <text
+                        x={padX - 8}
+                        y={y + 3}
+                        fill="#64748b"
+                        fontSize="10"
+                        textAnchor="end"
+                        fontFamily="monospace"
+                      >
+                        {val}
+                      </text>
+                    </g>
                   );
                 })}
-              </tbody>
-            </table>
+
+                {/* Gradient Area Fill */}
+                {areaPath && (
+                  <path
+                    d={areaPath}
+                    fill="url(#signupAreaGrad)"
+                    className="transition-all duration-300"
+                  />
+                )}
+
+                {/* Main Stroke Line */}
+                {linePath && (
+                  <path
+                    d={linePath}
+                    fill="none"
+                    stroke="url(#signupLineGrad)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="transition-all duration-300"
+                  />
+                )}
+
+                {/* Active Hover Guideline & Indicator */}
+                {hoveredPoint && (
+                  <g>
+                    <line
+                      x1={hoveredPoint.x}
+                      y1={padTop}
+                      x2={hoveredPoint.x}
+                      y2={padTop + plotHeight}
+                      stroke="#60a5fa"
+                      strokeWidth="1.5"
+                      strokeDasharray="3 3"
+                      opacity="0.8"
+                    />
+                    <circle
+                      cx={hoveredPoint.x}
+                      cy={hoveredPoint.y}
+                      r="7"
+                      fill="#3b82f6"
+                      opacity="0.3"
+                    />
+                    <circle
+                      cx={hoveredPoint.x}
+                      cy={hoveredPoint.y}
+                      r="4.5"
+                      fill="#60a5fa"
+                      stroke="#ffffff"
+                      strokeWidth="1.5"
+                    />
+                  </g>
+                )}
+
+                {/* Data Points on Line */}
+                {graphPoints.map((pt) => {
+                  const hasSignups = pt.data.count > 0;
+                  return (
+                    <circle
+                      key={pt.data.date}
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={hasSignups ? 3.5 : 2}
+                      fill={hasSignups ? '#60a5fa' : '#475569'}
+                      stroke={hasSignups ? '#1e293b' : 'transparent'}
+                      strokeWidth="1.5"
+                    />
+                  );
+                })}
+
+                {/* Invisible Hover Overlay Columns */}
+                {graphPoints.map((pt) => {
+                  const colW = plotWidth / (graphPoints.length || 1);
+                  return (
+                    <rect
+                      key={pt.data.date}
+                      x={pt.x - colW / 2}
+                      y={padTop}
+                      width={colW}
+                      height={plotHeight}
+                      fill="transparent"
+                      className="cursor-pointer"
+                      onMouseEnter={() =>
+                        setHoveredPoint({
+                          label: pt.data.label,
+                          count: pt.data.count,
+                          x: pt.x,
+                          y: pt.y,
+                        })
+                      }
+                      onMouseLeave={() => setHoveredPoint(null)}
+                    />
+                  );
+                })}
+              </svg>
+            </div>
+
+            {/* X-Axis Date Labels */}
+            <div className="flex justify-between items-center px-6 pt-2 text-[10px] text-slate-400 font-mono">
+              {displaySignupDays
+                .filter((_, i) => {
+                  if (displaySignupDays.length <= 7) return true;
+                  if (displaySignupDays.length <= 14) return i % 2 === 0 || i === displaySignupDays.length - 1;
+                  return i % 4 === 0 || i === displaySignupDays.length - 1;
+                })
+                .map((d) => (
+                  <span key={d.date}>{d.label}</span>
+                ))}
+            </div>
           </div>
         )}
       </div>
