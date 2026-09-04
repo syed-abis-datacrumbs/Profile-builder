@@ -35,6 +35,7 @@ import {
   Undo,
   Redo,
   AlertTriangle,
+  Target,
 } from 'lucide-react';
 import toast from '@/lib/toast';
 import { LinkedinPremiumBadge } from './icons';
@@ -707,7 +708,25 @@ export const LinkedinChatStudio: React.FC<{
         </div>
 
         {/* Bottom Input Area */}
-        <div className="shrink-0 p-3.5 bg-white border-t border-slate-200">
+        <div className="shrink-0 p-3.5 bg-white border-t border-slate-200 flex flex-col gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => send("Please optimize my LinkedIn headline to be keyword-rich and recruiter-ready, and rewrite my About summary to be engaging, professional, and high-converting.")}
+              disabled={loading}
+              className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+            >
+              <Target className="w-3.5 h-3.5 text-blue-600" />
+              Boost Headline & About
+            </button>
+            <button
+              onClick={() => send("Please optimize and enhance my complete LinkedIn profile: polish my headline, enhance experience bullet points with quantified achievements, and add relevant industry skills.")}
+              disabled={loading}
+              className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              ✨ Optimize & Enhance Profile
+            </button>
+          </div>
           {aiMessagesUsed >= 5 && !unlocked ? (
             <button
               onClick={() => {
@@ -2445,6 +2464,26 @@ export const LinkedinChatStudio: React.FC<{
           sessionIdRef.current = crypto.randomUUID();
           setMessages([{ role: 'assistant', content: 'Started a new chat session. How can I optimize your LinkedIn profile?' }]);
         }}
+        badgeAction={
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => send("Please optimize my LinkedIn headline to be keyword-rich and recruiter-ready, and rewrite my About summary to be engaging, professional, and high-converting.")}
+              disabled={loading}
+              className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-xs cursor-pointer"
+            >
+              <Target className="w-3.5 h-3.5 text-blue-600" />
+              Boost Headline & About
+            </button>
+            <button
+              onClick={() => send("Please optimize and enhance my complete LinkedIn profile: polish my headline, enhance experience bullet points with quantified achievements, and add relevant industry skills.")}
+              disabled={loading}
+              className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-xs cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              ✨ Optimize & Enhance Profile
+            </button>
+          </div>
+        }
       />
     </div>
   );

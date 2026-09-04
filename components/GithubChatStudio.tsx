@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo, Bug, Copy, LayoutTemplate, Trash2, Upload, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo, Bug, Copy, LayoutTemplate, Trash2, Upload, AlertTriangle, Code2 } from 'lucide-react';
 import toast from '@/lib/toast';
 import { GithubProfileData } from '../types';
 import { GithubIcon } from './icons';
@@ -553,7 +553,25 @@ export const GithubChatStudio: React.FC<{
         </div>
 
         {/* Bottom Input Area */}
-        <div className="shrink-0 p-3.5 bg-white border-t border-slate-200">
+        <div className="shrink-0 p-3.5 bg-white border-t border-slate-200 flex flex-col gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => send("Please enhance my tech stack with modern, relevant developer badges and tools, and ensure my GitHub stats and streak cards are enabled and highlighted.")}
+              disabled={loading}
+              className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+            >
+              <Code2 className="w-3.5 h-3.5 text-blue-600" />
+              Tech Stack & Badges
+            </button>
+            <button
+              onClick={() => send("Please optimize and polish my GitHub README: make my bio punchy and developer-focused, rewrite expertise bullet points with impactful details, and polish the layout.")}
+              disabled={loading}
+              className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              ✨ Optimize & Enhance README
+            </button>
+          </div>
           {aiMessagesUsed >= 5 && !unlocked ? (
             <button
               onClick={() => {
@@ -1057,6 +1075,26 @@ export const GithubChatStudio: React.FC<{
           sessionIdRef.current = crypto.randomUUID();
           setMessages([]);
         }}
+        badgeAction={
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => send("Please enhance my tech stack with modern, relevant developer badges and tools, and ensure my GitHub stats and streak cards are enabled and highlighted.")}
+              disabled={loading}
+              className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-xs cursor-pointer"
+            >
+              <Code2 className="w-3.5 h-3.5 text-blue-600" />
+              Tech Stack & Badges
+            </button>
+            <button
+              onClick={() => send("Please optimize and polish my GitHub README: make my bio punchy and developer-focused, rewrite expertise bullet points with impactful details, and polish the layout.")}
+              disabled={loading}
+              className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-xs cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              ✨ Optimize & Enhance README
+            </button>
+          </div>
+        }
       />
 
       {/* Hidden file input for Avatar Upload */}
