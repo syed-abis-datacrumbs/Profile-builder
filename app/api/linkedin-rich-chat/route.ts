@@ -298,6 +298,48 @@ export async function POST(request: Request) {
     const userMessage = messages[messages.length - 1]?.content || '';
     const contentProfile = toContentProfile(fullProfile);
 
+    const userMsgLower = userMessage.trim().toLowerCase();
+    const isDirectGenerateCommand = /\b(create|build|generate|make|transform|rewrite)\s+(?:me\s+)?(?:a\s+)?(?:linkedin\s+)?(?:profile)\s+(?:for|as|into)\b/i.test(userMsgLower);
+
+    const isGuidanceOrInfoQuery = !isDirectGenerateCommand && (
+      /\b(what\s+(?:do\s+i\s+(?:need\s+to\s+)?(?:provide|give|send|tell|share|enter|fill|write)|should\s+i\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|to\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|can\s+i\s+(?:provide|give|send|tell|share)|do\s+you\s+need(?:\s+from\s+me)?))\b/i.test(userMsgLower) ||
+      /\b(what\s+(?:information|info|details|data)\s+(?:do\s+you\s+need|to\s+provide|are\s+needed|should\s+i|do\s+i\s+need|to\s+give))\b/i.test(userMsgLower) ||
+      /\b(how\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin|use|create\s+my|build\s+my|make\s+my|fill|get\s+started))\b/i.test(userMsgLower) ||
+      /\b(where\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin))\b/i.test(userMsgLower) ||
+      /\b(help\s+me\s+(?:get\s+started|start|begin))\b/i.test(userMsgLower) ||
+      /\b(guide\s+me(?:\s+on\s+what|\s+how)?|how\s+does\s+this\s+work|what\s+can\s+you\s+do)\b/i.test(userMsgLower)
+    );
+
+    if (isGuidanceOrInfoQuery) {
+      const guidanceReply = `To create an impactful, ATS-friendly LinkedIn profile, here is what you can share with me:
+
+• **Headline & Target Role**: Your current or aspiring title (e.g. *"Senior Software Engineer | Cloud & Distributed Systems"*).
+• **About / Summary**: A brief overview of your professional journey, core strengths, and what drives you.
+• **Experience**: Past or current roles (job title, company name, employment dates, and key accomplishments).
+• **Education**: Degree, major, institution, and graduation year.
+• **Skills**: Top technical and soft skills for your industry (up to 15-20 skills).
+• **Certifications & Projects**: Any industry credentials or major initiatives you've spearheaded.
+
+You can share these details all at once or tell me step-by-step (e.g. *"I am an AI Engineer at DataCrumbs"*), and I will update your LinkedIn profile and banner in real time!`;
+
+      if (sessionId !== 'unknown') {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            userId,
+            userMessage,
+            aiReply: guidanceReply,
+            builderType,
+          },
+        });
+      }
+
+      return Response.json({
+        reply: guidanceReply,
+        profile: fullProfile,
+      });
+    }
+
     const coverTemplateId = fullProfile.coverTemplateId || 'template-1';
     const art = COVER_ART[coverTemplateId];
     const editableCoverFields = (art?.fields ?? [])
@@ -436,7 +478,7 @@ The ONLY fields to leave untouched are literal contact details you have no real 
       ...fullProfile,
       ...(preserved as unknown as Partial<LinkedinRichProfile>),
       coverTemplateId: fullProfile.coverTemplateId ?? '',
-      pfpGradientId: fullProfile.pfpGradientId || 'gradient-1',
+      pfpGradientId: fullProfile.pfpGradientId ?? '',
       headshotUrl: fullProfile.headshotUrl ?? '',
       customCoverUrl: fullProfile.customCoverUrl ?? '',
       followersCount: fullProfile.followersCount || '500+',

@@ -37,7 +37,10 @@ Rules:
   6. Cross-Section Project Alignment: When the user asks to update work experience, skills, or interests "as per my projects" (or based on projects), you MUST examine the user's active projects, extract all technologies, frameworks, APIs, and achievements (e.g. Meta API, React Native, WhatsApp integrations, AI generators, Python, YOLO, dlib, Arduino), and rewrite the work experience bullets, technical skills, and interests to authentically reflect those exact technologies while keeping existing projects intact!
   7. Strict Information Purge Rule ("just keep what information I have given you and remove what was already written before"): When the user asks to keep only the information they provided and remove previous/old content, you MUST strictly purge any previous companies, unmentioned projects, old degrees, and template certifications. You MUST return ONLY the authentic entities and items the user explicitly provided in the conversation (e.g. DataCrumbs, Habib University, Saylani Mass IT, and the specific user projects), with ZERO leftover template or unmentioned data!
 
-- ALWAYS make forward progress. Never respond with only a clarifying question and no changes to the cv — a beginner with almost no info (e.g. just a name) should still get a complete, realistic, ready-to-edit resume back immediately, not an empty shell or a stalled conversation. If you have a genuine follow-up question, ask it in "reply" AFTER you've already filled in a full, plausible draft — never before. EXCEPTION: The one case where you MUST return the cv unchanged is an ambiguous removal request (see the Ambiguous removal rule below) — in that case returning unchanged + asking is correct and required.
+- ALWAYS make forward progress on resume generation and editing requests. Never respond with only a clarifying question and no changes to the cv when the user is asking to build or update a resume — a beginner providing their details should still get a complete, realistic, ready-to-edit resume back immediately. If you have a genuine follow-up question, ask it in "reply" AFTER you've already filled in a full, plausible draft — never before.
+- EXCEPTIONS FOR RETURNING UNCHANGED CV:
+  1. Ambiguous removal request (see the Ambiguous removal rule below) — in that case returning unchanged + asking is correct and required.
+  2. Informational questions, guidance, advice, or general conversation (e.g. "what do I need to provide?", "what to provide for my resume", "how does this work?", "what information is required?", "how do I get started?", "give me tips"): In this case, DO NOT generate fake synthetic profiles or overwrite placeholders! Answer their question helpfully and conversationally in "reply", and return the "cv" object 100% UNCHANGED exactly as provided in the input!
 - Whenever a section is missing or empty and the user hasn't given you real content for it, fill it yourself with complete, plausible, professional example content appropriate to their stated (or inferable) target role/field — education, work experience or workshops, projects, certifications, skills, and interests should never be left blank or as raw placeholder text. Base it on whatever real details the user DID give you (name, target role, field, experience level); invent sensible specifics (a school, a past role, a couple of projects with quantified bullets) the same way a filled-out sample resume would, so the student has something concrete to react to and edit rather than a blank form.
 - Exception: contact fields (phone, email, linkedin, github, kaggle) are the one place NOT to invent realistic-looking specifics, since those are personal to the student and could be mistaken for real. If the user hasn't given you their own, use obviously-generic placeholder values — phone "+92 3XX XXXXXXX", email "your.email@example.com", and leave linkedin/github/kaggle as empty strings ("") rather than guessing a URL from their name. Never build a name-based or otherwise plausible-looking fake phone number, email, or profile URL.
 - Write concise, quantified, professional resume content. For emphasis inside bullets/descriptions use inline HTML tags — <strong>…</strong> for bold, <em>…</em> for italic, <u>…</u> for underline. Do NOT use markdown "**".
@@ -59,9 +62,11 @@ Rules:
   2. "skills" MUST be a comma-separated list of relevant technical skills, programming languages, frameworks, and tools inferred from the user's projects, education, and work experience (e.g., "JavaScript, Node.js, React, Python, C++, HTML/CSS, Git, REST APIs, Arduino, dlib").
   3. "interests" MUST be a short comma-separated list of professional/tech interests inferred from their projects and field (e.g., "Web Development, Artificial Intelligence, Open Source, System Architecture, Mobile App Development").
   4. If the user asks to "add skills", "fill skills", "add content to skills/interests", or if "skills" or "interests" are empty/blank, YOU MUST IMMEDIATELY POPULATE BOTH FIELDS with relevant, concrete technical content inferred from their resume items! NEVER return empty strings or blank placeholders for "skills" or "interests".
-- CRITICAL — PLACEHOLDER OVERWRITE RULE: If ANY field in the current resume contains placeholder text (such as "Your University", "College Name", "Degree Program", "Field of Study", "Company / Organization Name", "Company Name", "Job Title / Position", "Your Job Title", "Key Project Title", "Secondary Project Title", "Project Title", "Industry Certification", "Credential Name", "Issuing Organization", or similar generic templates):
-  1. YOU MUST COMPLETELY OVERWRITE AND REPLACE THEM with realistic, domain-specific, professional entities (e.g. real company names, prestigious universities, real degrees, real technical/business project titles with metrics, and real recognized certifications) tailored to the requested role or domain!
-  2. NEVER preserve or return raw placeholder strings like "Company / Organization Name", "Your University / College Name", or "Key Project Title" in the returned JSON!
+- CRITICAL — PLACEHOLDER OVERWRITE RULE (Role Generation & Explicit Profile Content ONLY):
+  When the user explicitly requests to create, build, generate, rewrite, or transform the CV for a target role (e.g. "Create CV for Software Engineer", "Build ATS resume for Data Analyst") OR provides their personal background and career details to populate the resume, and the resume contains placeholder text (such as "Your University", "College Name", "Degree Program", "Field of Study", "Company / Organization Name", "Company Name", "Job Title / Position", "Your Job Title", "Key Project Title", "Secondary Project Title", "Project Title", "Industry Certification", "Credential Name", "Issuing Organization", or similar generic templates):
+  1. Overwrite and replace those placeholders with realistic, domain-specific, professional entities tailored to the requested role or user's provided details.
+  2. NEVER preserve or return raw placeholder strings like "Company / Organization Name", "Your University / College Name", or "Key Project Title" when generating a role-specific resume!
+  3. If the user is ONLY asking an informational question, seeking guidance, or having a conversational exchange without requesting a role transformation, DO NOT overwrite placeholders — preserve the current resume JSON exactly as provided!
 - CRITICAL — Universal Total Role & Starter Prompt Transformation ("Create CV for [Role]", "Build [Role] resume", "New grad resume", "ATS-optimized [Role] resume", "Executive resume for [Role]", "Career switch to [Role]"): When the user requests to create, build, generate, switch, or transform the CV for ANY target role or experience level (e.g. Entry-level Software Engineer, Marketing Manager, VP of Sales, Product Manager, Data Scientist, Cybersecurity, etc.):
   1. YOU MUST DYNAMICALLY REWRITE AND ALIGN 100% OF ALL SECTIONS TO MATCH THAT SPECIFIC TARGET ROLE WITH FULL, HIGH-DENSITY CONTENT THAT FILLS PAGE 1 TOP-TO-BOTTOM!
   2. NEVER preserve outdated or mismatched text from previous roles or generic placeholder text. Replace all companies, job titles, universities, degrees, projects, and certifications with real names in that industry.
@@ -228,6 +233,50 @@ export async function POST(request: Request) {
     // ── Universal Array Slicing & Targeted Removal Engine ─────────────────
     const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content ?? '';
     const lastMsgLower = lastUserMessage.toLowerCase();
+
+    // ── Guidance / Informational Query Interceptor ────────────────────────
+    // When the user asks what to provide, how to start, or asks for guidance,
+    // NEVER overwrite placeholders or generate synthetic profiles. Return helpful advice with cv 100% UNCHANGED.
+    const isDirectGenerateCommand = /\b(create|build|generate|make|transform|rewrite)\s+(?:me\s+)?(?:a\s+)?(?:ats[- ]?)?(?:resume|cv)\s+(?:for|as|into)\b/i.test(lastMsgLower);
+
+    const isGuidanceOrInfoQuery = !isDirectGenerateCommand && (
+      /\b(what\s+(?:do\s+i\s+(?:need\s+to\s+)?(?:provide|give|send|tell|share|enter|fill|write)|should\s+i\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|to\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|can\s+i\s+(?:provide|give|send|tell|share)|do\s+you\s+need(?:\s+from\s+me)?))\b/i.test(lastMsgLower) ||
+      /\b(what\s+(?:information|info|details|data)\s+(?:do\s+you\s+need|to\s+provide|are\s+needed|should\s+i|do\s+i\s+need|to\s+give))\b/i.test(lastMsgLower) ||
+      /\b(how\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin|use|create\s+my|build\s+my|make\s+my|fill|get\s+started))\b/i.test(lastMsgLower) ||
+      /\b(where\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin))\b/i.test(lastMsgLower) ||
+      /\b(help\s+me\s+(?:get\s+started|start|begin))\b/i.test(lastMsgLower) ||
+      /\b(guide\s+me(?:\s+on\s+what|\s+how)?|how\s+does\s+this\s+work|what\s+can\s+you\s+do)\b/i.test(lastMsgLower)
+    );
+
+    if (isGuidanceOrInfoQuery) {
+      const guidanceReply = `To craft your personalized resume, here are the details you can share with me:
+
+• **Personal Info**: Your full name, phone number, email address, and profile links (LinkedIn, GitHub, Portfolio).
+• **Education**: Degree name, major/field of study, institution name, and graduation year (or years attended).
+• **Target Role & Experience**: Your target job title and past work experiences (company name, role title, dates, and key accomplishments or responsibilities).
+• **Projects**: Project names, technologies/tools used, and a brief description of what you engineered and its impact.
+• **Certifications**: Any licenses, certifications, or courses along with the issuing organization.
+• **Skills & Interests**: Technical skills, frameworks, tools, and professional areas of interest.
+
+You can share your information all at once or tell me step-by-step (e.g., *"My name is Alex and I'm a Frontend Developer"* or *"Add my degree: BSCS from UC Berkeley, 2020-2024"*), and I will update your resume in real time!`;
+
+      if (sessionId !== 'unknown') {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            userId: user?.id,
+            userMessage,
+            aiReply: guidanceReply,
+            isAutoFit,
+          },
+        });
+      }
+
+      return Response.json({
+        reply: guidanceReply,
+        cv,
+      });
+    }
 
     // Multi-Sentence / Comprehensive Background / Story / Full Transformation Check
     // When user provides multiple details or explicitly requests a full resume rewrite,
@@ -1442,21 +1491,21 @@ export async function POST(request: Request) {
       /\b(transition\s+resume|pivoting\s+from|pivot\s+from|career\s+transition|career\s+switch|just\s+keep\s+what\s+information|remove\s+what\s+was\s+already\s+written|only\s+what\s+i\s+(?:have\s+)?given|keep\s+only\s+what\s+i\s+gave)\b/i.test(msgLower);
 
     // Generalized Role Transformation & Resume Generation:
-    // Only true full role prompts, multi-sentence background descriptions, or initial placeholder CVs trigger a total rewrite.
+    // Only true full role prompts or multi-sentence background descriptions trigger a total rewrite.
     // Page fill requests, section edits, or minor requests never trigger a full role rewrite.
-    const isRoleTransform = !isPageFillReq && (cvHasPlaceholders || isFullRolePrompt || isMultiSentenceOrStory);
+    const isRoleTransform = !isPageFillReq && (isFullRolePrompt || isMultiSentenceOrStory);
 
     if (!isRoleTransform) {
-      if (!isProjEdit && cv.projects && !cv.projects.some(p => isPlaceholderToken(p.content))) {
+      if (!isProjEdit && cv.projects) {
         safeCv.projects = cv.projects;
       }
-      if (!isCertEdit && cv.certifications && !cv.certifications.some(c => isPlaceholderToken(c.name) || isPlaceholderToken(c.organization))) {
+      if (!isCertEdit && cv.certifications) {
         safeCv.certifications = cv.certifications;
       }
-      if (!isWorkEdit && cv.workExperience && !cv.workExperience.some(w => isPlaceholderToken(w.company) || isPlaceholderToken(w.title))) {
+      if (!isWorkEdit && cv.workExperience) {
         safeCv.workExperience = cv.workExperience;
       }
-      if (!isEduEdit && cv.education && !cv.education.some(e => isPlaceholderToken(e.institution) || isPlaceholderToken(e.degree))) {
+      if (!isEduEdit && cv.education) {
         safeCv.education = cv.education;
       }
       // If user previously removed certifications (empty array), NEVER resurrect them on non-cert prompts!
@@ -1808,154 +1857,160 @@ export async function POST(request: Request) {
     }
 
     // Auto-fix: Ensure every single bullet line in workExperience contains a percentage (%) or number
-    safeCv.workExperience = (safeCv.workExperience ?? []).map((w) => {
-      const bulletLines = (w.bullets || '').split('\n');
-      const enrichedLines = bulletLines.map((line, idx) => {
-        const trimmed = line.trim();
-        if (!trimmed) return line;
+    // ONLY during full role transformation or when explicitly editing work experience bullets
+    if (isRoleTransform || isWorkEdit) {
+      safeCv.workExperience = (safeCv.workExperience ?? []).map((w) => {
+        const bulletLines = (w.bullets || '').split('\n');
+        const enrichedLines = bulletLines.map((line, idx) => {
+          const trimmed = line.trim();
+          if (!trimmed) return line;
 
-        // Check if line already contains any number or percentage
-        if (/\d+|%/i.test(trimmed)) return line;
+          // Check if line already contains any number or percentage
+          if (/\d+|%/i.test(trimmed)) return line;
 
-        // Clean trailing period
-        const clean = trimmed.replace(/\.$/, '').trim();
-        const defaultMetrics = [
-          ' — <strong>increasing overall project efficiency by 25%</strong>.',
-          ' — <strong>uncovering key trends that boosted decision accuracy by 40%</strong>.',
-          ' — <strong>improving decision-making speed by 30%</strong>.',
-          ' — <strong>reducing manual processing time by 35%</strong>.',
-          ' — <strong>boosting team productivity by 20%</strong>.',
-        ];
-        const metric = defaultMetrics[idx % defaultMetrics.length];
-        return `${clean}${metric}`;
+          // Clean trailing period
+          const clean = trimmed.replace(/\.$/, '').trim();
+          const defaultMetrics = [
+            ' — <strong>increasing overall project efficiency by 25%</strong>.',
+            ' — <strong>uncovering key trends that boosted decision accuracy by 40%</strong>.',
+            ' — <strong>improving decision-making speed by 30%</strong>.',
+            ' — <strong>reducing manual processing time by 35%</strong>.',
+            ' — <strong>boosting team productivity by 20%</strong>.',
+          ];
+          const metric = defaultMetrics[idx % defaultMetrics.length];
+          return `${clean}${metric}`;
+        });
+        return { ...w, bullets: enrichedLines.join('\n') };
       });
-      return { ...w, bullets: enrichedLines.join('\n') };
-    });
+    }
 
-    if (safeCv.education) {
-      safeCv.education = safeCv.education.map((edu, idx) => {
-        let inst = edu.institution;
-        let deg = edu.degree;
-        if (isPlaceholderToken(inst)) {
-          inst = idx === 0 ? 'University of California, Berkeley' : 'State College Preparatory';
-        }
-        if (isPlaceholderToken(deg)) {
-          deg = idx === 0 ? 'B.S. in Business Administration & Management' : 'Intermediate / Pre-University Diploma (Honors)';
-        }
-        return {
-          ...edu,
-          institution: inst,
-          degree: deg,
-        };
-      });
-
-      // Only provide starter education if doing a full role transformation from an empty state
-      if (isRoleTransform && safeCv.education.length === 0) {
-        safeCv.education = [
-          {
-            institution: 'University of California, Berkeley',
-            degree: 'B.S. in Business Administration & Management',
-            start: '2020',
-            end: '2024',
-          },
-          {
-            institution: 'State College Preparatory',
-            degree: 'Intermediate / Pre-University Diploma (Honors)',
-            start: '2018',
-            end: '2020',
+    // Role Transformation entity population (ONLY when explicitly transforming/building for a target role)
+    if (isRoleTransform) {
+      if (safeCv.education) {
+        safeCv.education = safeCv.education.map((edu, idx) => {
+          let inst = edu.institution;
+          let deg = edu.degree;
+          if (isPlaceholderToken(inst)) {
+            inst = idx === 0 ? 'University of California, Berkeley' : 'State College Preparatory';
           }
-        ];
+          if (isPlaceholderToken(deg)) {
+            deg = idx === 0 ? 'B.S. in Business Administration & Management' : 'Intermediate / Pre-University Diploma (Honors)';
+          }
+          return {
+            ...edu,
+            institution: inst,
+            degree: deg,
+          };
+        });
+
+        // Only provide starter education if doing a full role transformation from an empty state
+        if (safeCv.education.length === 0) {
+          safeCv.education = [
+            {
+              institution: 'University of California, Berkeley',
+              degree: 'B.S. in Business Administration & Management',
+              start: '2020',
+              end: '2024',
+            },
+            {
+              institution: 'State College Preparatory',
+              degree: 'Intermediate / Pre-University Diploma (Honors)',
+              start: '2018',
+              end: '2020',
+            }
+          ];
+        }
       }
-    }
 
-    if (safeCv.workExperience) {
-      safeCv.workExperience = safeCv.workExperience.map((exp) => ({
-        ...exp,
-        company: isPlaceholderToken(exp.company) ? (msgLower.includes('sales') ? 'Apex Enterprise Solutions' : msgLower.includes('marketing') ? 'Vanguard Growth Media' : msgLower.includes('product') ? 'Nexus Tech Innovations' : 'CloudScale Technologies') : exp.company,
-        title: isPlaceholderToken(exp.title) ? (msgLower.includes('sales') ? 'Vice President of Enterprise Sales' : msgLower.includes('marketing') ? 'Senior Marketing Director' : msgLower.includes('product') ? 'Senior Product Manager' : 'Senior Software Engineer') : exp.title,
-      }));
-    }
+      if (safeCv.workExperience) {
+        safeCv.workExperience = safeCv.workExperience.map((exp) => ({
+          ...exp,
+          company: isPlaceholderToken(exp.company) ? (msgLower.includes('sales') ? 'Apex Enterprise Solutions' : msgLower.includes('marketing') ? 'Vanguard Growth Media' : msgLower.includes('product') ? 'Nexus Tech Innovations' : 'CloudScale Technologies') : exp.company,
+          title: isPlaceholderToken(exp.title) ? (msgLower.includes('sales') ? 'Vice President of Enterprise Sales' : msgLower.includes('marketing') ? 'Senior Marketing Director' : msgLower.includes('product') ? 'Senior Product Manager' : 'Senior Software Engineer') : exp.title,
+        }));
+      }
 
-    if (safeCv.projects) {
-      const salesProjs = [
-        '<strong>Enterprise Pipeline Scaling Architecture</strong> (Salesforce, Clari, HubSpot) – Engineered outbound sales engine closing $12M in enterprise ARR and expanding account retention by 35%.',
-        '<strong>Strategic Account Penetration Framework</strong> (Gong.io, ZoomInfo, LinkedIn Sales Navigator) – Led targeted enterprise campaigns converting 42 Fortune 500 accounts.',
-        '<strong>Global Revenue Optimization Engine</strong> (Tableau, Stripe, PowerBI) – Unified global sales analytics to accelerate deal cycle time by 28% and boost average contract value.'
-      ];
-      const marketingProjs = [
-        '<strong>Omnichannel Growth & Acquisition Funnel</strong> (Google Ads, Meta Ads, GA4) – Executed multi-channel acquisition generating 65,000 qualified MQLs with a 34% conversion rate.',
-        '<strong>Lifecycle Email & Retention Engine</strong> (Klaviyo, Marketo, HubSpot) – Automated behavioral segmentation campaigns driving $4.2M in recurring customer revenue.',
-        '<strong>Brand Performance & SEO Authority Campaign</strong> (Ahrefs, Semrush, WordPress) – Scaled organic inbound search traffic by 180% and lowered blended CAC by 40%.'
-      ];
-      const productProjs = [
-        '<strong>Autonomous Workflow & Integration Engine</strong> (React, Python, Jira, Mixpanel) – Spearheaded core automation suite adopted by 85,000 daily active users.',
-        '<strong>Real-Time Analytics & User Journey Tracker</strong> (Next.js, PostgreSQL, Amplitude) – Architected real-time event pipeline increasing 30-day user retention by 25%.',
-        '<strong>Enterprise API & Webhook Infrastructure</strong> (Node.js, Docker, AWS) – Led developer platform roadmap reducing partner integration time from weeks to 2 days.'
-      ];
-      const generalProjs = [
-        '<strong>High-Performance Distributed Microservices</strong> (Next.js, Python, PostgreSQL, Docker) – Architected scalable cloud infrastructure serving 50,000 daily active requests with sub-100ms latency.',
-        '<strong>Real-Time Collaboration & Data Pipeline</strong> (TypeScript, WebSockets, Redis) – Developed live multi-user synchronization layer handling 10,000 concurrent socket connections.',
-        '<strong>Automated CI/CD & Security Compliance Suite</strong> (GitHub Actions, Terraform, AWS) – Built zero-downtime deployment pipeline cutting release cycle time by 60%.'
-      ];
+      if (safeCv.projects) {
+        const salesProjs = [
+          '<strong>Enterprise Pipeline Scaling Architecture</strong> (Salesforce, Clari, HubSpot) – Engineered outbound sales engine closing $12M in enterprise ARR and expanding account retention by 35%.',
+          '<strong>Strategic Account Penetration Framework</strong> (Gong.io, ZoomInfo, LinkedIn Sales Navigator) – Led targeted enterprise campaigns converting 42 Fortune 500 accounts.',
+          '<strong>Global Revenue Optimization Engine</strong> (Tableau, Stripe, PowerBI) – Unified global sales analytics to accelerate deal cycle time by 28% and boost average contract value.'
+        ];
+        const marketingProjs = [
+          '<strong>Omnichannel Growth & Acquisition Funnel</strong> (Google Ads, Meta Ads, GA4) – Executed multi-channel acquisition generating 65,000 qualified MQLs with a 34% conversion rate.',
+          '<strong>Lifecycle Email & Retention Engine</strong> (Klaviyo, Marketo, HubSpot) – Automated behavioral segmentation campaigns driving $4.2M in recurring customer revenue.',
+          '<strong>Brand Performance & SEO Authority Campaign</strong> (Ahrefs, Semrush, WordPress) – Scaled organic inbound search traffic by 180% and lowered blended CAC by 40%.'
+        ];
+        const productProjs = [
+          '<strong>Autonomous Workflow & Integration Engine</strong> (React, Python, Jira, Mixpanel) – Spearheaded core automation suite adopted by 85,000 daily active users.',
+          '<strong>Real-Time Analytics & User Journey Tracker</strong> (Next.js, PostgreSQL, Amplitude) – Architected real-time event pipeline increasing 30-day user retention by 25%.',
+          '<strong>Enterprise API & Webhook Infrastructure</strong> (Node.js, Docker, AWS) – Led developer platform roadmap reducing partner integration time from weeks to 2 days.'
+        ];
+        const generalProjs = [
+          '<strong>High-Performance Distributed Microservices</strong> (Next.js, Python, PostgreSQL, Docker) – Architected scalable cloud infrastructure serving 50,000 daily active requests with sub-100ms latency.',
+          '<strong>Real-Time Collaboration & Data Pipeline</strong> (TypeScript, WebSockets, Redis) – Developed live multi-user synchronization layer handling 10,000 concurrent socket connections.',
+          '<strong>Automated CI/CD & Security Compliance Suite</strong> (GitHub Actions, Terraform, AWS) – Built zero-downtime deployment pipeline cutting release cycle time by 60%.'
+        ];
 
-      const pool = msgLower.includes('sales') ? salesProjs : msgLower.includes('marketing') ? marketingProjs : msgLower.includes('product') ? productProjs : generalProjs;
+        const pool = msgLower.includes('sales') ? salesProjs : msgLower.includes('marketing') ? marketingProjs : msgLower.includes('product') ? productProjs : generalProjs;
 
-      safeCv.projects = safeCv.projects.map((proj, idx) => {
-        if (isPlaceholderToken(proj.content)) {
-          return { content: pool[idx % pool.length] };
+        safeCv.projects = safeCv.projects.map((proj, idx) => {
+          if (isPlaceholderToken(proj.content)) {
+            return { content: pool[idx % pool.length] };
+          }
+          return proj;
+        });
+
+        // Ensure distinct projects if any duplicate contents exist
+        const seen = new Set<string>();
+        safeCv.projects = safeCv.projects.map((proj, idx) => {
+          if (seen.has(proj.content)) {
+            return { content: pool[(idx + 1) % pool.length] };
+          }
+          seen.add(proj.content);
+          return proj;
+        });
+      }
+
+      if (safeCv.certifications) {
+        const salesCerts = [
+          { name: 'Certified Sales Executive (CSE)', organization: 'Sales & Marketing Executives International' },
+          { name: 'Enterprise Sales Strategy & Negotiation', organization: 'Harvard Division of Continuing Education' },
+          { name: 'Salesforce Certified Administrator', organization: 'Salesforce' },
+          { name: 'HubSpot Inbound Sales Certified', organization: 'HubSpot Academy' },
+        ];
+        const marketingCerts = [
+          { name: 'Certified Digital Marketing Professional', organization: 'Digital Marketing Institute' },
+          { name: 'Google Analytics & Ads Search Certification', organization: 'Google Skillshop' },
+          { name: 'HubSpot Inbound Marketing Certified', organization: 'HubSpot Academy' },
+          { name: 'Meta Certified Digital Marketing Associate', organization: 'Meta Blueprint' },
+        ];
+        const productCerts = [
+          { name: 'Certified Scrum Product Owner (CSPO)', organization: 'Scrum Alliance' },
+          { name: 'Product Management Certificate', organization: 'General Assembly' },
+          { name: 'Agile Certified Practitioner (PMI-ACP)', organization: 'Project Management Institute' },
+          { name: 'Google Analytics Certification', organization: 'Google' },
+        ];
+        const generalCerts = [
+          { name: 'AWS Certified Solutions Architect', organization: 'Amazon Web Services' },
+          { name: 'Professional Scrum Master (PSM I)', organization: 'Scrum.org' },
+          { name: 'Google Cloud Professional Cloud Architect', organization: 'Google Cloud' },
+          { name: 'HashiCorp Certified Terraform Associate', organization: 'HashiCorp' },
+        ];
+
+        const certPool = msgLower.includes('sales') ? salesCerts : msgLower.includes('marketing') ? marketingCerts : msgLower.includes('product') ? productCerts : generalCerts;
+
+        safeCv.certifications = safeCv.certifications.map((cert, idx) => {
+          if (isPlaceholderToken(cert.name) || isPlaceholderToken(cert.organization)) {
+            return certPool[idx % certPool.length];
+          }
+          return cert;
+        });
+
+        // Only provide starter certifications if doing a full role transformation from an empty state
+        if (safeCv.certifications.length === 0) {
+          safeCv.certifications = certPool.slice(0, 2);
         }
-        return proj;
-      });
-
-      // Ensure distinct projects if any duplicate contents exist
-      const seen = new Set<string>();
-      safeCv.projects = safeCv.projects.map((proj, idx) => {
-        if (seen.has(proj.content)) {
-          return { content: pool[(idx + 1) % pool.length] };
-        }
-        seen.add(proj.content);
-        return proj;
-      });
-    }
-
-    if (safeCv.certifications) {
-      const salesCerts = [
-        { name: 'Certified Sales Executive (CSE)', organization: 'Sales & Marketing Executives International' },
-        { name: 'Enterprise Sales Strategy & Negotiation', organization: 'Harvard Division of Continuing Education' },
-        { name: 'Salesforce Certified Administrator', organization: 'Salesforce' },
-        { name: 'HubSpot Inbound Sales Certified', organization: 'HubSpot Academy' },
-      ];
-      const marketingCerts = [
-        { name: 'Certified Digital Marketing Professional', organization: 'Digital Marketing Institute' },
-        { name: 'Google Analytics & Ads Search Certification', organization: 'Google Skillshop' },
-        { name: 'HubSpot Inbound Marketing Certified', organization: 'HubSpot Academy' },
-        { name: 'Meta Certified Digital Marketing Associate', organization: 'Meta Blueprint' },
-      ];
-      const productCerts = [
-        { name: 'Certified Scrum Product Owner (CSPO)', organization: 'Scrum Alliance' },
-        { name: 'Product Management Certificate', organization: 'General Assembly' },
-        { name: 'Agile Certified Practitioner (PMI-ACP)', organization: 'Project Management Institute' },
-        { name: 'Google Analytics Certification', organization: 'Google' },
-      ];
-      const generalCerts = [
-        { name: 'AWS Certified Solutions Architect', organization: 'Amazon Web Services' },
-        { name: 'Professional Scrum Master (PSM I)', organization: 'Scrum.org' },
-        { name: 'Google Cloud Professional Cloud Architect', organization: 'Google Cloud' },
-        { name: 'HashiCorp Certified Terraform Associate', organization: 'HashiCorp' },
-      ];
-
-      const certPool = msgLower.includes('sales') ? salesCerts : msgLower.includes('marketing') ? marketingCerts : msgLower.includes('product') ? productCerts : generalCerts;
-
-      safeCv.certifications = safeCv.certifications.map((cert, idx) => {
-        if (isPlaceholderToken(cert.name) || isPlaceholderToken(cert.organization)) {
-          return certPool[idx % certPool.length];
-        }
-        return cert;
-      });
-
-      // Only provide starter certifications if doing a full role transformation from an empty state
-      if (isRoleTransform && safeCv.certifications.length === 0) {
-        safeCv.certifications = certPool.slice(0, 2);
       }
     }
 

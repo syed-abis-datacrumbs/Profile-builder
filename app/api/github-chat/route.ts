@@ -158,6 +158,49 @@ export async function POST(request: Request) {
 
     // ── Direct Fast & Deterministic Field Handlers ─────────────────────────
     const userMsg = userMessage.trim();
+    const userMsgLower = userMsg.toLowerCase();
+
+    // Guidance / Informational Query Interceptor
+    const isDirectGenerateCommand = /\b(create|build|generate|make|transform|rewrite)\s+(?:me\s+)?(?:a\s+)?(?:github\s+)?(?:profile|readme)\s+(?:for|as|into)\b/i.test(userMsgLower);
+
+    const isGuidanceOrInfoQuery = !isDirectGenerateCommand && (
+      /\b(what\s+(?:do\s+i\s+(?:need\s+to\s+)?(?:provide|give|send|tell|share|enter|fill|write)|should\s+i\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|to\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|can\s+i\s+(?:provide|give|send|tell|share)|do\s+you\s+need(?:\s+from\s+me)?))\b/i.test(userMsgLower) ||
+      /\b(what\s+(?:information|info|details|data)\s+(?:do\s+you\s+need|to\s+provide|are\s+needed|should\s+i|do\s+i\s+need|to\s+give))\b/i.test(userMsgLower) ||
+      /\b(how\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin|use|create\s+my|build\s+my|make\s+my|fill|get\s+started))\b/i.test(userMsgLower) ||
+      /\b(where\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin))\b/i.test(userMsgLower) ||
+      /\b(help\s+me\s+(?:get\s+started|start|begin))\b/i.test(userMsgLower) ||
+      /\b(guide\s+me(?:\s+on\s+what|\s+how)?|how\s+does\s+this\s+work|what\s+can\s+you\s+do)\b/i.test(userMsgLower)
+    );
+
+    if (isGuidanceOrInfoQuery) {
+      const guidanceReply = `To craft an outstanding GitHub profile README, here is what you can provide:
+
+• **GitHub Username**: Your GitHub handle (so badges, stats cards, and streak counters link to you).
+• **Name & Bio**: Your full name and a short tagline (e.g. *"Full Stack Engineer passionate about open-source"*).
+• **Tech Stack & Skills**: Languages, frameworks, databases, and tools you work with (e.g. *TypeScript, React, Node.js, Python, PostgreSQL, Docker*).
+• **Featured Projects & Repositories**: Key project names, what they do, and tech stack used.
+• **Social & Contact Links**: LinkedIn, Portfolio website, Twitter/X, or email.
+• **Theme / Style**: Preferred theme (e.g. *Dark Modern, Minimalist, Cyberpunk, Gradient*).
+
+You can share your details all at once or tell me step-by-step (e.g. *"My GitHub username is octocat and I build Next.js apps"*), and I will update your profile preview in real time!`;
+
+      if (sessionId !== 'unknown') {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            userId,
+            userMessage,
+            aiReply: guidanceReply,
+            builderType,
+          },
+        });
+      }
+
+      return Response.json({
+        reply: guidanceReply,
+        github,
+      });
+    }
 
     // 1. Direct Username Handler ("change username to ahmerkhanak", "my github is ahmerkhanak", etc.)
     const usernameMatch =

@@ -212,7 +212,7 @@ export function removeTemplateFromRichProfile(_profile?: LinkedinRichProfile): L
     recommendations: [{ id: 'rec-ph-1', recommenderName: '', recommenderAvatar: '/images/featured-thumbnail/mutual connection.png', recommenderTitle: '', relationship: '', text: '' }],
     coverTemplateId: '',
     coverFieldValues: {},
-    pfpGradientId: 'gradient-1',
+    pfpGradientId: '',
     headshotUrl: '',
     customCoverUrl: '',
   };

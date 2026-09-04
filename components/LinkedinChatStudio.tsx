@@ -1570,8 +1570,10 @@ export const LinkedinChatStudio: React.FC<{
                   <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 relative bg-slate-100 shrink-0 flex items-center justify-center">
                     {profile.headshotUrl ? (
                       <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/images/linkedin-templates/pfp/${profile.pfpGradientId || 'gradient-1'}/background.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        {profile.pfpGradientId && profile.pfpGradientId !== 'none' && (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={`/images/linkedin-templates/pfp/${profile.pfpGradientId}/background.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        )}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={profile.headshotUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
                       </>
