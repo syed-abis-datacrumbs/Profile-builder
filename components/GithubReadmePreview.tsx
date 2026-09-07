@@ -503,7 +503,7 @@ export const GithubReadmePreview: React.FC<{
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-slate-500">
-                  {(github.username || '?').charAt(0).toUpperCase()}
+                  {(github.name || github.username || '?').charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
@@ -577,16 +577,41 @@ export const GithubReadmePreview: React.FC<{
       {/* Spacer for the avatar overflow + name/username row */}
       <div className="pt-14 px-6 pb-2 flex items-end justify-between">
         <div>
-          <Edit
-            readOnly={!editable}
-            value={github.username}
-            placeholder="your-username"
-            onCommit={(v) => {
-              const clean = v.trim().replace(/^@/, '').replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
-              onSet?.({ username: clean });
-            }}
-            className="text-lg font-bold text-white tracking-tight inline-block hover:bg-white/10 rounded px-1 -ml-1 transition-colors cursor-text"
-          />
+          {github.name ? (
+            <div>
+              <Edit
+                readOnly={!editable}
+                value={github.name}
+                placeholder="Your Full Name"
+                onCommit={(v) => onSet?.({ name: v.trim() })}
+                className="text-xl font-extrabold text-white tracking-tight inline-block hover:bg-white/10 rounded px-1 -ml-1 transition-colors cursor-text"
+              />
+              <div className="flex items-center gap-1 text-xs font-semibold text-slate-400 mt-0.5">
+                <span>@</span>
+                <Edit
+                  readOnly={!editable}
+                  value={github.username}
+                  placeholder="your-username"
+                  onCommit={(v) => {
+                    const clean = v.trim().replace(/^@/, '').replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
+                    onSet?.({ username: clean });
+                  }}
+                  className="inline-block hover:bg-white/10 rounded px-1 -ml-1 transition-colors cursor-text text-slate-400 hover:text-slate-200"
+                />
+              </div>
+            </div>
+          ) : (
+            <Edit
+              readOnly={!editable}
+              value={github.username}
+              placeholder="your-username"
+              onCommit={(v) => {
+                const clean = v.trim().replace(/^@/, '').replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
+                onSet?.({ username: clean });
+              }}
+              className="text-lg font-bold text-white tracking-tight inline-block hover:bg-white/10 rounded px-1 -ml-1 transition-colors cursor-text"
+            />
+          )}
         </div>
       </div>
 

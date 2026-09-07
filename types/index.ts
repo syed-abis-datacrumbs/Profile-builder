@@ -59,6 +59,7 @@ export interface ResumeData {
 
 export interface GithubProfileData {
   username: string;
+  name?: string;
   title: string;
   about: string;
   /** Full-width cover/banner image URL displayed at the top of the README. */

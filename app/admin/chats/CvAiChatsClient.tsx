@@ -380,6 +380,13 @@ export function CvAiChatsClient({
                     prevTurn={prevTurnForInspector}
                     builderType={activeTab}
                     onClose={() => setInspectingTurnId(null)}
+                    allTurns={turns || []}
+                    turnIndex={inspectingTurnIndex}
+                    onSelectTurnIndex={(idx) => {
+                      if (turns && turns[idx]) {
+                        setInspectingTurnId(turns[idx].id);
+                      }
+                    }}
                   />
                 </div>
               )}

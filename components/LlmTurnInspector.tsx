@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   X,
   Copy,
@@ -14,14 +14,29 @@ import {
   CheckCircle2,
   XCircle,
   Database,
+  Eye,
+  Maximize2,
 } from 'lucide-react';
 import type { CvAiChatTurn } from '@/app/admin/chats/CvAiChatsClient';
+import { CvPreview } from '@/components/CvPreview';
+import { GithubReadmePreview } from '@/components/GithubReadmePreview';
+import { LinkedinCardPreview } from '@/components/admin/LinkedinCardPreview';
+import { PreviewErrorBoundary } from '@/components/admin/PreviewErrorBoundary';
+import { TurnPreviewModal } from '@/components/admin/TurnPreviewModal';
+import {
+  normalizeCvData,
+  normalizeGithubData,
+  normalizeLinkedinData,
+} from '@/lib/admin/previewNormalizers';
 
 interface LlmTurnInspectorProps {
   turn: CvAiChatTurn;
   prevTurn: CvAiChatTurn | null;
   builderType: 'resume' | 'linkedin' | 'github';
   onClose: () => void;
+  allTurns?: CvAiChatTurn[];
+  turnIndex?: number;
+  onSelectTurnIndex?: (index: number) => void;
 }
 
 interface ChangeItem {
@@ -31,12 +46,27 @@ interface ChangeItem {
   items?: string[];
 }
 
-export function LlmTurnInspector({ turn, prevTurn, builderType, onClose }: LlmTurnInspectorProps) {
-  const [activeTab, setActiveTab] = useState<'diff' | 'raw' | 'snapshot' | 'telemetry'>('diff');
+export function LlmTurnInspector({
+  turn,
+  prevTurn,
+  builderType,
+  onClose,
+  allTurns,
+  turnIndex,
+  onSelectTurnIndex,
+}: LlmTurnInspectorProps) {
+  const [activeTab, setActiveTab] = useState<'preview' | 'diff' | 'raw' | 'snapshot'>('preview');
+  const [previewScale, setPreviewScale] = useState<number>(55);
+  const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const currData = turn.rawOutput?.cv || turn.rawOutput?.github || turn.rawOutput?.profile || null;
   const prevData = prevTurn?.rawOutput?.cv || prevTurn?.rawOutput?.github || prevTurn?.rawOutput?.profile || null;
+
+  // Normalized safe data for visual renderers
+  const normalizedCv = useMemo(() => (builderType === 'resume' && currData ? normalizeCvData(currData) : null), [currData, builderType]);
+  const normalizedGithub = useMemo(() => (builderType === 'github' && currData ? normalizeGithubData(currData) : null), [currData, builderType]);
+  const normalizedLinkedin = useMemo(() => (builderType === 'linkedin' && currData ? normalizeLinkedinData(currData) : null), [currData, builderType]);
 
   // Lazy compute diff between this turn and previous turn
   const computeDiff = (): {
@@ -225,10 +255,22 @@ export function LlmTurnInspector({ turn, prevTurn, builderType, onClose }: LlmTu
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 p-2 bg-white border-b border-slate-200 shrink-0 text-xs">
+      <div className="flex items-center gap-1 p-2 bg-white border-b border-slate-200 shrink-0 text-xs overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('preview')}
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            activeTab === 'preview'
+              ? 'bg-blue-50 text-blue-600 border border-blue-100 shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Eye className="w-3.5 h-3.5" />
+          Visual Preview
+        </button>
+
         <button
           onClick={() => setActiveTab('diff')}
-          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
             activeTab === 'diff'
               ? 'bg-blue-50 text-blue-600 border border-blue-100 shadow-2xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -240,31 +282,110 @@ export function LlmTurnInspector({ turn, prevTurn, builderType, onClose }: LlmTu
 
         <button
           onClick={() => setActiveTab('raw')}
-          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
             activeTab === 'raw'
               ? 'bg-blue-50 text-blue-600 border border-blue-100 shadow-2xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
           <FileCode className="w-3.5 h-3.5" />
-          Raw Model Output
+          Raw Output
         </button>
 
         <button
           onClick={() => setActiveTab('snapshot')}
-          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
             activeTab === 'snapshot'
               ? 'bg-blue-50 text-blue-600 border border-blue-100 shadow-2xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
           <Database className="w-3.5 h-3.5" />
-          Full Snapshot
+          Snapshot
         </button>
       </div>
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto p-4">
+        {/* TAB 0: VISUAL PREVIEW */}
+        {activeTab === 'preview' && (
+          <div className="space-y-3">
+            {/* Header controls for preview */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  {builderType} Preview
+                </span>
+                <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                  Read-Only
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                {/* Scale selection for resume */}
+                {builderType === 'resume' && (
+                  <select
+                    value={previewScale}
+                    onChange={(e) => setPreviewScale(Number(e.target.value))}
+                    className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 font-medium outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value={55}>Fit (55%)</option>
+                    <option value={75}>75%</option>
+                    <option value={100}>100%</option>
+                  </select>
+                )}
+
+                {/* Expand to Fullscreen Modal Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreenModalOpen(true)}
+                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition-colors cursor-pointer"
+                  title="Open Fullscreen Time-Travel Modal"
+                >
+                  <Maximize2 className="w-3 h-3" />
+                  <span>Expand</span>
+                </button>
+              </div>
+            </div>
+
+            {/* ErrorBoundary & Rendered Preview Component */}
+            <PreviewErrorBoundary fallbackData={currData} resetKey={turn.id}>
+              {!currData ? (
+                <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl shadow-xs space-y-2">
+                  <Terminal className="w-8 h-8 text-slate-400 mx-auto opacity-60" />
+                  <h4 className="text-sm font-bold text-slate-800">No Structured Snapshot Available</h4>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                    This turn did not record a structured {builderType} data object.
+                  </p>
+                </div>
+              ) : builderType === 'resume' && normalizedCv ? (
+                <div className="overflow-x-auto bg-slate-200/50 p-2 rounded-xl border border-slate-200">
+                  <div
+                    style={{
+                      transform: `scale(${previewScale / 100})`,
+                      transformOrigin: 'top left',
+                      width: `${(100 / previewScale) * 100}%`,
+                    }}
+                    className="bg-white rounded-lg shadow-md border border-slate-200"
+                  >
+                    <CvPreview data={normalizedCv} />
+                  </div>
+                </div>
+              ) : builderType === 'github' && normalizedGithub ? (
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                  <GithubReadmePreview github={normalizedGithub} editable={false} />
+                </div>
+              ) : builderType === 'linkedin' && normalizedLinkedin ? (
+                <div className="p-1">
+                  <LinkedinCardPreview profile={normalizedLinkedin} />
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 py-4 text-center">Unrecognized snapshot payload.</p>
+              )}
+            </PreviewErrorBoundary>
+          </div>
+        )}
+
         {/* TAB 1: DIFF */}
         {activeTab === 'diff' && (
           <div className="space-y-4">
@@ -293,7 +414,7 @@ export function LlmTurnInspector({ turn, prevTurn, builderType, onClose }: LlmTu
                   Warning: No Changes in Data Payload
                 </div>
                 <p className="text-xs text-rose-800 leading-relaxed">
-                  The LLM generated a conversational reply, but the structured data object (<code className="bg-rose-100 px-1 py-0.5 rounded font-mono">cv</code>) is <strong>identical</strong> to the previous turn.
+                  The LLM generated a conversational reply, but the structured data object is <strong>identical</strong> to the previous turn.
                 </p>
                 <p className="text-[11px] text-rose-600">
                   This typically means the model said &quot;Done&quot; but failed to append or modify the targeted section in its JSON.
@@ -395,6 +516,20 @@ export function LlmTurnInspector({ turn, prevTurn, builderType, onClose }: LlmTu
           </div>
         )}
       </div>
+
+      {/* Option 2 Fullscreen Time-Travel Modal */}
+      {isFullscreenModalOpen && (
+        <TurnPreviewModal
+          isOpen={isFullscreenModalOpen}
+          onClose={() => setIsFullscreenModalOpen(false)}
+          turns={allTurns && allTurns.length > 0 ? allTurns : [turn]}
+          activeTurnIndex={turnIndex !== undefined && turnIndex >= 0 ? turnIndex : 0}
+          onSelectTurnIndex={(idx) => {
+            onSelectTurnIndex?.(idx);
+          }}
+          builderType={builderType}
+        />
+      )}
     </div>
   );
 }

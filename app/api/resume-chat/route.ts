@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 import type { CvData } from '../../../lib/cvTypes';
+import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
-import { MAX_FREE_RESUME_NAME_EDITS } from '../../../lib/resumeNameLock';
 
 export const runtime = 'nodejs';
 
@@ -245,15 +245,21 @@ export async function POST(request: Request) {
     // ── Guidance / Informational Query Interceptor ────────────────────────
     // When the user asks what to provide, how to start, or asks for guidance,
     // NEVER overwrite placeholders or generate synthetic profiles. Return helpful advice with cv 100% UNCHANGED.
-    const isDirectGenerateCommand = /\b(create|build|generate|make|transform|rewrite)\s+(?:me\s+)?(?:a\s+)?(?:ats[- ]?)?(?:resume|cv)\s+(?:for|as|into)\b/i.test(lastMsgLower);
+    // Check if the user message contains actual resume content, commands, or data.
+    const hasResumeContentOrCommand =
+      lastUserMessage.length > 120 ||
+      lastUserMessage.includes('\n') ||
+      lastUserMessage.includes(':') ||
+      /\b(create|build|generate|make|transform|rewrite|write|draft|add|update|change|set|edit|remove|delete|optimize|improve|polish|include|put|insert)\b/i.test(lastMsgLower) ||
+      /\b(resume|cv|experience|work\s*experience|education|projects?|skills?|certifications?|summary|profile|bullet|bullets)\b/i.test(lastMsgLower);
 
-    const isGuidanceOrInfoQuery = !isDirectGenerateCommand && (
-      /\b(what\s+(?:do\s+i\s+(?:need\s+to\s+)?(?:provide|give|send|tell|share|enter|fill|write)|should\s+i\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|to\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|can\s+i\s+(?:provide|give|send|tell|share)|do\s+you\s+need(?:\s+from\s+me)?))\b/i.test(lastMsgLower) ||
+    const isGuidanceOrInfoQuery = !hasResumeContentOrCommand && (
+      /\b(what\s+(?:do\s+i\s+(?:need\s+to\s+)?(?:provide|give|send|tell|share|enter|fill|write)|should\s+i\s+(?:provide|give|send|tell|share|enter|fill|write)|to\s+(?:provide|give|send|tell|share)|can\s+i\s+(?:provide|give|send|tell|share)|do\s+you\s+need(?:\s+from\s+me)?))\b/i.test(lastMsgLower) ||
       /\b(what\s+(?:information|info|details|data)\s+(?:do\s+you\s+need|to\s+provide|are\s+needed|should\s+i|do\s+i\s+need|to\s+give))\b/i.test(lastMsgLower) ||
-      /\b(how\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin|use|create\s+my|build\s+my|make\s+my|fill|get\s+started))\b/i.test(lastMsgLower) ||
+      /\b(how\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin|get\s+started))\b/i.test(lastMsgLower) ||
       /\b(where\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin))\b/i.test(lastMsgLower) ||
       /\b(help\s+me\s+(?:get\s+started|start|begin))\b/i.test(lastMsgLower) ||
-      /\b(guide\s+me(?:\s+on\s+what|\s+how)?|how\s+does\s+this\s+work|what\s+can\s+you\s+do)\b/i.test(lastMsgLower)
+      /\b(guide\s+me(?:\s+on\s+what|\s+how)?|how\s+does\s+this\s+work|what\s+can\s+you\s+do|what\s+should\s+i\s+do)\b/i.test(lastMsgLower)
     );
 
     if (isGuidanceOrInfoQuery) {
@@ -281,7 +287,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
               rawOutput: {
                 reply: guidanceReply,
                 cv,
-              } as any,
+              } as unknown as Prisma.InputJsonValue,
               rawText: guidanceReply,
               parseSuccess: true,
               model: 'guidance-interceptor',
@@ -597,7 +603,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         return text
           .split('\n')
           .map(line => {
-            let cleaned = line
+            const cleaned = line
               // Replace "by 50%" or "by 35%" with "significantly"
               .replace(/\bby\s+\d+(?:\.\d+)?%\b/gi, 'significantly')
               // Replace "100+ " with "numerous "
@@ -1375,20 +1381,20 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     const modelUsed = completion.model || 'gpt-4o-mini';
 
     const raw = completion.choices[0]?.message?.content ?? '{}';
-    let parsed: any = {};
+    let parsed: Record<string, unknown> = {};
     let parseSuccess = false;
     let parseError: string | null = null;
     try {
-      parsed = JSON.parse(raw);
+      parsed = JSON.parse(raw) as Record<string, unknown>;
       parseSuccess = true;
       if (!parsed || typeof parsed !== 'object') {
         parseError = 'Model returned non-object JSON';
       } else if (!parsed.cv) {
         parseError = 'Model returned JSON without a "cv" object';
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       parseSuccess = false;
-      parseError = err?.message || 'JSON.parse failed on model output';
+      parseError = err instanceof Error ? err.message : 'JSON.parse failed on model output';
       console.error('[Resume AI JSON Parse Error]:', err, raw);
     }
 
@@ -1488,7 +1494,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       (c, index, self) => index === self.findIndex((t) => (t.name || '').toLowerCase() === (c.name || '').toLowerCase())
     );
 
-    let safeCv: CvData = {
+    const safeCv: CvData = {
       ...nextCv,
       cvType,
       personalInfo: nextCv.personalInfo ?? cv.personalInfo ?? defaultPersonalInfo,
@@ -1502,7 +1508,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       additional: nextCv.additional ?? cv.additional ?? defaultAdditional,
     };
 
-    let reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.';
+    const reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.';
 
     // ───────────────────────────────────────────────────────────────────────
     // Deterministic Section Locking Architecture:
@@ -1513,13 +1519,6 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     const isProjEdit = /\b(project|projects)\b/i.test(msgLower) && !/\b(as per\s+(?:my\s+)?projects?|based on\s+(?:my\s+)?projects?)\b/i.test(msgLower);
     const isWorkEdit = /\b(work|experience|job|bullet|point|bullets|points)/i.test(msgLower);
     const isEduEdit  = /\b(education|degree|school|university|college|educaton)/i.test(msgLower);
-
-    // Check if the current resume still contains any initial template placeholder tokens
-    const cvHasPlaceholders =
-      (cv.projects && cv.projects.some(p => isPlaceholderToken(p.content))) ||
-      (cv.education && cv.education.some(e => isPlaceholderToken(e.institution) || isPlaceholderToken(e.degree))) ||
-      (cv.workExperience && cv.workExperience.some(w => isPlaceholderToken(w.company) || isPlaceholderToken(w.title))) ||
-      (cv.certifications && cv.certifications.some(c => isPlaceholderToken(c.name) || isPlaceholderToken(c.organization)));
 
     const isPageFillReq =
       /\b(fill|expand|increase)\b.*?\b(page|gap|space|empty|bottom|content)\b/i.test(msgLower) ||
@@ -2072,7 +2071,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
               reply,
               cv: safeCv,
               rawParsed: parseSuccess ? parsed : null,
-            } as any,
+            } as unknown as Prisma.InputJsonValue,
             rawText: raw,
             parseSuccess,
             model: modelUsed,
@@ -2104,10 +2103,10 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       reply,
       cv: safeCv,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[Resume AI Error]:', err);
     return Response.json({
-      error: err?.message || 'The AI request failed. Check your API key / connection and try again.',
+      error: err instanceof Error ? err.message : 'The AI request failed. Check your API key / connection and try again.',
     });
   }
 }

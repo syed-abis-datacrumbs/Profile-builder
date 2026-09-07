@@ -1,8 +1,9 @@
 import OpenAI from 'openai';
 import type { LinkedinRichProfile } from '../../../lib/linkedinRichProfile';
+import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
-import { COVER_ART, DEFAULT_HEADSHOT_URL } from '../../../lib/linkedinRichProfile';
+import { COVER_ART } from '../../../lib/linkedinRichProfile';
 import { overageCeiling } from '../../../lib/linkedinCoverArt';
 
 export const runtime = 'nodejs';
@@ -299,15 +300,21 @@ export async function POST(request: Request) {
     const contentProfile = toContentProfile(fullProfile);
 
     const userMsgLower = userMessage.trim().toLowerCase();
-    const isDirectGenerateCommand = /\b(create|build|generate|make|transform|rewrite)\s+(?:me\s+)?(?:a\s+)?(?:linkedin\s+)?(?:profile)\s+(?:for|as|into)\b/i.test(userMsgLower);
+    // Check if the user message contains actual LinkedIn profile content, commands, or data.
+    const hasLinkedinContentOrCommand =
+      userMessage.length > 120 ||
+      userMessage.includes('\n') ||
+      userMessage.includes(':') ||
+      /\b(create|build|generate|make|transform|rewrite|write|draft|add|update|change|set|edit|remove|delete|optimize|improve|polish|include|put|insert)\b/i.test(userMsgLower) ||
+      /\b(headline|summary|about|experience|education|skills?|certifications?|projects?|banner|role|company)\b/i.test(userMsgLower);
 
-    const isGuidanceOrInfoQuery = !isDirectGenerateCommand && (
-      /\b(what\s+(?:do\s+i\s+(?:need\s+to\s+)?(?:provide|give|send|tell|share|enter|fill|write)|should\s+i\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|to\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|can\s+i\s+(?:provide|give|send|tell|share)|do\s+you\s+need(?:\s+from\s+me)?))\b/i.test(userMsgLower) ||
+    const isGuidanceOrInfoQuery = !hasLinkedinContentOrCommand && (
+      /\b(what\s+(?:do\s+i\s+(?:need\s+to\s+)?(?:provide|give|send|tell|share|enter|fill|write)|should\s+i\s+(?:provide|give|send|tell|share|enter|fill|write)|to\s+(?:provide|give|send|tell|share)|can\s+i\s+(?:provide|give|send|tell|share)|do\s+you\s+need(?:\s+from\s+me)?))\b/i.test(userMsgLower) ||
       /\b(what\s+(?:information|info|details|data)\s+(?:do\s+you\s+need|to\s+provide|are\s+needed|should\s+i|do\s+i\s+need|to\s+give))\b/i.test(userMsgLower) ||
-      /\b(how\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin|use|create\s+my|build\s+my|make\s+my|fill|get\s+started))\b/i.test(userMsgLower) ||
+      /\b(how\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin|get\s+started))\b/i.test(userMsgLower) ||
       /\b(where\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin))\b/i.test(userMsgLower) ||
       /\b(help\s+me\s+(?:get\s+started|start|begin))\b/i.test(userMsgLower) ||
-      /\b(guide\s+me(?:\s+on\s+what|\s+how)?|how\s+does\s+this\s+work|what\s+can\s+you\s+do)\b/i.test(userMsgLower)
+      /\b(guide\s+me(?:\s+on\s+what|\s+how)?|how\s+does\s+this\s+work|what\s+can\s+you\s+do|what\s+should\s+i\s+do)\b/i.test(userMsgLower)
     );
 
     if (isGuidanceOrInfoQuery) {
@@ -334,7 +341,7 @@ You can share these details all at once or tell me step-by-step (e.g. *"I am an 
               rawOutput: {
                 reply: guidanceReply,
                 profile: fullProfile,
-              } as any,
+              } as unknown as Prisma.InputJsonValue,
               rawText: guidanceReply,
               parseSuccess: true,
               model: 'guidance-interceptor',
@@ -437,13 +444,14 @@ The ONLY fields to leave untouched are literal contact details you have no real 
         new RegExp(`\\b(${key}|all|everything)\\b`, 'i').test(userMessage);
 
       // Check if prev was purely blank placeholders
-      const isBlankPlaceholderArray = Array.isArray(prev) && prev.length > 0 && prev.every((item: any) => {
+      const isBlankPlaceholderArray = Array.isArray(prev) && prev.length > 0 && prev.every((item: unknown) => {
         if (!item || typeof item !== 'object') return true;
-        if (key === 'certifications') return !item.name?.trim();
-        if (key === 'recommendations') return !item.recommenderName?.trim() && !item.text?.trim();
-        if (key === 'experience') return !item.title?.trim() && !item.company?.trim();
-        if (key === 'education') return !item.school?.trim();
-        if (key === 'projects') return !item.title?.trim();
+        const rec = item as Record<string, string | undefined>;
+        if (key === 'certifications') return !rec.name?.trim();
+        if (key === 'recommendations') return !rec.recommenderName?.trim() && !rec.text?.trim();
+        if (key === 'experience') return !rec.title?.trim() && !rec.company?.trim();
+        if (key === 'education') return !rec.school?.trim();
+        if (key === 'projects') return !rec.title?.trim();
         return false;
       });
 
@@ -461,7 +469,7 @@ The ONLY fields to leave untouched are literal contact details you have no real 
     // If user specified or works in a domain, ensure certifications and recommendations are never left empty or placeholder
     const effectiveRoleText = [
       typeof preserved.title === 'string' ? preserved.title : '',
-      Array.isArray(preserved.experience) && preserved.experience[0]?.title ? preserved.experience[0].title : '',
+      Array.isArray(preserved.experience) && (preserved.experience[0] as Record<string, string> | undefined)?.title ? (preserved.experience[0] as Record<string, string>).title : '',
       userMessage,
     ].join(' ').toLowerCase();
 
@@ -479,14 +487,14 @@ The ONLY fields to leave untouched are literal contact details you have no real 
     if (detectedDomain) {
       // Auto-populate certifications if empty or purely placeholder
       const currentCerts = Array.isArray(preserved.certifications) ? preserved.certifications : [];
-      const certsAreEmpty = currentCerts.length === 0 || currentCerts.every((c: any) => !c?.name?.trim());
+      const certsAreEmpty = currentCerts.length === 0 || currentCerts.every((c: unknown) => !(c as { name?: string })?.name?.trim());
       if (certsAreEmpty) {
         preserved.certifications = DOMAIN_CERTIFICATIONS[detectedDomain];
       }
 
       // Auto-populate recommendations if empty or purely placeholder
       const currentRecs = Array.isArray(preserved.recommendations) ? preserved.recommendations : [];
-      const recsAreEmpty = currentRecs.length === 0 || currentRecs.every((r: any) => !r?.recommenderName?.trim() && !r?.text?.trim());
+      const recsAreEmpty = currentRecs.length === 0 || currentRecs.every((r: unknown) => !(r as { recommenderName?: string; text?: string })?.recommenderName?.trim() && !(r as { recommenderName?: string; text?: string })?.text?.trim());
       if (recsAreEmpty) {
         preserved.recommendations = DOMAIN_RECOMMENDATIONS[detectedDomain];
       }
@@ -502,7 +510,7 @@ The ONLY fields to leave untouched are literal contact details you have no real 
       followersCount: fullProfile.followersCount || '500+',
       activity: fullProfile.activity ?? [],
       recommendations: (Array.isArray(preserved.recommendations) && preserved.recommendations.length > 0)
-        ? (preserved.recommendations as any)
+        ? (preserved.recommendations as unknown as LinkedinRichProfile['recommendations'])
         : (fullProfile.recommendations ?? []),
       coverFieldValues: finalCoverFieldValues,
     };
@@ -522,7 +530,7 @@ The ONLY fields to leave untouched are literal contact details you have no real 
               reply,
               profile: mergedProfile,
               rawParsed: parsedObj,
-            } as any,
+            } as unknown as Prisma.InputJsonValue,
             rawText: raw,
             parseSuccess: true,
             model: modelUsed,
@@ -554,10 +562,10 @@ The ONLY fields to leave untouched are literal contact details you have no real 
       reply,
       profile: mergedProfile,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[LinkedIn AI Error]:', err);
     return Response.json({
-      error: err?.message || 'The AI request failed. Check your API key / connection and try again.',
+      error: err instanceof Error ? err.message : 'The AI request failed. Check your API key / connection and try again.',
     });
   }
 }

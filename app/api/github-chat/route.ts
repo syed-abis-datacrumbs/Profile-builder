@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { GithubProfileData } from '../../../types';
+import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
 
@@ -15,7 +16,8 @@ Respond with ONLY a JSON object (no markdown fences, no prose outside it):
 
 Profile JSON schema (keep this exact shape and keys):
 {
-  "username": "",
+  "name": "",                  // the user's real full name (e.g. "John Doe")
+  "username": "",              // the GitHub username/handle slug (e.g. "john-doe")
   "title": "",                 // the "# Hi, I'm …" headline
   "about": "",                 // the About Me paragraph
   "avatarUrl": "",             // the user's profile picture URL (PRESERVE THIS EXACTLY)
@@ -104,6 +106,15 @@ CRITICAL CONTENT QUALITY RULES:
      - DO NOT touch or regenerate the other projects in that section or touch the tech stack, about me, or expertise!
      - Slicing/Removing: If there are 3 projects and user says "remove the last project", the resulting "🚀 Featured Projects" section must retain the first 2 projects verbatim and drop only the last one.
 
+- CRITICAL — NAME & USERNAME RULES:
+  When the user asks to change, set, or update their name (e.g. "change name to John Doe", "change the name to Jane Smith", "my name is Alex"):
+  1. Set "name": "<Full Name>" in the returned 'github' JSON object! (e.g. "John Doe")
+  2. Set "username": "<clean-slug>" (e.g. "john-doe") unless they specify a different handle!
+  3. Set "title": Update to include their name and role (e.g. "Hi, I'm John Doe 👋 | MERN Stack Developer").
+  4. Set "about": Update the About Me paragraph to introduce their real name (e.g. "👋 Hi, I'm John Doe! I am a passionate...").
+  5. In 'customSections', replace any legacy or placeholder usernames (like "alexrivera-ai", "alex-rivera-dev", "your-username") in project URLs with the new username slug!
+  6. NEVER reply saying you updated the name without actually modifying 'name', 'username', 'title', and 'about' in the returned 'github' JSON object!
+
 General Rules:
 - Return the WHOLE github object every time; preserve every field the user did not ask to change.
 - NEVER invent or hallucinate a fake name (like "Alex Rivera") if the user does not provide one. Use a generic greeting like "Hi 👋" for the title if no name is known.
@@ -160,16 +171,211 @@ export async function POST(request: Request) {
     const userMsg = userMessage.trim();
     const userMsgLower = userMsg.toLowerCase();
 
-    // Guidance / Informational Query Interceptor
-    const isDirectGenerateCommand = /\b(create|build|generate|make|transform|rewrite)\s+(?:me\s+)?(?:a\s+)?(?:github\s+)?(?:profile|readme)\s+(?:for|as|into)\b/i.test(userMsgLower);
+    // 1. Direct Name Handler ("change name to John Doe", "change the name to Jane Smith", "my name is X", etc.)
+    const isSingleNameIntent = !userMsg.includes('\n') && userMsg.length < 80;
+    const nameMatch = isSingleNameIntent ? (
+      userMsg.match(/^(?:please\s+)?(?:change|update|set)\s+(?:the\s+|my\s+)?name\s+(?:to|is|=|:)\s*([a-zA-Z\.\-']+(?:\s+[a-zA-Z\.\-']+){0,3})[.!]?$/i) ||
+      userMsg.match(/^(?:hi\s*,?\s*)?(?:my\s+name\s+is)\s+([a-zA-Z\.\-']+(?:\s+[a-zA-Z\.\-']+){0,3})[.!]?$/i) ||
+      userMsg.match(/^name:\s*([a-zA-Z\.\-']+(?:\s+[a-zA-Z\.\-']+){0,3})[.!]?$/i)
+    ) : null;
 
-    const isGuidanceOrInfoQuery = !isDirectGenerateCommand && (
-      /\b(what\s+(?:do\s+i\s+(?:need\s+to\s+)?(?:provide|give|send|tell|share|enter|fill|write)|should\s+i\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|to\s+(?:provide|give|send|tell|share|enter|fill|write|put|include)|can\s+i\s+(?:provide|give|send|tell|share)|do\s+you\s+need(?:\s+from\s+me)?))\b/i.test(userMsgLower) ||
+    if (nameMatch && nameMatch[1]) {
+      const rawName = nameMatch[1].trim().replace(/[.,!?:;]+$/, '').trim();
+      if (rawName && !/^(the|my|a|an|github|username|handle)$/i.test(rawName)) {
+        const slug = rawName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        const currentTitle = github.title || 'Developer';
+        
+        let newTitle = currentTitle;
+        if (/^#?\s*Hi,\s*I'm\b/i.test(currentTitle)) {
+          newTitle = currentTitle.replace(/^#?\s*Hi,\s*I'm\s+[^👋|•–-]+/i, `Hi, I'm ${rawName} `);
+        } else if (currentTitle.includes('|')) {
+          const parts = currentTitle.split('|');
+          newTitle = `Hi, I'm ${rawName} 👋 | ${parts.slice(1).join('|').trim()}`;
+        } else {
+          newTitle = `Hi, I'm ${rawName} 👋 | ${currentTitle}`;
+        }
+
+        let newAbout = github.about || '';
+        if (/^👋?\s*Hi,\s*I'm\s+[^!.,]+/i.test(newAbout)) {
+          newAbout = newAbout.replace(/^👋?\s*Hi,\s*I'm\s+[^!.,]+[!,.]?/i, `👋 Hi, I'm ${rawName}!`);
+        } else if (/^I am\s+[^,]+/i.test(newAbout)) {
+          newAbout = newAbout.replace(/^I am\s+[^,]+,/i, `👋 Hi, I'm ${rawName}! I am`);
+        } else if (newAbout) {
+          newAbout = `👋 Hi, I'm ${rawName}! ${newAbout}`;
+        }
+
+        const replyText = `I've updated your name to ${rawName} in the profile.`;
+        const updatedGithub: GithubProfileData = {
+          ...github as GithubProfileData,
+          name: rawName,
+          username: github.username || slug || 'developer',
+          title: newTitle,
+          about: newAbout,
+        };
+
+        if (Array.isArray(updatedGithub.customSections)) {
+          updatedGithub.customSections = updatedGithub.customSections.map((sec) => ({
+            ...sec,
+            content: sec.content ? sec.content.replace(/github\.com\/(?:alex-rivera-dev|your-username|username|alexrivera-ai)/g, `github.com/${slug}`) : sec.content,
+          }));
+        }
+
+        if (sessionId !== 'unknown') {
+          try {
+            await db.profileBuilderChatLog.create({
+              data: {
+                sessionId,
+                builderType,
+                userId: user?.id,
+                userMessage,
+                aiReply: replyText,
+                isAutoFit: false,
+                rawOutput: {
+                  reply: replyText,
+                  github: updatedGithub,
+                } as unknown as Prisma.InputJsonValue,
+                rawText: replyText,
+                parseSuccess: true,
+                model: 'guidance-interceptor',
+                tokens: 0,
+                latencyMs: 0,
+              },
+            });
+          } catch (logErr) {
+            console.error('[ProfileBuilderChatLog Error]:', logErr);
+          }
+        }
+
+        return Response.json({
+          reply: replyText,
+          github: updatedGithub,
+        });
+      }
+    }
+
+    // 2. Direct Username Handler ("change username to ahmerkhanak", "my github is ahmerkhanak", etc.)
+    const isSingleUsernameIntent = !userMsg.includes('\n') && userMsg.length < 80;
+    const usernameMatch = isSingleUsernameIntent ? (
+      userMsg.match(/^(?:please\s+)?(?:change|update|set)\s+(?:the\s+)?(?:github\s+)?(?:user\s*name|username|handle)\s+(?:to|:|=)\s*@?([a-zA-Z0-9_\-\.]+)[.!]?$/i) ||
+      userMsg.match(/^(?:my\s+github\s+(?:user\s*name|username|handle)?\s+is|my\s+username\s+is)\s*@?([a-zA-Z0-9_\-\.]+)[.!]?$/i) ||
+      userMsg.match(/^(?:github\s+)?(?:username|handle):\s*@?([a-zA-Z0-9_\-\.]+)[.!]?$/i) ||
+      userMsg.match(/^https?:\/\/github\.com\/([a-zA-Z0-9_\-\.]+)\/?$/i)
+    ) : null;
+
+    if (usernameMatch && usernameMatch[1]) {
+      const cleanUsername = usernameMatch[1].trim().replace(/^@/, '').replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
+      if (cleanUsername) {
+        const replyText = `Done — I've updated your GitHub username to "${cleanUsername}".`;
+        const updatedGithub: GithubProfileData = {
+          ...github as GithubProfileData,
+          username: cleanUsername,
+        };
+        if (Array.isArray(updatedGithub.customSections)) {
+          updatedGithub.customSections = updatedGithub.customSections.map((sec) => ({
+            ...sec,
+            content: sec.content ? sec.content.replace(/github\.com\/(?:alex-rivera-dev|your-username|username|alexrivera-ai)/g, `github.com/${cleanUsername}`) : sec.content,
+          }));
+        }
+        if (sessionId !== 'unknown') {
+          try {
+            await db.profileBuilderChatLog.create({
+              data: {
+                sessionId,
+                builderType,
+                userId: user?.id,
+                userMessage,
+                aiReply: replyText,
+                isAutoFit: false,
+                rawOutput: {
+                  reply: replyText,
+                  github: updatedGithub,
+                } as unknown as Prisma.InputJsonValue,
+                rawText: replyText,
+                parseSuccess: true,
+                model: 'guidance-interceptor',
+                tokens: 0,
+                latencyMs: 0,
+              },
+            });
+          } catch (logErr) {
+            console.error('[ProfileBuilderChatLog Error]:', logErr);
+          }
+        }
+        return Response.json({
+          reply: replyText,
+          github: updatedGithub,
+        });
+      }
+    }
+
+    // 3. Direct Social Connections Removal ("remove all connects from my git", "remove social links", etc.)
+    const isRemoveAllConnects = /^(?:please\s+)?(?:remove|delete|clear)\s+(?:all\s+)?(?:connects|connections|social\s*links|socials|social\s*connections)[.!]?$/i.test(userMsg.trim());
+    if (isRemoveAllConnects) {
+      const updatedGithub: GithubProfileData = {
+        ...github as GithubProfileData,
+        socialLinks: {},
+      };
+      if (sessionId !== 'unknown') {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            builderType,
+            userId: user?.id,
+            userMessage,
+            aiReply: "I've removed all social connections from your profile.",
+            isAutoFit: false,
+          },
+        });
+      }
+      return Response.json({
+        reply: "I've removed all social connections from your profile.",
+        github: updatedGithub,
+      });
+    }
+
+    // 4. Direct Banner Removal ("remove banner", "delete cover", etc.)
+    const isRemoveBanner = /^(?:please\s+)?(?:remove|delete|clear)\s+(?:the\s+)?(?:banner|cover|header\s*banner)[.!]?$/i.test(userMsg.trim());
+    if (isRemoveBanner) {
+      const updatedGithub: GithubProfileData = {
+        ...github as GithubProfileData,
+        bannerUrl: '',
+      };
+      if (sessionId !== 'unknown') {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            builderType,
+            userId: user?.id,
+            userMessage,
+            aiReply: "I've removed the cover banner from your README.",
+            isAutoFit: false,
+          },
+        });
+      }
+      return Response.json({
+        reply: "I've removed the cover banner from your README.",
+        github: updatedGithub,
+      });
+    }
+
+    // ── Guidance / Informational Query Interceptor ─────────────────────────
+    // Check if the user message contains actual profile content, code, or action commands.
+    // If it does, we must NOT intercept it with static guidance.
+    const hasProfileContentOrCommand =
+      userMsg.length > 120 ||
+      userMsg.includes('\n') ||
+      userMsg.includes(':') ||
+      /\b(create|build|generate|make|transform|rewrite|write|draft|add|update|change|set|edit|remove|delete|optimize|improve|polish|include|put|insert)\b/i.test(userMsgLower) ||
+      /\b(tech\s*stack|skills?|experience|projects?|badges?|sections?|title|headline|banner|avatar|bio|about|socials?|links?|readme|markdown|repo|repositories)\b/i.test(userMsgLower) ||
+      /\b(react|next\.?js|node|python|typescript|javascript|docker|postgres|aws|mongodb|tailwind|vue|angular|django|fastapi|graphql)\b/i.test(userMsgLower);
+
+    const isGuidanceOrInfoQuery = !hasProfileContentOrCommand && (
+      /\b(what\s+(?:do\s+i\s+(?:need\s+to\s+)?(?:provide|give|send|tell|share|enter|fill|write)|should\s+i\s+(?:provide|give|send|tell|share|enter|fill|write)|to\s+(?:provide|give|send|tell|share)|can\s+i\s+(?:provide|give|send|tell|share)|do\s+you\s+need(?:\s+from\s+me)?))\b/i.test(userMsgLower) ||
       /\b(what\s+(?:information|info|details|data)\s+(?:do\s+you\s+need|to\s+provide|are\s+needed|should\s+i|do\s+i\s+need|to\s+give))\b/i.test(userMsgLower) ||
-      /\b(how\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin|use|create\s+my|build\s+my|make\s+my|fill|get\s+started))\b/i.test(userMsgLower) ||
+      /\b(how\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin|get\s+started))\b/i.test(userMsgLower) ||
       /\b(where\s+(?:do\s+i|to|can\s+i|should\s+i)\s+(?:start|begin))\b/i.test(userMsgLower) ||
       /\b(help\s+me\s+(?:get\s+started|start|begin))\b/i.test(userMsgLower) ||
-      /\b(guide\s+me(?:\s+on\s+what|\s+how)?|how\s+does\s+this\s+work|what\s+can\s+you\s+do)\b/i.test(userMsgLower)
+      /\b(guide\s+me(?:\s+on\s+what|\s+how)?|how\s+does\s+this\s+work|what\s+can\s+you\s+do|what\s+should\s+i\s+do)\b/i.test(userMsgLower)
     );
 
     if (isGuidanceOrInfoQuery) {
@@ -196,7 +402,7 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
               rawOutput: {
                 reply: guidanceReply,
                 github,
-              } as any,
+              } as unknown as Prisma.InputJsonValue,
               rawText: guidanceReply,
               parseSuccess: true,
               model: 'guidance-interceptor',
@@ -212,94 +418,6 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
       return Response.json({
         reply: guidanceReply,
         github,
-      });
-    }
-
-    // 1. Direct Username Handler ("change username to ahmerkhanak", "my github is ahmerkhanak", etc.)
-    const usernameMatch =
-      userMsg.match(/\b(?:change|update|set)?\s*(?:the\s+)?(?:github\s+)?(?:user\s*name|username|handle)\s*(?:to|:|=)?\s*([a-zA-Z0-9_\-\.]+)\b/i) ||
-      userMsg.match(/\b(?:my\s+github\s+is|my\s+username\s+is|github\.com\/)\s*([a-zA-Z0-9_\-\.]+)\b/i) ||
-      userMsg.match(/\b(?:username|handle):\s*([a-zA-Z0-9_\-\.]+)\b/i);
-
-    if (usernameMatch && usernameMatch[1]) {
-      const cleanUsername = usernameMatch[1].trim().replace(/^@/, '').replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
-      if (cleanUsername) {
-        const updatedGithub: GithubProfileData = {
-          ...github as GithubProfileData,
-          username: cleanUsername,
-        };
-        if (Array.isArray(updatedGithub.customSections)) {
-          updatedGithub.customSections = updatedGithub.customSections.map((sec) => ({
-            ...sec,
-            content: sec.content ? sec.content.replace(/github\.com\/(?:alex-rivera-dev|your-username|username|alexrivera-ai)/g, `github.com/${cleanUsername}`) : sec.content,
-          }));
-        }
-        if (sessionId !== 'unknown') {
-          await db.profileBuilderChatLog.create({
-            data: {
-              sessionId,
-              builderType,
-              userId: user?.id,
-              userMessage,
-              aiReply: `Done — I've updated your GitHub username to "${cleanUsername}".`,
-              isAutoFit: false,
-            },
-          });
-        }
-        return Response.json({
-          reply: `Done — I've updated your GitHub username to "${cleanUsername}".`,
-          github: updatedGithub,
-        });
-      }
-    }
-
-    // 2. Direct Social Connections Removal ("remove all connects from my git", "remove social links", etc.)
-    const isRemoveAllConnects = /\b(?:remove|delete|clear)\s+(?:all\s+)?(?:connects|connections|social\s*links|socials|links)\b/i.test(userMsg);
-    if (isRemoveAllConnects) {
-      const updatedGithub: GithubProfileData = {
-        ...github as GithubProfileData,
-        socialLinks: {},
-      };
-      if (sessionId !== 'unknown') {
-        await db.profileBuilderChatLog.create({
-          data: {
-            sessionId,
-            builderType,
-            userId: user?.id,
-            userMessage,
-            aiReply: "I've removed all social connections from your profile.",
-            isAutoFit: false,
-          },
-        });
-      }
-      return Response.json({
-        reply: "I've removed all social connections from your profile.",
-        github: updatedGithub,
-      });
-    }
-
-    // 3. Direct Banner Removal ("remove banner", "delete cover", etc.)
-    const isRemoveBanner = /\b(?:remove|delete|clear)\s+(?:banner|cover|header)\b/i.test(userMsg);
-    if (isRemoveBanner) {
-      const updatedGithub: GithubProfileData = {
-        ...github as GithubProfileData,
-        bannerUrl: '',
-      };
-      if (sessionId !== 'unknown') {
-        await db.profileBuilderChatLog.create({
-          data: {
-            sessionId,
-            builderType,
-            userId: user?.id,
-            userMessage,
-            aiReply: "I've removed the cover banner from your README.",
-            isAutoFit: false,
-          },
-        });
-      }
-      return Response.json({
-        reply: "I've removed the cover banner from your README.",
-        github: updatedGithub,
       });
     }
 
@@ -321,25 +439,25 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
     const modelUsed = completion.model || 'gpt-4o-mini';
 
     const raw = completion.choices[0]?.message?.content ?? '{}';
-    let parsed: any = {};
+    let parsed: Record<string, unknown> = {};
     let parseSuccess = false;
     let parseError: string | null = null;
     try {
-      parsed = JSON.parse(raw);
+      parsed = JSON.parse(raw) as Record<string, unknown>;
       parseSuccess = true;
       if (!parsed || typeof parsed !== 'object') {
         parseError = 'Model returned non-object JSON';
       } else if (!parsed.github) {
         parseError = 'Model returned JSON without a "github" object';
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       parseSuccess = false;
-      parseError = err?.message || 'JSON.parse failed on model output';
+      parseError = err instanceof Error ? err.message : 'JSON.parse failed on model output';
       console.error('[GitHub AI JSON Parse Error]:', err, raw);
     }
 
     const reply = typeof parsed?.reply === 'string' ? parsed.reply : 'Done — updated your README.';
-    const updatedGithub: GithubProfileData = (parsed?.github && typeof parsed.github === 'object') ? parsed.github : github;
+    const updatedGithub: GithubProfileData = (parsed?.github && typeof parsed.github === 'object') ? (parsed.github as unknown as GithubProfileData) : (github as GithubProfileData);
     if (updatedGithub && !updatedGithub.avatarUrl) {
       updatedGithub.avatarUrl = github?.avatarUrl || '/images/github-profile/git-profile-1.png';
     }
@@ -358,7 +476,7 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
               reply,
               github: updatedGithub,
               rawParsed: parseSuccess ? parsed : null,
-            } as any,
+            } as unknown as Prisma.InputJsonValue,
             rawText: raw,
             parseSuccess,
             model: modelUsed,
@@ -390,10 +508,10 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
       reply,
       github: updatedGithub,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[GitHub AI Error]:', err);
     return Response.json({
-      error: err?.message || 'The AI request failed. Check your API key / connection and try again.',
+      error: err instanceof Error ? err.message : 'The AI request failed. Check your API key / connection and try again.',
     });
   }
 }
