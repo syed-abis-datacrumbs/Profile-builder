@@ -152,7 +152,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as { messages?: ChatMessage[]; github?: GithubProfileData; sessionId?: string; builderType?: string };
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const github: Partial<GithubProfileData> = body.github ?? {};
-    const sessionId = body.sessionId || 'unknown';
+    const sessionId = (body.sessionId && body.sessionId !== 'unknown') ? body.sessionId : crypto.randomUUID();
     const builderType = body.builderType || 'github';
     const userMessage = messages[messages.length - 1]?.content || '';
 
@@ -185,15 +185,28 @@ export async function POST(request: Request) {
 You can share your details all at once or tell me step-by-step (e.g. *"My GitHub username is octocat and I build Next.js apps"*), and I will update your profile preview in real time!`;
 
       if (sessionId !== 'unknown') {
-        await db.profileBuilderChatLog.create({
-          data: {
-            sessionId,
-            userId,
-            userMessage,
-            aiReply: guidanceReply,
-            builderType,
-          },
-        });
+        try {
+          await db.profileBuilderChatLog.create({
+            data: {
+              sessionId,
+              userId,
+              userMessage,
+              aiReply: guidanceReply,
+              builderType,
+              rawOutput: {
+                reply: guidanceReply,
+                github,
+              } as any,
+              rawText: guidanceReply,
+              parseSuccess: true,
+              model: 'guidance-interceptor',
+              tokens: 0,
+              latencyMs: 0,
+            },
+          });
+        } catch (logErr) {
+          console.error('[ProfileBuilderChatLog Error]:', logErr);
+        }
       }
 
       return Response.json({
@@ -290,6 +303,7 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
       });
     }
 
+    const startTime = Date.now();
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -302,25 +316,74 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
       ],
     });
 
+    const latencyMs = Date.now() - startTime;
+    const tokens = completion.usage?.total_tokens ?? null;
+    const modelUsed = completion.model || 'gpt-4o-mini';
+
     const raw = completion.choices[0]?.message?.content ?? '{}';
-    const parsed = JSON.parse(raw);
-    const reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your README.';
-    if (sessionId !== 'unknown') {
-      await db.profileBuilderChatLog.create({
-        data: {
-          sessionId,
-          builderType,
-          userId: user?.id,
-          userMessage,
-          aiReply: reply,
-          isAutoFit: false,
-        },
-      });
+    let parsed: any = {};
+    let parseSuccess = false;
+    let parseError: string | null = null;
+    try {
+      parsed = JSON.parse(raw);
+      parseSuccess = true;
+      if (!parsed || typeof parsed !== 'object') {
+        parseError = 'Model returned non-object JSON';
+      } else if (!parsed.github) {
+        parseError = 'Model returned JSON without a "github" object';
+      }
+    } catch (err: any) {
+      parseSuccess = false;
+      parseError = err?.message || 'JSON.parse failed on model output';
+      console.error('[GitHub AI JSON Parse Error]:', err, raw);
     }
 
-    const updatedGithub: GithubProfileData = (parsed.github && typeof parsed.github === 'object') ? parsed.github : github;
+    const reply = typeof parsed?.reply === 'string' ? parsed.reply : 'Done — updated your README.';
+    const updatedGithub: GithubProfileData = (parsed?.github && typeof parsed.github === 'object') ? parsed.github : github;
     if (updatedGithub && !updatedGithub.avatarUrl) {
       updatedGithub.avatarUrl = github?.avatarUrl || '/images/github-profile/git-profile-1.png';
+    }
+
+    if (sessionId !== 'unknown') {
+      try {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            builderType,
+            userId: user?.id,
+            userMessage,
+            aiReply: reply,
+            isAutoFit: false,
+            rawOutput: {
+              reply,
+              github: updatedGithub,
+              rawParsed: parseSuccess ? parsed : null,
+            } as any,
+            rawText: raw,
+            parseSuccess,
+            model: modelUsed,
+            tokens,
+            latencyMs,
+            error: parseError,
+          },
+        });
+      } catch (logErr) {
+        console.warn('[ProfileBuilderChatLog] Full insert failed, falling back to base fields:', logErr);
+        try {
+          await db.profileBuilderChatLog.create({
+            data: {
+              sessionId,
+              builderType,
+              userId: user?.id,
+              userMessage,
+              aiReply: reply,
+              isAutoFit: false,
+            },
+          });
+        } catch (fallbackErr) {
+          console.error('[ProfileBuilderChatLog Fallback Error]:', fallbackErr);
+        }
+      }
     }
 
     return Response.json({

@@ -18,7 +18,7 @@ model ResumeSave {
   userId    String
   name      String
   data      Json
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([userId])
   @@map("profile_builder_resumes")
@@ -30,7 +30,7 @@ model GithubSave {
   userId    String
   name      String
   data      Json
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([userId])
   @@map("profile_builder_github_saves")
@@ -42,7 +42,7 @@ model LinkedinSave {
   userId    String
   name      String
   data      Json
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([userId])
   @@map("profile_builder_linkedin_saves")
@@ -56,8 +56,8 @@ model LinkedinSave {
 model PaymentUnlock {
   id           String    @id @default(cuid())
   userId       String    @unique
-  unlockedAt   DateTime  @default(now())
-  celebratedAt DateTime?
+  unlockedAt   DateTime  @default(now()) @db.Timestamptz(3)
+  celebratedAt DateTime? @db.Timestamptz(3)
 
   @@map("profile_builder_payment_unlocks")
 }
@@ -84,7 +84,7 @@ model PaymentProof {
   tamperSignal           Boolean  @default(false)
   status                 String   @default("PENDING")
   decisionReason         String?
-  createdAt              DateTime @default(now())
+  createdAt              DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([userId])
   @@index([imageHash])
@@ -111,7 +111,7 @@ model ProfileBuilderCoupon {
   /// Admin can disable without deleting. Disabled codes are always rejected.
   isActive  Boolean  @default(true)
   createdBy String?
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   redemptions ProfileBuilderCouponRedemption[]
 
@@ -125,7 +125,7 @@ model ProfileBuilderCouponRedemption {
   id         String   @id @default(cuid())
   couponId   String
   userId     String
-  redeemedAt DateTime @default(now())
+  redeemedAt DateTime @default(now()) @db.Timestamptz(3)
 
   coupon ProfileBuilderCoupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
 
@@ -140,8 +140,8 @@ model ProfileBuilderCouponRedemption {
 model ProfileBuilderAiUsage {
   userId     String   @id
   usedCount  Int      @default(0)
-  updatedAt  DateTime @updatedAt
-  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
 
   @@map("profile_builder_ai_usage")
 }
@@ -150,14 +150,21 @@ model ProfileBuilderAiUsage {
 /// Represents one turn of an AI conversation in the Resume Builder.
 /// A frontend-generated sessionId groups multiple turns together.
 model ProfileBuilderChatLog {
-  id          String   @id @default(cuid())
-  sessionId   String
-  builderType String   @default("resume") // "resume", "github", "linkedin"
-  userId      String?
-  userMessage String
-  aiReply     String
-  isAutoFit   Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  sessionId    String
+  builderType  String   @default("resume") // "resume", "github", "linkedin"
+  userId       String?
+  userMessage  String
+  aiReply      String
+  isAutoFit    Boolean  @default(false)
+  rawOutput    Json?
+  rawText      String?
+  parseSuccess Boolean? @default(true)
+  model        String?
+  tokens       Int?
+  latencyMs    Int?
+  error        String?
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([sessionId])
   @@index([userId])
@@ -173,8 +180,8 @@ model ResumeProfile {
   userId            String   @unique
   fullNameEditsUsed Int      @default(0)
   downloadedNames   Json     @default("[]")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
 
   nameChangeRequests ResumeNameChangeRequest[]
 
@@ -190,8 +197,8 @@ model ResumeNameChangeRequest {
   currentName   String
   requestedName String
   status        String    @default("PENDING") // PENDING | APPROVED | REJECTED
-  createdAt     DateTime  @default(now())
-  decidedAt     DateTime?
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  decidedAt     DateTime? @db.Timestamptz(3)
 
   profile ResumeProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
@@ -208,10 +215,31 @@ model ProfileBuilderIssue {
   text      String
   imageUrl  String?
   status    String   @default("OPEN") // OPEN, RESOLVED
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([userId])
   @@index([status])
   @@index([category])
   @@map("profile_builder_issues")
 }
+
+// Real-time visitor sessions table used for live traffic analytics
+model ProfileBuilderVisitorSession {
+  id           String   @id @db.VarChar(64)
+  visitor_id   String   @db.VarChar(64)
+  path         String   @default("/") @db.VarChar(255)
+  tool         String   @default("home") @db.VarChar(64)
+  country      String   @default("Unknown") @db.VarChar(100)
+  country_code String   @default("XX") @db.VarChar(10)
+  city         String?  @db.VarChar(100)
+  device       String   @default("Desktop") @db.VarChar(32)
+  browser      String?  @db.VarChar(64)
+  ip           String?  @db.VarChar(64)
+  last_active  DateTime @default(now()) @db.Timestamptz
+  created_at   DateTime @default(now()) @db.Timestamptz
+
+  @@index([last_active], map: "idx_pb_sessions_last_active")
+  @@index([tool], map: "idx_pb_sessions_tool")
+  @@map("profile_builder_visitor_sessions")
+}
+

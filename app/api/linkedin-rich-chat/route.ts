@@ -293,7 +293,7 @@ export async function POST(request: Request) {
     };
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const fullProfile = ((body.profile ?? body.linkedin) ?? {}) as LinkedinRichProfile;
-    const sessionId = body.sessionId || 'unknown';
+    const sessionId = (body.sessionId && body.sessionId !== 'unknown') ? body.sessionId : crypto.randomUUID();
     const builderType = body.builderType || 'linkedin';
     const userMessage = messages[messages.length - 1]?.content || '';
     const contentProfile = toContentProfile(fullProfile);
@@ -323,15 +323,28 @@ export async function POST(request: Request) {
 You can share these details all at once or tell me step-by-step (e.g. *"I am an AI Engineer at DataCrumbs"*), and I will update your LinkedIn profile and banner in real time!`;
 
       if (sessionId !== 'unknown') {
-        await db.profileBuilderChatLog.create({
-          data: {
-            sessionId,
-            userId,
-            userMessage,
-            aiReply: guidanceReply,
-            builderType,
-          },
-        });
+        try {
+          await db.profileBuilderChatLog.create({
+            data: {
+              sessionId,
+              userId,
+              userMessage,
+              aiReply: guidanceReply,
+              builderType,
+              rawOutput: {
+                reply: guidanceReply,
+                profile: fullProfile,
+              } as any,
+              rawText: guidanceReply,
+              parseSuccess: true,
+              model: 'guidance-interceptor',
+              tokens: 0,
+              latencyMs: 0,
+            },
+          });
+        } catch (logErr) {
+          console.error('[ProfileBuilderChatLog Error]:', logErr);
+        }
       }
 
       return Response.json({
@@ -359,6 +372,7 @@ You can share these details all at once or tell me step-by-step (e.g. *"I am an 
 The ONLY fields to leave untouched are literal contact details you have no real data for — phone number, email address, website URL. Never invent those. Everything else is fair game and should be personalized. Never invent ids not in this list; pills fields take an array of short chip strings, everything else takes a plain string.`
       : '';
 
+    const startTime = Date.now();
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -371,6 +385,10 @@ The ONLY fields to leave untouched are literal contact details you have no real 
         ...messages.map((m) => ({ role: m.role, content: m.content })),
       ],
     });
+
+    const latencyMs = Date.now() - startTime;
+    const tokens = completion.usage?.total_tokens ?? null;
+    const modelUsed = completion.model || 'gpt-4o-mini';
 
     const choice = completion.choices[0];
     const raw = choice?.message?.content ?? '';
@@ -491,16 +509,45 @@ The ONLY fields to leave untouched are literal contact details you have no real 
 
     const reply = typeof parsedObj.reply === 'string' ? parsedObj.reply : 'Done — updated your profile.';
     if (sessionId !== 'unknown') {
-      await db.profileBuilderChatLog.create({
-        data: {
-          sessionId,
-          builderType,
-          userId: user?.id,
-          userMessage,
-          aiReply: reply,
-          isAutoFit: false,
-        },
-      });
+      try {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            builderType,
+            userId: user?.id,
+            userMessage,
+            aiReply: reply,
+            isAutoFit: false,
+            rawOutput: {
+              reply,
+              profile: mergedProfile,
+              rawParsed: parsedObj,
+            } as any,
+            rawText: raw,
+            parseSuccess: true,
+            model: modelUsed,
+            tokens,
+            latencyMs,
+            error: null,
+          },
+        });
+      } catch (logErr) {
+        console.warn('[ProfileBuilderChatLog] Full insert failed, falling back to base fields:', logErr);
+        try {
+          await db.profileBuilderChatLog.create({
+            data: {
+              sessionId,
+              builderType,
+              userId: user?.id,
+              userMessage,
+              aiReply: reply,
+              isAutoFit: false,
+            },
+          });
+        } catch (fallbackErr) {
+          console.error('[ProfileBuilderChatLog Fallback Error]:', fallbackErr);
+        }
+      }
     }
 
     return Response.json({

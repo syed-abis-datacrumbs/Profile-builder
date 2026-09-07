@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { GithubIcon, LinkedinIcon } from "@/components/icons";
 import toast from "@/lib/toast";
+import { formatKarachiDateTime } from "@/lib/dateUtils";
 
 export interface Issue {
   id: string;
@@ -141,23 +142,23 @@ export function IssuesClient({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 font-sans">
+    <div className="flex flex-col h-full bg-slate-50 font-sans">
       {/* Header */}
-      <div className="p-6 border-b border-slate-800 flex items-center justify-between shrink-0">
+      <div className="p-4 sm:p-6 border-b border-slate-200/90 flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <Bug className="w-5 h-5 text-rose-500" />
             User Reported Issues & Feedback
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Categorized bug reports, UI issues, and user feedback across Profile Builder modules.
+          <p className="text-sm text-slate-500 mt-1">
+            Categorized bug reports, UI issues, and user feedback across Momentum tools.
           </p>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
         {/* Top Controls: Parent Category Tabs */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/90 pb-5">
           {/* Parent Feature Tabs */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
             {[
@@ -177,11 +178,11 @@ export function IssuesClient({
                   }}
                   className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 border cursor-pointer ${
                     isSelected
-                      ? "bg-slate-800 border-blue-500/50 text-white shadow-sm ring-1 ring-blue-500/30"
-                      : "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-850"
+                      ? "bg-white border-blue-500/50 text-blue-600 shadow-xs ring-1 ring-blue-500/30"
+                      : "bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-2xs"
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isSelected ? "text-blue-400" : "text-slate-500"}`} />
+                  <Icon className={`w-4 h-4 ${isSelected ? "text-blue-600" : "text-slate-400"}`} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -189,7 +190,7 @@ export function IssuesClient({
           </div>
 
           {/* Child Status Filter (Open / Resolved) */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-xl shrink-0">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 rounded-xl shrink-0">
             {["OPEN", "RESOLVED"].map((tab) => {
               const isSelected = statusFilter === tab;
               const count = tab === "OPEN" ? counts?.open : counts?.resolved;
@@ -203,12 +204,12 @@ export function IssuesClient({
                   className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     isSelected
                       ? tab === "OPEN"
-                        ? "bg-rose-500/20 border border-rose-500/40 text-rose-300"
-                        : "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent"
+                        ? "bg-white border border-rose-200/80 text-rose-700 shadow-xs"
+                        : "bg-white border border-emerald-200/80 text-emerald-700 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900 border border-transparent"
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${tab === "OPEN" ? "bg-rose-400" : "bg-emerald-400"}`} />
+                  <span className={`w-2 h-2 rounded-full ${tab === "OPEN" ? "bg-rose-500" : "bg-emerald-500"}`} />
                   <span className="capitalize">{tab.toLowerCase()}</span>
                   {count !== undefined && (
                     <span className="ml-1 text-[11px] opacity-75 font-mono">({count})</span>
@@ -221,32 +222,32 @@ export function IssuesClient({
 
         {/* Content Area: Table List of Rows */}
         {loading ? (
-          <div className="py-16 text-center text-slate-400 text-sm">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="py-16 text-center text-slate-500 text-sm">
+            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             Loading reported issues...
           </div>
         ) : issues.length === 0 ? (
-          <div className="py-16 text-center bg-slate-900/60 border border-slate-800 rounded-2xl p-8">
-            <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-3 opacity-80" />
-            <h3 className="text-base font-bold text-white mb-1">No {statusFilter.toLowerCase()} issues</h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+          <div className="py-16 text-center bg-white border border-slate-200 rounded-2xl p-8 shadow-xs">
+            <CheckCircle className="w-10 h-10 text-emerald-600 mx-auto mb-3 opacity-80" />
+            <h3 className="text-base font-bold text-slate-900 mb-1">No {statusFilter.toLowerCase()} issues</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
               There are no reported issues in this category right now.
             </p>
           </div>
         ) : (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+            <div className="overflow-x-auto overscroll-x-contain">
+              <table className="w-full min-w-[720px] text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 uppercase tracking-wider font-semibold text-[11px]">
-                    <th className="py-3.5 px-4">Feature</th>
-                    <th className="py-3.5 px-4">User Details</th>
-                    <th className="py-3.5 px-4">Issue Description</th>
-                    <th className="py-3.5 px-4 text-center">Attachment</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
+                  <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-600 uppercase tracking-wider font-semibold text-[11px]">
+                    <th className="py-3.5 px-4 whitespace-nowrap">Feature</th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">User Details</th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">Issue Description</th>
+                    <th className="py-3.5 px-4 text-center whitespace-nowrap">Attachment</th>
+                    <th className="py-3.5 px-4 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-slate-100">
                   {issues.map((issue) => {
                     const cat = CATEGORY_CONFIG[issue.category || "resume"] || CATEGORY_CONFIG.resume;
                     const CatIcon = cat.icon;
@@ -255,7 +256,7 @@ export function IssuesClient({
                       <tr
                         key={issue.id}
                         onClick={() => setSelectedIssue(issue)}
-                        className="hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                        className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                       >
                         {/* Feature Category */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
@@ -270,12 +271,12 @@ export function IssuesClient({
                         {/* User info */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="flex flex-col">
-                            <span className="font-semibold text-slate-200 text-xs truncate max-w-[180px]">
+                            <span className="font-semibold text-slate-900 text-xs truncate max-w-[180px]">
                               {issue.user ? issue.user.email : "Anonymous"}
                             </span>
-                            <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                              <Clock className="w-3 h-3 text-slate-600" />
-                              {new Date(issue.createdAt).toLocaleString(undefined, {
+                            <span className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              {formatKarachiDateTime(issue.createdAt, {
                                 month: "short",
                                 day: "numeric",
                                 hour: "2-digit",
@@ -287,7 +288,7 @@ export function IssuesClient({
 
                         {/* Issue preview text */}
                         <td className="py-3.5 px-4">
-                          <p className="text-slate-300 font-medium line-clamp-2 max-w-md text-xs leading-relaxed group-hover:text-white transition-colors">
+                          <p className="text-slate-600 font-medium line-clamp-2 max-w-md text-xs leading-relaxed group-hover:text-slate-900 transition-colors">
                             {issue.text}
                           </p>
                         </td>
@@ -301,13 +302,13 @@ export function IssuesClient({
                                 e.stopPropagation();
                                 setSelectedIssue(issue);
                               }}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 transition-colors text-[11px] font-semibold"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 transition-colors text-[11px] font-semibold"
                             >
                               <ImageIcon className="w-3.5 h-3.5" />
                               <span>1 Attachment</span>
                             </button>
                           ) : (
-                            <span className="text-slate-600 text-[11px]">—</span>
+                            <span className="text-slate-400 text-[11px]">—</span>
                           )}
                         </td>
 
@@ -317,7 +318,7 @@ export function IssuesClient({
                             {issue.status === "OPEN" ? (
                               <button
                                 onClick={() => handleUpdateStatus(issue.id, "RESOLVED")}
-                                className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-emerald-500/20 cursor-pointer shadow-2xs"
+                                className="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-emerald-200/80 cursor-pointer shadow-2xs"
                               >
                                 <CheckCircle className="w-3.5 h-3.5" />
                                 Resolve
@@ -325,7 +326,7 @@ export function IssuesClient({
                             ) : (
                               <button
                                 onClick={() => handleUpdateStatus(issue.id, "OPEN")}
-                                className="px-3 py-1.5 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-amber-500/20 cursor-pointer"
+                                className="px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-amber-200/80 cursor-pointer shadow-2xs"
                               >
                                 <RotateCcw className="w-3.5 h-3.5" />
                                 Reopen
@@ -334,7 +335,7 @@ export function IssuesClient({
 
                             <button
                               onClick={() => setSelectedIssue(issue)}
-                              className="px-2.5 py-1.5 bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                              className="px-2.5 py-1.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
                               title="Inspect full details"
                             >
                               Details
@@ -352,25 +353,25 @@ export function IssuesClient({
 
         {/* Pagination */}
         {total > pageSize && (
-          <div className="flex items-center justify-between py-4 border-t border-slate-800">
-            <span className="text-xs text-slate-400">
+          <div className="flex items-center justify-between py-4 border-t border-slate-200">
+            <span className="text-xs text-slate-500">
               Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, total)} of {total} reported issues
             </span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-xs text-slate-400 font-semibold px-2">
+              <span className="text-xs text-slate-600 font-semibold px-2">
                 Page {page} of {totalPages}
               </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -381,11 +382,11 @@ export function IssuesClient({
 
       {/* ── Issue Detail Inspection Modal ─────────────────────────────── */}
       {selectedIssue && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="fixed inset-0" onClick={() => setSelectedIssue(null)} />
-          <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[90vh]">
             {/* Modal Header */}
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/80 shrink-0">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 shrink-0">
               <div className="flex items-center gap-3">
                 {(() => {
                   const cat = CATEGORY_CONFIG[selectedIssue.category || "resume"] || CATEGORY_CONFIG.resume;
@@ -401,18 +402,18 @@ export function IssuesClient({
                 <span
                   className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                     selectedIssue.status === "OPEN"
-                      ? "bg-rose-500/15 text-rose-400 border border-rose-500/30"
-                      : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                      ? "bg-rose-50 text-rose-700 border border-rose-200/80"
+                      : "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${selectedIssue.status === "OPEN" ? "bg-rose-400" : "bg-emerald-400"}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${selectedIssue.status === "OPEN" ? "bg-rose-500" : "bg-emerald-500"}`} />
                   {selectedIssue.status}
                 </span>
               </div>
 
               <button
                 onClick={() => setSelectedIssue(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -421,33 +422,33 @@ export function IssuesClient({
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-5 flex-1 min-h-0">
               {/* User Details Card */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between flex-wrap gap-3">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200/60 flex items-center justify-center text-blue-600 font-bold text-sm shrink-0">
                     <User className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white">
+                    <h4 className="text-sm font-bold text-slate-900">
                       {selectedIssue.user ? selectedIssue.user.email : "Anonymous User"}
                     </h4>
                     {selectedIssue.user?.name && (
-                      <p className="text-xs text-slate-400">{selectedIssue.user.name}</p>
+                      <p className="text-xs text-slate-500">{selectedIssue.user.name}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="text-right text-xs text-slate-400 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{new Date(selectedIssue.createdAt).toLocaleString()}</span>
+                <div className="text-right text-xs text-slate-500 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{formatKarachiDateTime(selectedIssue.createdAt)}</span>
                 </div>
               </div>
 
               {/* Description Content */}
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   Issue Description & Feedback
                 </label>
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
                   {selectedIssue.text}
                 </div>
               </div>
@@ -456,14 +457,14 @@ export function IssuesClient({
               {selectedIssue.imageUrl && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                       Attached Screenshot
                     </label>
                     <a
                       href={selectedIssue.imageUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors"
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       Open Full Size
@@ -472,7 +473,7 @@ export function IssuesClient({
 
                   <div
                     onClick={() => setInspectImageFull(selectedIssue.imageUrl)}
-                    className="relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 cursor-pointer max-h-72 flex items-center justify-center"
+                    className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-100 cursor-pointer max-h-72 flex items-center justify-center"
                   >
                     <img
                       src={selectedIssue.imageUrl}
@@ -489,12 +490,12 @@ export function IssuesClient({
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0">
+            <div className="p-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between shrink-0">
               <div>
                 {selectedIssue.status === "OPEN" ? (
                   <button
                     onClick={() => handleUpdateStatus(selectedIssue.id, "RESOLVED")}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs"
                   >
                     <CheckCircle className="w-4 h-4" />
                     Mark as Resolved
@@ -502,7 +503,7 @@ export function IssuesClient({
                 ) : (
                   <button
                     onClick={() => handleUpdateStatus(selectedIssue.id, "OPEN")}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs"
                   >
                     <RotateCcw className="w-4 h-4" />
                     Reopen Issue
@@ -512,7 +513,7 @@ export function IssuesClient({
 
               <button
                 onClick={() => setSelectedIssue(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
                 Close
               </button>

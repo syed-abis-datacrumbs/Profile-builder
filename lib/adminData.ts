@@ -2,65 +2,92 @@ import { db } from '@/lib/db';
 import { lookupClerkUsers } from '@/lib/clerkUserLookup';
 
 export async function getAdminUsers() {
-  const [
-    unlocks,
-    couponRedemptions,
-    aiUsage,
-    resumes,
-    githubs,
-    linkedins
-  ] = await Promise.all([
-    db.paymentUnlock.findMany({ select: { userId: true, unlockedAt: true } }),
-    db.profileBuilderCouponRedemption.findMany({ select: { userId: true, coupon: { select: { isActive: true } } } }),
-    db.profileBuilderAiUsage.findMany({ select: { userId: true } }),
-    db.resumeSave.findMany({ select: { userId: true } }),
-    db.githubSave.findMany({ select: { userId: true } }),
-    db.linkedinSave.findMany({ select: { userId: true } }),
-  ]);
+  try {
+    const [
+      unlocks,
+      couponRedemptions,
+      aiUsage,
+      resumes,
+      githubs,
+      linkedins,
+      chats,
+      nameRequests,
+      paymentProofs,
+    ] = await Promise.all([
+      db.paymentUnlock.findMany({ select: { userId: true, unlockedAt: true } }).catch(() => []),
+      db.profileBuilderCouponRedemption.findMany({ select: { userId: true, coupon: { select: { isActive: true } } } }).catch(() => []),
+      db.profileBuilderAiUsage.findMany({ select: { userId: true } }).catch(() => []),
+      db.resumeSave.findMany({ select: { userId: true } }).catch(() => []),
+      db.githubSave.findMany({ select: { userId: true } }).catch(() => []),
+      db.linkedinSave.findMany({ select: { userId: true } }).catch(() => []),
+      db.profileBuilderChatLog.findMany({ where: { userId: { not: null } }, select: { userId: true } }).catch(() => []),
+      db.resumeNameChangeRequest.findMany({ select: { userId: true } }).catch(() => []),
+      db.paymentProof.findMany({ select: { userId: true } }).catch(() => []),
+    ]);
 
-  const allIds = new Set<string>();
-  const unlockedMap = new Map<string, Date>();
-  const couponStatusMap = new Map<string, 'Active' | 'Deactive'>();
+    const allIds = new Set<string>();
+    const unlockedMap = new Map<string, Date>();
+    const couponStatusMap = new Map<string, 'Active' | 'Deactive'>();
 
-  unlocks.forEach((u) => {
-    allIds.add(u.userId);
-    unlockedMap.set(u.userId, u.unlockedAt);
-  });
-  
-  couponRedemptions.forEach((c) => {
-    allIds.add(c.userId);
-    if (c.coupon?.isActive || couponStatusMap.get(c.userId) === 'Active') {
-      couponStatusMap.set(c.userId, 'Active');
-    } else {
-      couponStatusMap.set(c.userId, 'Deactive');
-    }
-  });
-  
-  aiUsage.forEach((u) => allIds.add(u.userId));
-  resumes.forEach((r) => allIds.add(r.userId));
-  githubs.forEach((g) => allIds.add(g.userId));
-  linkedins.forEach((l) => allIds.add(l.userId));
+    unlocks.forEach((u: any) => {
+      if (u.userId) {
+        allIds.add(u.userId);
+        unlockedMap.set(u.userId, u.unlockedAt);
+      }
+    });
 
-  const uniqueUserIds = Array.from(allIds).filter(Boolean);
-  const userMap = await lookupClerkUsers(uniqueUserIds);
+    couponRedemptions.forEach((c: any) => {
+      if (c.userId) {
+        allIds.add(c.userId);
+        if (c.coupon?.isActive || couponStatusMap.get(c.userId) === 'Active') {
+          couponStatusMap.set(c.userId, 'Active');
+        } else {
+          couponStatusMap.set(c.userId, 'Deactive');
+        }
+      }
+    });
 
-  return uniqueUserIds.map((userId) => {
-    const clerkData = userMap.get(userId);
-    const hasUnlock = unlockedMap.has(userId);
-    const couponStatus = couponStatusMap.get(userId) || null;
+    aiUsage.forEach((u: any) => { if (u.userId) allIds.add(u.userId); });
+    resumes.forEach((r: any) => { if (r.userId) allIds.add(r.userId); });
+    githubs.forEach((g: any) => { if (g.userId) allIds.add(g.userId); });
+    linkedins.forEach((l: any) => { if (l.userId) allIds.add(l.userId); });
+    chats.forEach((c: any) => { if (c.userId) allIds.add(c.userId); });
+    nameRequests.forEach((n: any) => { if (n.userId) allIds.add(n.userId); });
+    paymentProofs.forEach((p: any) => { if (p.userId) allIds.add(p.userId); });
 
-    // If a user has a coupon, they are considered 'Free' (with a coupon badge) even though they have a PaymentUnlock.
-    let planStatus: 'Free' | 'Paid' = (hasUnlock && !couponStatus) ? 'Paid' : 'Free';
+    const uniqueUserIds = Array.from(allIds).filter(Boolean);
 
-    return {
-      userId,
-      email: clerkData?.email || '(Not found in Clerk)',
-      name: clerkData?.name || clerkData?.email || 'Unknown User',
-      planStatus,
-      couponStatus,
-      unlockedAt: unlockedMap.get(userId)?.toISOString() || null,
-    };
-  });
+    // Look up Clerk details ONLY for verified Momentum users (excludes LMS-only accounts)
+    const userMap = await lookupClerkUsers(uniqueUserIds);
+
+    return uniqueUserIds
+      .map((userId) => {
+        const clerkData = userMap.get(userId);
+        const hasUnlock = unlockedMap.has(userId);
+        const couponStatus = couponStatusMap.get(userId) || null;
+
+        // If a user has a coupon, they are considered 'Free' (with a coupon badge) even though they have a PaymentUnlock.
+        let planStatus: 'Free' | 'Paid' = (hasUnlock && !couponStatus) ? 'Paid' : 'Free';
+
+        return {
+          userId,
+          email: clerkData?.email || '(Not found in Clerk)',
+          name: clerkData?.name || clerkData?.email || 'Unknown User',
+          planStatus,
+          couponStatus,
+          unlockedAt: unlockedMap.get(userId)?.toISOString() || null,
+          createdAt: clerkData?.createdAt || null,
+        };
+      })
+      .sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+      });
+  } catch (err) {
+    console.error('[getAdminUsers] Critical error:', err);
+    return [];
+  }
 }
 
 export async function getAdminPayments(status?: string) {
@@ -187,17 +214,53 @@ export async function getAdminChats(search: string = '', type: string = 'resume'
     orderBy: { _max: { createdAt: "desc" } },
   });
 
-  const mergedList: any[] = [];
-  const userSessions = new Map<string, typeof rawSessions>();
+  // Consolidate by sessionId so a session that transitioned from anonymous to logged-in is unified
+  const consolidatedBySession = new Map<string, {
+    sessionId: string;
+    userId: string | null;
+    count: number;
+    minCreatedAt: Date;
+    maxCreatedAt: Date;
+  }>();
 
   for (const s of rawSessions) {
+    const existing = consolidatedBySession.get(s.sessionId);
+    if (!existing) {
+      consolidatedBySession.set(s.sessionId, {
+        sessionId: s.sessionId,
+        userId: s.userId ?? null,
+        count: s._count._all,
+        minCreatedAt: s._min.createdAt ?? new Date(),
+        maxCreatedAt: s._max.createdAt ?? new Date(),
+      });
+    } else {
+      if (!existing.userId && s.userId) {
+        existing.userId = s.userId;
+      }
+      existing.count += s._count._all;
+      if (s._min.createdAt && s._min.createdAt < existing.minCreatedAt) {
+        existing.minCreatedAt = s._min.createdAt;
+      }
+      if (s._max.createdAt && s._max.createdAt > existing.maxCreatedAt) {
+        existing.maxCreatedAt = s._max.createdAt;
+      }
+    }
+  }
+
+  const consolidatedSessions = Array.from(consolidatedBySession.values());
+  consolidatedSessions.sort((a, b) => b.maxCreatedAt.getTime() - a.maxCreatedAt.getTime());
+
+  const mergedList: any[] = [];
+  const userSessions = new Map<string, typeof consolidatedSessions>();
+
+  for (const s of consolidatedSessions) {
     if (!s.userId) {
       mergedList.push({
         sessionIds: [s.sessionId],
         userId: null,
-        turnCount: s._count._all,
-        startedAt: s._min.createdAt ?? new Date(),
-        lastAt: s._max.createdAt ?? new Date(),
+        turnCount: s.count,
+        startedAt: s.minCreatedAt,
+        lastAt: s.maxCreatedAt,
       });
     } else {
       if (!userSessions.has(s.userId)) userSessions.set(s.userId, []);
@@ -214,24 +277,24 @@ export async function getAdminChats(search: string = '', type: string = 'resume'
         currentGroup = {
           sessionIds: [s.sessionId],
           userId,
-          turnCount: s._count._all,
-          startedAt: s._min.createdAt ?? new Date(),
-          lastAt: s._max.createdAt ?? new Date(),
+          turnCount: s.count,
+          startedAt: s.minCreatedAt,
+          lastAt: s.maxCreatedAt,
         };
       } else {
-        const diff = currentGroup.startedAt.getTime() - (s._max.createdAt ?? new Date()).getTime();
+        const diff = currentGroup.startedAt.getTime() - s.maxCreatedAt.getTime();
         if (diff <= 60 * 60 * 1000 && diff >= 0) {
           currentGroup.sessionIds.push(s.sessionId);
-          currentGroup.turnCount += s._count._all;
-          currentGroup.startedAt = s._min.createdAt ?? new Date();
+          currentGroup.turnCount += s.count;
+          currentGroup.startedAt = s.minCreatedAt;
         } else {
           mergedList.push(currentGroup);
           currentGroup = {
             sessionIds: [s.sessionId],
             userId,
-            turnCount: s._count._all,
-            startedAt: s._min.createdAt ?? new Date(),
-            lastAt: s._max.createdAt ?? new Date(),
+            turnCount: s.count,
+            startedAt: s.minCreatedAt,
+            lastAt: s.maxCreatedAt,
           };
         }
       }
@@ -248,10 +311,10 @@ export async function getAdminChats(search: string = '', type: string = 'resume'
 
   const paginated = mergedList.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const firstSessionIds = paginated.map((g) => g.sessionIds[g.sessionIds.length - 1]);
+  const allSessionIds = Array.from(new Set(paginated.flatMap((g) => g.sessionIds)));
   
   const firstTurns = await db.profileBuilderChatLog.findMany({
-    where: { sessionId: { in: firstSessionIds } },
+    where: { sessionId: { in: allSessionIds } },
     orderBy: { createdAt: "asc" },
     select: {
       sessionId: true,
@@ -274,9 +337,14 @@ export async function getAdminChats(search: string = '', type: string = 'resume'
 
   const sessions = paginated
     .map((g) => {
-      const firstSessionId = g.sessionIds[g.sessionIds.length - 1];
-      const first = firstBySession.get(firstSessionId);
-      if (!first) return null;
+      let first: (typeof firstTurns)[number] | undefined;
+      for (const sid of g.sessionIds) {
+        const found = firstBySession.get(sid);
+        if (found) {
+          first = found;
+          break;
+        }
+      }
       
       const clerkData = g.userId ? userMap.get(g.userId) : null;
       const student = clerkData ? { id: g.userId, name: clerkData.name, email: clerkData.email } : null;
@@ -286,11 +354,10 @@ export async function getAdminChats(search: string = '', type: string = 'resume'
         turnCount: g.turnCount,
         startedAt: g.startedAt.toISOString(),
         lastAt: g.lastAt.toISOString(),
-        firstMessage: first.userMessage,
+        firstMessage: first?.userMessage || '(No user message)',
         student: student || { id: 'unknown', name: 'Anonymous', email: 'N/A' },
       };
-    })
-    .filter((s): s is NonNullable<typeof s> => s !== null);
+    });
 
   return {
     sessions,

@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS "profile_builder_resume_profiles" (
   "id"                TEXT NOT NULL DEFAULT gen_random_uuid()::text,
   "userId"            TEXT NOT NULL,
   "fullNameEditsUsed" INTEGER NOT NULL DEFAULT 0,
-  "createdAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "createdAt"         TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt"         TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   CONSTRAINT "profile_builder_resume_profiles_pkey" PRIMARY KEY ("id")
 );
@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS "profile_builder_resume_name_requests" (
   "currentName"   TEXT NOT NULL,
   "requestedName" TEXT NOT NULL,
   "status"        TEXT NOT NULL DEFAULT 'PENDING',
-  "createdAt"     TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "decidedAt"     TIMESTAMP(3),
+  "createdAt"     TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "decidedAt"     TIMESTAMPTZ(3),
 
   CONSTRAINT "profile_builder_resume_name_requests_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "profile_builder_resume_name_requests_userId_fkey"

@@ -4,6 +4,8 @@ import { lookupClerkUsers } from '@/lib/clerkUserLookup';
 import { NextResponse } from 'next/server';
 import { getAdminUsers } from '@/lib/adminData';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const auth = await requireAdmin();
   if (auth instanceof NextResponse) return auth;
