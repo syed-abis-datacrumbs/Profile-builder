@@ -111,6 +111,7 @@ export function GoogleAnalytics() {
             gtag('js', new Date());
             gtag('config', '${GA_MEASUREMENT_ID}', {
               page_path: window.location.pathname + window.location.search,
+              send_page_view: false,
             });
           `,
         }}

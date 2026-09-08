@@ -10,8 +10,9 @@ declare global {
 // Track pageviews
 export function pageview(url: string) {
   if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-    window.gtag('config', GA_MEASUREMENT_ID, {
+    window.gtag('event', 'page_view', {
       page_path: url,
+      send_to: GA_MEASUREMENT_ID,
     });
   }
 }
