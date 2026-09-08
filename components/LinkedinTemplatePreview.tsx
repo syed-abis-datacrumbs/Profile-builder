@@ -32,7 +32,12 @@ import {
 import { COVER_ART, CoverArtField, getCoverArtId, computeFitScale, coverFontSize } from '../lib/linkedinCoverArt';
 import { ShrinkToFitCoverText } from './ShrinkToFitCoverText';
 
-const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  preload: false,
+  display: 'swap',
+});
 
 interface LinkedinTemplatePreviewProps {
   templateId: string;
