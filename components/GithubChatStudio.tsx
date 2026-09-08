@@ -1283,7 +1283,7 @@ export const GithubChatStudio: React.FC<{
                           </span>
                         ))}
                         {preset.techStack.length > 4 && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-400 font-medium">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
                             +{preset.techStack.length - 4}
                           </span>
                         )}

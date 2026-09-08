@@ -66,7 +66,7 @@ export const ImagineHeader: React.FC<ImagineHeaderProps> = ({
             
             {/* Dropdown Menu */}
             <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl p-2 shadow-lg z-40 flex flex-col space-y-1">
-              <div className="px-2.5 py-2 border-b border-slate-100 text-[10px] text-slate-400 font-medium truncate">
+              <div className="px-2.5 py-2 border-b border-slate-100 text-[10px] text-slate-600 font-medium truncate">
                 {userEmail}
               </div>
               <button

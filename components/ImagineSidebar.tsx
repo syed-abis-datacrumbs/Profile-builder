@@ -244,7 +244,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                       <div className="font-bold text-xs text-slate-900 truncate">
                         {userName}
                       </div>
-                      <div className="text-[10px] text-slate-400 font-medium">
+                      <div className="text-[10px] text-slate-600 font-medium">
                         {planName}
                       </div>
                     </div>
@@ -356,7 +356,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                   <div className="font-bold text-xs text-slate-900 truncate">
                     {!isLoggedIn ? "Sign in to save" : userName}
                   </div>
-                  <div className="text-[10px] text-slate-400 font-medium">
+                  <div className="text-[10px] text-slate-600 font-medium">
                     {!isLoggedIn ? "Create a free account" : planName}
                   </div>
                 </div>

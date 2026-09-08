@@ -1451,7 +1451,7 @@ export const JobHuntingLandingView: React.FC<JobHuntingLandingViewProps> = ({
               <div key={idx} className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1.5 backdrop-blur-xs">
                 <div className="text-2xl font-black text-emerald-400 tracking-tight">{target.metric}</div>
                 <div className="font-bold text-xs text-white">{target.label}</div>
-                <div className="text-[10px] text-slate-400 font-medium leading-tight">{target.detail}</div>
+                <div className="text-[10px] text-slate-300 font-medium leading-tight">{target.detail}</div>
               </div>
             ))}
           </div>

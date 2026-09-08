@@ -105,7 +105,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
             </div>
 
             {/* Table Headers */}
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-200/80 px-1">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider pb-2 border-b border-slate-200/80 px-1">
               <span>What's included in plan</span>
               <div className="flex items-center gap-8 pr-2">
                 <span>Free</span>
@@ -131,7 +131,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
 
                   <div className="flex items-center gap-9 shrink-0 pt-0.5">
                     {/* Free Status */}
-                    <span className="text-red-400 font-bold text-xs w-4 text-center">✕</span>
+                    <span className="text-rose-500 font-bold text-xs w-4 text-center">✕</span>
                     {/* Pro Status */}
                     <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
                       <Check className="w-3 h-3 stroke-[3]" />
@@ -183,8 +183,8 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] font-bold text-slate-400">⚡ 3K</div>
-                  <div className="text-[10px] text-slate-400 font-medium">$0.46/day</div>
+                  <div className="text-[10px] font-bold text-slate-600">⚡ 3K</div>
+                  <div className="text-[10px] text-slate-600 font-bold">$0.46/day</div>
                 </div>
               </div>
 
@@ -209,7 +209,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
                       <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px] font-extrabold">Save 21%</span>
                     </div>
                     <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                      <span className="line-through text-slate-400 mr-1">$14</span>
+                      <span className="line-through text-slate-500 mr-1">$14</span>
                       <span className="text-slate-900 font-bold">$11</span>
                       <span>/month</span>
                     </div>
@@ -243,7 +243,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
                         <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[9px] font-extrabold">Save 42%</span>
                       </div>
                       <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                        <span className="line-through text-slate-400 mr-1">$14</span>
+                        <span className="line-through text-slate-500 mr-1">$14</span>
                         <span className="text-slate-900 font-bold">$8</span>
                         <span>/month</span>
                       </div>
