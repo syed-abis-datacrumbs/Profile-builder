@@ -77,7 +77,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Menu className="w-5 h-5" />
           </button>
 
-          <Link href="/admin/traffic" className="flex items-center gap-2 min-w-0 group">
+          <Link href="/admin/traffic" prefetch={false} className="flex items-center gap-2 min-w-0 group">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo.png"
@@ -97,6 +97,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
         <Link
           href="/"
+          prefetch={false}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shrink-0"
         >
           <LogOut className="w-3.5 h-3.5 text-slate-400" />
@@ -131,6 +132,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200/90">
                 <Link
                   href="/admin/traffic"
+                  prefetch={false}
                   onClick={() => setIsMobileOpen(false)}
                   className="flex items-center gap-2.5 min-w-0"
                 >
@@ -169,6 +171,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={href}
                       href={href}
+                      prefetch={false}
                       onClick={() => setIsMobileOpen(false)}
                       className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all font-medium ${
                         isActive
@@ -191,6 +194,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <div className="p-3 border-t border-slate-200/90 bg-slate-50/50">
                 <Link
                   href="/"
+                  prefetch={false}
                   onClick={() => setIsMobileOpen(false)}
                   className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
                 >
@@ -222,7 +226,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               >
                 <PanelLeftOpen className="w-5 h-5 text-blue-600" />
               </button>
-              <Link href="/admin/traffic" title="MOMENTUM Admin">
+              <Link href="/admin/traffic" prefetch={false} title="MOMENTUM Admin">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/logo.png"
@@ -233,7 +237,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </>
           ) : (
             <>
-              <Link href="/admin/traffic" className="flex items-center gap-2.5 group min-w-0">
+              <Link href="/admin/traffic" prefetch={false} className="flex items-center gap-2.5 group min-w-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/logo.png"
@@ -272,6 +276,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={href}
                   href={href}
+                  prefetch={false}
                   title={label}
                   className={`w-10 h-10 flex items-center justify-center rounded-xl transition-colors cursor-pointer ${
                     isActive
@@ -288,6 +293,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={href}
                 href={href}
+                prefetch={false}
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all font-medium group ${
                   isActive
                     ? 'bg-blue-50 text-blue-600 font-semibold shadow-xs border border-blue-100/80'
@@ -310,6 +316,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           {isCollapsed ? (
             <Link
               href="/"
+              prefetch={false}
               title="Back to App"
               className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
             >
@@ -318,6 +325,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           ) : (
             <Link
               href="/"
+              prefetch={false}
               className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
             >
               <LogOut className="w-4 h-4 text-slate-400" />

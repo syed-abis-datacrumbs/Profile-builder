@@ -25,6 +25,7 @@ export function AdminSidebarNav() {
           <Link
             key={href}
             href={href}
+            prefetch={false}
             className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all font-medium group ${
               isActive
                 ? 'bg-blue-50 text-blue-600 font-semibold shadow-xs border border-blue-100/80'

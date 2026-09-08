@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Inter } from 'next/font/google';
 import {
   ArrowLeft,
   Send,
@@ -71,12 +70,7 @@ import {
   LinkedinRecommendation,
 } from '../lib/linkedinTemplateSamples';
 
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  preload: false,
-  display: 'swap',
-});
+
 
 const featuredItems = [
   {
@@ -1062,7 +1056,7 @@ export const LinkedinChatStudio: React.FC<{
           </div>
         </div>
 
-        <div className={`flex-1 overflow-y-auto p-4 sm:p-6 ${inter.className}`}>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 font-sans">
           <div className="w-full max-w-3xl mx-auto space-y-4">
             {/* ── CARD 1: Profile Header ── */}
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">

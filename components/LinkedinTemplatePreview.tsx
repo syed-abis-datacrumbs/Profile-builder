@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Inter } from 'next/font/google';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -32,12 +31,7 @@ import {
 import { COVER_ART, CoverArtField, getCoverArtId, computeFitScale, coverFontSize } from '../lib/linkedinCoverArt';
 import { ShrinkToFitCoverText } from './ShrinkToFitCoverText';
 
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  preload: false,
-  display: 'swap',
-});
+
 
 interface LinkedinTemplatePreviewProps {
   templateId: string;
@@ -106,7 +100,7 @@ export const LinkedinTemplatePreview: React.FC<LinkedinTemplatePreviewProps> = (
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.22, ease: 'easeOut' }}
-      className={`fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 ${inter.className}`}
+      className="fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 font-sans"
     >
       <motion.div
         initial={{ opacity: 0 }}
