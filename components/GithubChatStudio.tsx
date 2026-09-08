@@ -972,7 +972,7 @@ export const GithubChatStudio: React.FC<{
 
       {/* Report Issue Modal */}
       {reportIssueModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60">
           <div className="fixed inset-0" onClick={() => setReportIssueModalOpen(false)} />
           <div className="relative w-full max-w-[420px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[85vh]">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
@@ -1130,7 +1130,7 @@ export const GithubChatStudio: React.FC<{
       {/* Banner Selection Modal */}
       {showBannerPicker && (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowBannerPicker(false);
           }}
@@ -1224,7 +1224,7 @@ export const GithubChatStudio: React.FC<{
       {/* Template Selection Modal */}
       {showTemplateModal && (
         <div
-          className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4"
+          className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/65 p-3 sm:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowTemplateModal(false);
           }}

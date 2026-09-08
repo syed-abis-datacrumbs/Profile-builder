@@ -5,6 +5,7 @@ import { Sparkles, MessageSquare, X, Send, Loader2, ArrowLeft, Bot } from 'lucid
 import { motion, AnimatePresence } from 'framer-motion';
 
 export interface ChatMessage {
+  id?: string;
   role: 'user' | 'assistant';
   content: string;
 }
@@ -38,6 +39,23 @@ function renderMessageText(text: string) {
     return part;
   });
 }
+
+const MobileMessageRow = React.memo(function MobileMessageRow({ message }: { message: ChatMessage }) {
+  const renderedContent = React.useMemo(() => renderMessageText(message.content), [message.content]);
+  return (
+    <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+      <div
+        className={`rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
+          message.role === 'user'
+            ? 'bg-slate-900 text-white px-4 py-2.5 max-w-[88%] font-medium shadow-2xs'
+            : 'bg-white text-slate-800 p-3.5 max-w-[92%] border border-slate-200/80 shadow-2xs space-y-1.5'
+        }`}
+      >
+        {renderedContent}
+      </div>
+    </div>
+  );
+});
 
 export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
   isOpen,
@@ -130,7 +148,7 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={onToggle}
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] pointer-events-auto"
+              className="absolute inset-0 bg-slate-900/50 pointer-events-auto"
             />
 
             {/* Floating Drawer / Card */}
@@ -201,20 +219,7 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
                 )}
 
                 {messages.map((m, i) => (
-                  <div
-                    key={i}
-                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
-                        m.role === 'user'
-                          ? 'bg-slate-900 text-white px-4 py-2.5 max-w-[88%] font-medium shadow-2xs'
-                          : 'bg-white text-slate-800 p-3.5 max-w-[92%] border border-slate-200/80 shadow-2xs space-y-1.5'
-                      }`}
-                    >
-                      {renderMessageText(m.content)}
-                    </div>
-                  </div>
+                  <MobileMessageRow key={m.id || i} message={m} />
                 ))}
 
                 {loading && (
@@ -236,9 +241,15 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
                     rows={1}
                     value={input}
                     onChange={(e) => {
-                      setInput(e.target.value);
-                      e.target.style.height = 'auto';
-                      e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
+                      const val = e.target.value;
+                      setInput(val);
+                      requestAnimationFrame(() => {
+                        const ta = textareaRef.current;
+                        if (ta) {
+                          ta.style.height = 'auto';
+                          ta.style.height = `${Math.min(ta.scrollHeight, 96)}px`;
+                        }
+                      });
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CvPreview } from './CvPreview';
 import {
   PAGE_WIDTH_PX,
@@ -23,13 +23,72 @@ function samePages(a: CvPage[], b: CvPage[]): boolean {
   return a.length === b.length && a.every((p, i) => p.sliceStart === b[i].sliceStart);
 }
 
+function isCvDataEqual(a?: CvData, b?: CvData): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.theme !== b.theme || a.summary !== b.summary || a.cvType !== b.cvType) return false;
+  if (a.projectsBulletStyle !== b.projectsBulletStyle || a.workshopsBulletStyle !== b.workshopsBulletStyle) return false;
+  if (a.additional?.bulletStyle !== b.additional?.bulletStyle) return false;
+  if (a.additional?.skills !== b.additional?.skills || a.additional?.interests !== b.additional?.interests) return false;
+  
+  // Fast length checks
+  if (a.education?.length !== b.education?.length) return false;
+  if (a.workExperience?.length !== b.workExperience?.length) return false;
+  if (a.projects?.length !== b.projects?.length) return false;
+  if (a.certifications?.length !== b.certifications?.length) return false;
+  if (a.workshops?.length !== b.workshops?.length) return false;
+
+  // Personal info
+  const pA = a.personalInfo;
+  const pB = b.personalInfo;
+  if (pA?.fullName !== pB?.fullName || pA?.phone !== pB?.phone || pA?.email !== pB?.email ||
+      pA?.linkedin !== pB?.linkedin || pA?.linkedinLabel !== pB?.linkedinLabel ||
+      pA?.github !== pB?.github || pA?.githubLabel !== pB?.githubLabel ||
+      pA?.kaggle !== pB?.kaggle || pA?.kaggleLabel !== pB?.kaggleLabel) {
+    return false;
+  }
+
+  // Work experience
+  for (let i = 0; i < (a.workExperience?.length || 0); i++) {
+    const wA = a.workExperience[i];
+    const wB = b.workExperience[i];
+    if (wA.company !== wB.company || wA.title !== wB.title || wA.start !== wB.start ||
+        wA.end !== wB.end || wA.location !== wB.location || wA.bullets !== wB.bullets ||
+        wA.bulletStyle !== wB.bulletStyle) return false;
+  }
+
+  // Education
+  for (let i = 0; i < (a.education?.length || 0); i++) {
+    const eA = a.education[i];
+    const eB = b.education[i];
+    if (eA.institution !== eB.institution || eA.degree !== eB.degree || eA.start !== eB.start ||
+        eA.end !== eB.end || eA.location !== eB.location) return false;
+  }
+
+  // Projects
+  for (let i = 0; i < (a.projects?.length || 0); i++) {
+    const prA = a.projects[i];
+    const prB = b.projects[i];
+    if (prA.content !== prB.content || prA.title !== prB.title || prA.technologies !== prB.technologies ||
+        prA.date !== prB.date || prA.bullets !== prB.bullets) return false;
+  }
+
+  // Certifications
+  for (let i = 0; i < (a.certifications?.length || 0); i++) {
+    if (a.certifications[i].name !== b.certifications[i].name ||
+        a.certifications[i].organization !== b.certifications[i].organization) return false;
+  }
+
+  return true;
+}
+
 /**
  * Renders the resume as separate A4 page boxes — exactly like Google Docs /
  * the LMS CV builder — while keeping a hidden full-height copy as the source
  * that Puppeteer PDF export captures. Because BOTH use the same paginateCvSmart
  * algorithm, the editor page breaks and PDF page breaks are always identical.
  */
-export function PaginatedCvPreview({
+function PaginatedCvPreviewBase({
   data,
   exportRef,
   accentColor = '#4f46e5',
@@ -43,10 +102,17 @@ export function PaginatedCvPreview({
   ]);
   const [scale, setScale] = useState(1);
 
-  const renderContent = (isEditable = true) => {
+  // Memoize static (measurement/export) and editable contents so child trees
+  // don't re-create or reconcile when PaginatedCvPreview re-evaluates slice sizes.
+  const staticContent = useMemo(() => {
     if (children) return <>{children}</>;
-    return <CvPreview data={data!} onChange={isEditable ? onChange : undefined} />;
-  };
+    return <CvPreview data={data} />;
+  }, [children, data]);
+
+  const editableContent = useMemo(() => {
+    if (children) return <>{children}</>;
+    return <CvPreview data={data} onChange={onChange} />;
+  }, [children, data, onChange]);
 
   useLayoutEffect(() => {
     let frame = 0;
@@ -107,7 +173,7 @@ export function PaginatedCvPreview({
           pointerEvents: 'none',
         }}
       >
-        {renderContent(false)}
+        {staticContent}
       </div>
 
       {/* Hidden EXPORT copy — captured by Puppeteer PDF export */}
@@ -121,7 +187,7 @@ export function PaginatedCvPreview({
           pointerEvents: 'none',
         }}
       >
-        {renderContent(false)}
+        {staticContent}
       </div>
 
       {/* Visible paginated preview — one A4 box per page */}
@@ -162,7 +228,7 @@ export function PaginatedCvPreview({
                   }}
                 >
                   <div style={{ transform: `translateY(${-page.sliceStart}px)` }}>
-                    {renderContent(true)}
+                    {editableContent}
                   </div>
                 </div>
               </div>
@@ -173,3 +239,19 @@ export function PaginatedCvPreview({
     </div>
   );
 }
+
+function arePaginatedCvPreviewPropsEqual(
+  prev: PaginatedCvPreviewProps,
+  next: PaginatedCvPreviewProps
+): boolean {
+  if (prev.accentColor !== next.accentColor) return false;
+  if (prev.exportRef !== next.exportRef) return false;
+  if (prev.onChange !== next.onChange) return false;
+  if (prev.children !== next.children) return false;
+  return isCvDataEqual(prev.data, next.data);
+}
+
+export const PaginatedCvPreview = React.memo(
+  PaginatedCvPreviewBase,
+  arePaginatedCvPreviewPropsEqual
+);

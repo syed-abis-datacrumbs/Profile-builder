@@ -46,7 +46,7 @@ export const GithubTemplatePreview: React.FC<GithubTemplatePreviewProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-900/75"
         onClick={onBack}
       />
 

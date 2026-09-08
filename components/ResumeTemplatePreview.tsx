@@ -65,11 +65,8 @@ export const ResumeTemplatePreview: React.FC<ResumeTemplatePreviewProps> = ({ sa
       transition={{ duration: 0.22, ease: 'easeOut' }}
       className="fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6"
     >
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"
+      <div
+        className="absolute inset-0 bg-slate-900/75"
         onClick={onClose}
       />
 

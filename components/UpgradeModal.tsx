@@ -70,7 +70,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 animate-in fade-in duration-150">
       
       {/* Modal Container */}
       <div 

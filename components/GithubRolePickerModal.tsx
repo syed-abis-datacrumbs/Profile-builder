@@ -23,8 +23,10 @@ export const GithubRolePickerModal: React.FC<GithubRolePickerModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         className="w-full max-w-2xl max-h-[85vh] flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden"

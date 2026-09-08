@@ -48,9 +48,41 @@ import toast from '@/lib/toast';
 const PAGE_MARGIN_PX = 32;
 
 interface Msg {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
 }
+
+const MessageRow = React.memo(function MessageRow({ message }: { message: Msg }) {
+  const renderedContent = React.useMemo(() => {
+    if (!message.content.includes('**')) return message.content;
+    const parts = message.content.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <strong key={idx} className="font-bold text-slate-900">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      return part;
+    });
+  }, [message.content]);
+
+  return (
+    <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+      <div
+        className={`rounded-2xl text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${
+          message.role === 'user'
+            ? 'bg-slate-100 text-slate-900 border border-slate-200/80 px-4 py-3 max-w-[85%] font-medium'
+            : 'bg-white text-slate-800 p-4.5 max-w-[98%] border border-slate-200/60 shadow-2xs space-y-2'
+        }`}
+      >
+        {renderedContent}
+      </div>
+    </div>
+  );
+});
 
 interface NameStatus {
   fullName: string;
@@ -97,17 +129,61 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('profile_builder_resume_chat');
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.map((m: any) => ({
+              id: m.id || crypto.randomUUID(),
+              role: m.role,
+              content: m.content,
+            }));
+          }
+        }
       } catch {}
     }
     return [];
   });
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('profile_builder_resume_chat', JSON.stringify(messages));
+  const pendingMessagesRef = useRef<Msg[] | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const flushPendingMessages = useCallback(() => {
+    if (pendingMessagesRef.current && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          'profile_builder_resume_chat',
+          JSON.stringify(pendingMessagesRef.current)
+        );
+      } catch {}
+      pendingMessagesRef.current = null;
     }
-  }, [messages]);
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    pendingMessagesRef.current = messages;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      flushPendingMessages();
+    }, 200);
+
+    return () => {
+      flushPendingMessages();
+    };
+  }, [messages, flushPendingMessages]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      flushPendingMessages();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [flushPendingMessages]);
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -503,7 +579,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           ? `🎯 **Target Job ATS Match Score: ${scoreNum}%** (Target: 95%+)\n\n**Analysis & Breakdown:**\n${breakdownItems}\n\n✨ *Outstanding! Your resume achieves a 95%+ ATS compatibility score.*`
           : `🎯 **Target Job ATS Match Score: ${scoreNum}%** (Target: 95%+)\n\n**Analysis & Recommended Actions:**\n${breakdownItems}\n\n💡 *Ask me to optimize your resume or click "Auto-Inject ATS Keywords" below to reach 95%+ match!*`;
 
-        setMessages((prev) => [...prev, { role: 'assistant', content: recMsg }]);
+        setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: recMsg }]);
       }
     } catch {
       setAtsError('Failed to calculate score — check your connection.');
@@ -781,17 +857,20 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     }
   };
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages, loading]);
-
   const send = async (overrideText?: string) => {
     const text = (overrideText ?? input).trim();
     if (!text || loading) return;
     if (!isLoggedIn) { onRequireAuth(); return; }
-    const nextMessages: Msg[] = [...messages, { role: 'user', content: text }];
+    const userMsgId = crypto.randomUUID();
+    const nextMessages: Msg[] = [...messages, { id: userMsgId, role: 'user', content: text }];
     setMessages(nextMessages);
-    if (overrideText === undefined) setInput('');
+    if (overrideText === undefined) {
+      setInput('');
+      requestAnimationFrame(() => {
+        const ta = chatTextareaRef.current;
+        if (ta) ta.style.height = 'auto';
+      });
+    }
     setLoading(true);
     try {
       const res = await fetch('/api/resume-chat', {
@@ -807,7 +886,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       });
       const data = await res.json();
       if (data.error) {
-        setMessages((m) => [...m, { role: 'assistant', content: `⚠️ ${data.error}` }]);
+        setMessages((m) => [...m, { id: crypto.randomUUID(), role: 'assistant', content: `⚠️ ${data.error}` }]);
       } else {
         if (data.cv) {
           const updatedCv: CvData = {
@@ -816,10 +895,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           };
           external(cvMarkdownToHtml(updatedCv));
         }
-        setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Done.' }]);
+        setMessages((m) => [...m, { id: crypto.randomUUID(), role: 'assistant', content: data.reply || 'Done.' }]);
       }
     } catch {
-      setMessages((m) => [...m, { role: 'assistant', content: '⚠️ Something went wrong. Please try again.' }]);
+      setMessages((m) => [...m, { id: crypto.randomUUID(), role: 'assistant', content: '⚠️ Something went wrong. Please try again.' }]);
     } finally {
       setLoading(false);
     }
@@ -838,7 +917,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
 
   return (
-    <div className="flex flex-col lg:flex-row h-full w-full bg-slate-100 overflow-hidden font-sans border-0 rounded-none relative">
+    <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-64px)] overflow-hidden bg-slate-100/60 relative">
 
       {/* COLUMN 2 (AI CHAT - LEFT: Visible only on Desktop lg screens and up) */}
       <div className="hidden lg:flex lg:w-[380px] xl:w-[420px] 2xl:w-[460px] flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden">
@@ -894,26 +973,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               </div>
             </div>
           )}
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`rounded-2xl text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${m.role === 'user'
-                    ? 'bg-slate-100 text-slate-900 border border-slate-200/80 px-4 py-3 max-w-[85%] font-medium'
-                    : 'bg-white text-slate-800 p-4.5 max-w-[98%] border border-slate-200/60 shadow-2xs space-y-2'
-                  }`}
-              >
-                {(() => {
-                  if (!m.content.includes('**')) return m.content;
-                  const parts = m.content.split(/(\*\*.*?\*\*)/g);
-                  return parts.map((part, idx) => {
-                    if (part.startsWith('**') && part.endsWith('**')) {
-                      return <strong key={idx} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
-                    }
-                    return part;
-                  });
-                })()}
-              </div>
-            </div>
+          {messages.map((m) => (
+            <MessageRow key={m.id} message={m} />
           ))}
           {loading && (
             <div className="flex justify-start">
@@ -981,9 +1042,15 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 rows={1}
                 value={input}
                 onChange={(e) => {
-                  setInput(e.target.value);
-                  e.target.style.height = 'auto';
-                  e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                  const val = e.target.value;
+                  setInput(val);
+                  requestAnimationFrame(() => {
+                    const ta = chatTextareaRef.current;
+                    if (ta) {
+                      ta.style.height = 'auto';
+                      ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
+                    }
+                  });
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -1486,14 +1553,14 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
       {/* Target Job Matcher Centered Pop-up Modal */}
       {targetJobModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60">
           <div className="fixed inset-0" onClick={() => setTargetJobModalOpen(false)} />
           <div className="relative w-full max-w-[420px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[85vh]">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                 🎯 Target Job Matcher
               </h3>
-              <button onClick={() => setTargetJobModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+              <button onClick={() => setTargetJobModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1536,7 +1603,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
       {/* Report Issue Modal */}
       {reportIssueModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60">
           <div className="fixed inset-0" onClick={() => setReportIssueModalOpen(false)} />
           <div className="relative w-full max-w-[420px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[85vh]">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
@@ -1729,7 +1796,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       {/* Template Selection Modal */}
       {showTemplateModal && (
         <div
-          className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4"
+          className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/65 p-3 sm:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowTemplateModal(false);
           }}

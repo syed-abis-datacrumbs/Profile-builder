@@ -209,7 +209,12 @@ export function PaymentModal({ reason, onApproved, onClose }: PaymentModalProps)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl flex flex-col max-h-[85vh]">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 shrink-0">
           <div>
