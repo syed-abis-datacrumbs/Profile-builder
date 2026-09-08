@@ -1,6 +1,7 @@
 import { LMS_RESUME_SAMPLES, LmsResumeSample } from './resumeSamples';
 
 export const FIELD_KEYWORDS: Record<string, string[]> = {
+  'Software Engineer - Classic Overleaf ATS': ['overleaf', 'latex', 'ats', 'jake', 'jordan', 'classic ats', 'tex'],
   'AI/ML Engineer': ['ai', 'machine learning', 'ml', 'artificial intelligence', 'nlp', 'deep learning'],
   'Data Science': ['data science', 'data scientist', 'python', 'r', 'pandas', 'analytics'],
   'Full Stack Developer': ['full stack', 'fullstack', 'react', 'node', 'django', 'mern', 'mean'],

@@ -16,11 +16,12 @@ Respond with ONLY a JSON object (no markdown, no prose outside it):
 
 Resume JSON schema (keep this exact shape and keys — do NOT include a "cvType" key; the app controls that separately and will ignore it if you send one):
 {
+  "summary": "2-3 sentence impactful professional summary tailored to the target role",
   "personalInfo": { "fullName": "", "phone": "", "email": "", "linkedin": "", "linkedinLabel": "Linkedin", "github": "", "githubLabel": "GitHub", "kaggle": "", "kaggleLabel": "Kaggle" },
-  "education": [ { "institution": "", "degree": "", "start": "", "end": "" } ],
-  "workExperience": [ { "company": "", "title": "", "start": "", "end": "", "bullets": "one bullet per line\\nseparated by newlines" } ],
+  "education": [ { "institution": "", "degree": "", "start": "", "end": "", "location": "City, State or Country" } ],
+  "workExperience": [ { "company": "", "title": "", "start": "", "end": "", "location": "City, State or Country", "bullets": "one bullet per line\\nseparated by newlines" } ],
   "workshops": [ { "content": "<strong>Workshop Title</strong>: One or two descriptive sentences." } ],
-  "projects": [ { "content": "<strong>Project Title</strong> (Technologies used) – Description with impact." } ],
+  "projects": [ { "title": "Project Title", "technologies": "Technologies used", "date": "Month Year", "bullets": "one bullet per line\\nseparated by newlines", "content": "<strong>Project Title</strong> (Technologies used) – Description with impact." } ],
   "certifications": [ { "name": "", "organization": "" } ],
   "additional": { "skills": "", "interests": "" }
 }
@@ -1497,18 +1498,35 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     const safeCv: CvData = {
       ...nextCv,
       cvType,
+      theme: cv.theme || nextCv.theme || 'classic',
+      summary: (nextCv.summary && nextCv.summary.trim()) ? nextCv.summary : (cv.summary || ''),
       personalInfo: nextCv.personalInfo ?? cv.personalInfo ?? defaultPersonalInfo,
       education: cleanEducation,
       workExperience: (cvType === 'student' ? cv.workExperience ?? [] : nextCv.workExperience ?? []).filter(
         (w) => w.company || w.title || w.bullets
       ),
       workshops: (cvType === 'student' ? nextCv.workshops ?? [] : cv.workshops ?? []).filter((w) => (w.content || '').trim()),
-      projects: (nextCv.projects ?? []).filter((p) => (p.content || '').trim()),
+      projects: (nextCv.projects ?? []).filter((p) => (p.content || '').trim() || (p.title || '').trim()).map((p) => {
+        if (!p.content && p.title) {
+          const tech = p.technologies ? ` (${p.technologies})` : '';
+          const desc = p.bullets ? ` – ${p.bullets.replace(/\n/g, ' ')}` : '';
+          return { ...p, content: `<strong>${p.title}</strong>${tech}${desc}` };
+        }
+        return p;
+      }),
       certifications: uniqueCertifications,
       additional: nextCv.additional ?? cv.additional ?? defaultAdditional,
     };
 
     const reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.';
+
+    // Fallback: If summary is still blank or unchanged from initial template, extract from AI reply
+    if (!safeCv.summary || safeCv.summary === cv.summary) {
+      const summaryMatch = reply.match(/(?:PROFESSIONAL\s+SUMMARY|SUMMARY)\s*[:\n\-]+\s*([\s\S]+?)(?=\n\s*(?:[A-Z\s]{4,}:|$))/i);
+      if (summaryMatch && summaryMatch[1]?.trim()) {
+        safeCv.summary = summaryMatch[1].trim();
+      }
+    }
 
     // ───────────────────────────────────────────────────────────────────────
     // Deterministic Section Locking Architecture:

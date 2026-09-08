@@ -66,7 +66,15 @@ function Bullet({ children, marker = '•' }: { children: React.ReactNode; marke
   );
 }
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+function SectionHeading({ children, isLatex }: { children: React.ReactNode; isLatex?: boolean }) {
+  if (isLatex) {
+    return (
+      <div className="mt-3.5 mb-1.5">
+        <h2 className="text-[13.5px] font-bold tracking-wider uppercase text-slate-900 pb-0.5">{children}</h2>
+        <div className="border-t border-slate-900 w-full" />
+      </div>
+    );
+  }
   return (
     <>
       <h2 className="text-[16px] font-bold tracking-wide uppercase mt-4 mb-1">{children}</h2>
@@ -219,7 +227,7 @@ function CvPreviewBase({
   const setProj = (i: number, patch: Partial<CvProject> | string) => {
     const current = data.projects[i] || { content: '' };
     const next = typeof patch === 'string' ? { ...current, content: patch } : { ...current, ...patch };
-    const isEmpty = isBlank(next.content);
+    const isEmpty = isBlank(next.content) && isBlank(next.title);
     commit({
       ...data,
       projects: isEmpty
@@ -227,6 +235,7 @@ function CvPreviewBase({
         : data.projects.map((p, j) => (j === i ? next : p)),
     });
   };
+  const setSummary = (summary: string) => commit({ ...data, summary });
   const setWs = (i: number, content: string) => {
     const workshops = data.workshops ?? [];
     const isEmpty = isBlank(content);
@@ -355,19 +364,20 @@ function CvPreviewBase({
     onPasteLines: (h, lines) => {
       const list = [...(data.workshops ?? [])];
       list[i] = { content: h + (lines[0] ?? '') };
-      list.splice(i + 1, 0, ...lines.slice(1).map((c) => ({ content: c })));
       commit({ ...data, workshops: list });
     },
   });
 
   const isStudent = data.cvType === 'student';
+  const isLatex = data.theme === 'latex-ats';
+  const defaultBulletMarker = isLatex ? '–' : '•';
 
   const eduList = editable ? data.education : data.education.filter((e) => !isBlank(e.institution) || !isBlank(e.degree));
   const workList = editable
     ? data.workExperience
     : data.workExperience.filter((w) => !isBlank(w.company) || !isBlank(w.title) || !isBlank(w.bullets));
   const workshopList = editable ? data.workshops ?? [] : (data.workshops ?? []).filter((w) => !isBlank(w.content));
-  const projectList = editable ? data.projects : data.projects.filter((p) => !isBlank(p.content));
+  const projectList = editable ? data.projects : data.projects.filter((p) => !isBlank(p.content) || !isBlank(p.title));
   const certList = editable ? data.certifications : data.certifications.filter((c) => !isBlank(c.name) || !isBlank(c.organization));
   const hasAdditional = editable || data.additional.skills || data.additional.interests;
 
@@ -400,103 +410,788 @@ function CvPreviewBase({
 
   const p = data.personalInfo;
 
-  return (
-    <div className="bg-white text-slate-900 p-8 text-[17px] leading-snug font-serif relative">
-      {/* Header */}
-      <div data-cv-block>
-        <h1 className="text-[40px] font-bold tracking-wide text-center">
-          {editable ? <RichText html={p.fullName} placeholder="YOUR NAME" onCommit={(v) => setPersonal({ fullName: v })} /> : <Html html={p.fullName || 'YOUR NAME'} />}
-        </h1>
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center text-[16px] mt-1 text-slate-700 gap-2">
-          <div className="text-left whitespace-nowrap">
-            {editable ? <RichText html={p.phone} placeholder="Phone" onCommit={(v) => setPersonal({ phone: v })} /> : <Html html={p.phone} />}
-          </div>
-          <div className="flex flex-nowrap justify-center gap-x-3 whitespace-nowrap">
-            {Boolean(p.linkedin && p.linkedin.trim()) && (
-              <span className="inline-flex items-center group relative">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openLinkModal('linkedin', p.linkedinLabel || 'LinkedIn', p.linkedin || '');
-                  }}
-                  className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
-                  title="Click to add or change LinkedIn link"
-                >
-                  {p.linkedinLabel || 'LinkedIn'}
-                </button>
-                {editable && (
+  const renderSummary = () => {
+    if (!editable && (!data.summary || isBlank(data.summary))) return null;
+    return (
+      <section data-cv-block className="mb-2">
+        <SectionHeading isLatex={isLatex}>Summary</SectionHeading>
+        <div className="text-[13.5px] leading-relaxed text-slate-800">
+          {editable ? (
+            <RichText
+              block
+              html={data.summary || ''}
+              placeholder="Brief professional summary..."
+              onCommit={setSummary}
+            />
+          ) : (
+            <Html html={data.summary || ''} />
+          )}
+        </div>
+      </section>
+    );
+  };
+
+  const renderEducation = () => {
+    if (!editable && eduList.length === 0) return null;
+    return (
+      <section>
+        {eduList.map((edu, pos) => {
+          const i = data.education.indexOf(edu);
+          return (
+            <div key={i} data-cv-block className="mb-1.5">
+              {pos === 0 && <SectionHeading isLatex={isLatex}>Education</SectionHeading>}
+              {isLatex ? (
+                <>
+                  <div className="flex justify-between items-baseline gap-3">
+                    <span className="font-bold text-slate-950 text-[14px]">
+                      {editable ? (
+                        <RichText
+                          html={edu.institution}
+                          placeholder="Institution"
+                          onCommit={(v) => setEdu(i, { institution: v })}
+                          onEmptyBackspace={() => eduEmptyBackspace(i)}
+                        />
+                      ) : (
+                        <Html html={edu.institution} />
+                      )}
+                    </span>
+                    <span className="text-slate-800 text-[13px] shrink-0 whitespace-nowrap">
+                      {editable ? (
+                        <RichText
+                          html={edu.location || ''}
+                          placeholder="Location (e.g. Austin, TX)"
+                          onCommit={(v) => setEdu(i, { location: v })}
+                        />
+                      ) : (
+                        <Html html={edu.location || ''} />
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-baseline gap-3 text-[13px] text-slate-700 italic mb-0.5">
+                    <span>
+                      {editable ? (
+                        <RichText
+                          block
+                          html={edu.degree}
+                          placeholder="Degree"
+                          onCommit={(v) => setEdu(i, { degree: v })}
+                          onEmptyBackspace={() => eduEmptyBackspace(i)}
+                        />
+                      ) : (
+                        <Html html={edu.degree} />
+                      )}
+                    </span>
+                    <span className="shrink-0 whitespace-nowrap not-italic text-slate-700">
+                      {editable ? (
+                        <>
+                          <RichText html={edu.start} placeholder="Start" onCommit={(v) => setEdu(i, { start: v })} />
+                          {' – '}
+                          <RichText html={edu.end} placeholder="End" onCommit={(v) => setEdu(i, { end: v })} />
+                        </>
+                      ) : (
+                        (edu.start || edu.end) && <>{edu.start} – {edu.end}</>
+                      )}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-baseline gap-3">
+                    <span className="font-bold">
+                      {editable ? (
+                        <RichText
+                          html={edu.institution}
+                          placeholder="Institution"
+                          onCommit={(v) => setEdu(i, { institution: v })}
+                          onEmptyBackspace={() => eduEmptyBackspace(i)}
+                        />
+                      ) : (
+                        <Html html={edu.institution} />
+                      )}
+                    </span>
+                    <span className="text-slate-600 text-[16px] shrink-0 whitespace-nowrap">
+                      {editable ? (
+                        <>
+                          <RichText html={edu.start} placeholder="Start" onCommit={(v) => setEdu(i, { start: v })} />
+                          {' - '}
+                          <RichText html={edu.end} placeholder="End" onCommit={(v) => setEdu(i, { end: v })} />
+                        </>
+                      ) : (
+                        (edu.start || edu.end) && (
+                          <>
+                            {edu.start}
+                            {edu.start && edu.end ? ' - ' : ''}
+                            {edu.end}
+                          </>
+                        )
+                      )}
+                    </span>
+                  </div>
+                  {editable ? (
+                    <RichText
+                      block
+                      html={edu.degree}
+                      placeholder="Degree"
+                      onCommit={(v) => setEdu(i, { degree: v })}
+                      onEmptyBackspace={() => eduEmptyBackspace(i)}
+                    />
+                  ) : (
+                    edu.degree && (
+                      <div>
+                        <Html html={edu.degree} />
+                      </div>
+                    )
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </section>
+    );
+  };
+
+  const renderWorkExperience = () => {
+    if (isStudent || (!editable && workList.length === 0)) return null;
+    return (
+      <section>
+        {workList.map((job, pos) => {
+          const i = data.workExperience.indexOf(job);
+          const lines = editable ? job.bullets.split('\n') : job.bullets.split('\n').filter((l) => l.trim());
+          return (
+            <div key={i} data-cv-block className="mb-2">
+              {pos === 0 && <SectionHeading isLatex={isLatex}>Experience</SectionHeading>}
+              {isLatex ? (
+                <>
+                  <div className="flex justify-between items-baseline gap-3">
+                    <span className="font-bold text-slate-950 text-[14px]">
+                      {editable ? (
+                        <RichText
+                          html={job.company}
+                          placeholder="Company"
+                          onCommit={(v) => setWork(i, { company: v })}
+                          onEmptyBackspace={() => workEmptyBackspace(i)}
+                        />
+                      ) : (
+                        <Html html={job.company} />
+                      )}
+                    </span>
+                    <span className="text-slate-800 text-[13px] shrink-0 whitespace-nowrap">
+                      {editable ? (
+                        <RichText
+                          html={job.location || ''}
+                          placeholder="Location (e.g. San Francisco, CA)"
+                          onCommit={(v) => setWork(i, { location: v })}
+                        />
+                      ) : (
+                        <Html html={job.location || ''} />
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-baseline gap-3 text-[13px] text-slate-700 italic mb-0.5">
+                    <span>
+                      {editable ? (
+                        <RichText
+                          html={job.title}
+                          placeholder="Title"
+                          onCommit={(v) => setWork(i, { title: v })}
+                          onEmptyBackspace={() => workEmptyBackspace(i)}
+                        />
+                      ) : (
+                        <Html html={job.title} />
+                      )}
+                    </span>
+                    <span className="shrink-0 whitespace-nowrap not-italic text-slate-700">
+                      {editable ? (
+                        <>
+                          <RichText html={job.start} placeholder="Start" onCommit={(v) => setWork(i, { start: v })} />
+                          {' – '}
+                          <RichText html={job.end} placeholder="End" onCommit={(v) => setWork(i, { end: v })} />
+                        </>
+                      ) : (
+                        (job.start || job.end) && <>{job.start} – {job.end}</>
+                      )}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between items-baseline gap-3">
+                  <span className="font-bold">
+                    {editable ? (
+                      <>
+                        <RichText html={job.company} placeholder="Company" onCommit={(v) => setWork(i, { company: v })} onEmptyBackspace={() => workEmptyBackspace(i)} />
+                        {' – '}
+                        <RichText html={job.title} placeholder="Title" onCommit={(v) => setWork(i, { title: v })} onEmptyBackspace={() => workEmptyBackspace(i)} />
+                      </>
+                    ) : (
+                      <>
+                        <Html html={job.company} />
+                        {job.company && job.title ? ' – ' : ''}
+                        <Html html={job.title} />
+                      </>
+                    )}
+                  </span>
+                  <span className="text-slate-600 text-[16px] shrink-0 whitespace-nowrap">
+                    {editable ? (
+                      <>
+                        <RichText html={job.start} placeholder="Start" onCommit={(v) => setWork(i, { start: v })} />
+                        {'- '}
+                        <RichText html={job.end} placeholder="End" onCommit={(v) => setWork(i, { end: v })} />
+                      </>
+                    ) : (
+                      (job.start || job.end) && <>{job.start}- {job.end}</>
+                    )}
+                  </span>
+                </div>
+              )}
+              {lines.length > 0 && (
+                <div className="mt-0.5 space-y-0.5" data-bullet-group={`we-${i}`}>
+                  {lines.map((line, j) => (
+                    <Bullet key={j} marker={job.bulletStyle === 'number' ? `${j + 1}.` : defaultBulletMarker}>
+                      {editable ? (
+                        <RichText block html={line} placeholder="Bullet point" onCommit={(v) => setBulletLine(i, j, v)} bullet={keysFor(i, j)} />
+                      ) : (
+                        <Html html={line} />
+                      )}
+                    </Bullet>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </section>
+    );
+  };
+
+  const renderProjects = () => {
+    if (!editable && projectList.length === 0) return null;
+    return (
+      <section data-bullet-group="projects">
+        <SectionHeading isLatex={isLatex}>Projects</SectionHeading>
+        {projectList.map((proj, pos) => {
+          const i = data.projects.indexOf(proj);
+          const hasLink = !!extractLinkFromProject(proj);
+          const isTargeted = editable && activeProjectIndex === i;
+          const isStructuredLatex = isLatex && Boolean(proj.title || proj.technologies || proj.date);
+          return (
+            <div
+              key={i}
+              data-cv-block
+              className="mb-1.5 relative group/proj-item"
+              onMouseEnter={() => setHoveredProjectIndex(i)}
+              onMouseLeave={() => setHoveredProjectIndex((prev) => (prev === i ? null : prev))}
+              onFocus={() => setFocusedProjectIndex(i)}
+              onBlur={() => setFocusedProjectIndex((prev) => (prev === i ? null : prev))}
+            >
+              {isTargeted && (
+                <div className="absolute -top-2.5 left-6 z-30 transition-all duration-150 flex items-center gap-1 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-100">
                   <button
-                    onClick={() => setPersonal({ linkedin: '', linkedinLabel: '' })}
-                    className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
-                    title="Remove"
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openProjectLinkModal(i);
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[11px] font-sans font-medium shadow-lg hover:bg-blue-600 transition-colors cursor-pointer border border-white/20"
                   >
-                    <span className="text-[10px] font-bold leading-none mb-[1px]">✕</span>
+                    <span className="text-[10px]">🔗</span>
+                    <span>{hasLink ? 'Edit Link' : 'Add Link'}</span>
                   </button>
+                  {hasLink && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newContent = applyLinkToProjectContent(proj.content, '');
+                        setProj(i, { content: newContent, link: undefined, linkLabel: undefined });
+                      }}
+                      className="w-4 h-4 rounded-full bg-slate-800 text-slate-300 hover:text-white hover:bg-red-600 flex items-center justify-center text-[9px] transition-colors cursor-pointer shadow-md"
+                      title="Remove link"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {isStructuredLatex ? (
+                <div className="w-full">
+                  <div className="flex justify-between items-baseline gap-3">
+                    <div>
+                      <span className="font-bold text-slate-950 text-[14px]">
+                        {editable ? (
+                          <RichText
+                            html={proj.title || ''}
+                            placeholder="Project Title"
+                            onCommit={(v) => setProj(i, { title: v })}
+                            onEmptyBackspace={() => projectEmptyBackspace(i)}
+                          />
+                        ) : (
+                          <Html html={proj.title || ''} />
+                        )}
+                      </span>
+                      {(editable || proj.technologies) && (
+                        <span className="italic text-slate-700 text-[13px]">
+                          {' | '}
+                          {editable ? (
+                            <RichText
+                              html={proj.technologies || ''}
+                              placeholder="React, Node.js"
+                              onCommit={(v) => setProj(i, { technologies: v })}
+                            />
+                          ) : (
+                            <Html html={proj.technologies || ''} />
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    {(editable || proj.date) && (
+                      <span className="text-[13px] text-slate-700 shrink-0">
+                        {editable ? (
+                          <RichText
+                            html={proj.date || ''}
+                            placeholder="Date (e.g. Jan 2024)"
+                            onCommit={(v) => setProj(i, { date: v })}
+                          />
+                        ) : (
+                          <Html html={proj.date || ''} />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  {proj.bullets ? (
+                    <div className="mt-0.5 space-y-0.5">
+                      {proj.bullets.split('\n').map((line, bj) => (
+                        <Bullet key={bj} marker={defaultBulletMarker}>
+                          {editable ? (
+                            <RichText
+                              block
+                              html={line}
+                              placeholder="Bullet point"
+                              onCommit={(v) => {
+                                const bLines = (proj.bullets || '').split('\n');
+                                bLines[bj] = v;
+                                setProj(i, { bullets: bLines.join('\n') });
+                              }}
+                            />
+                          ) : (
+                            <Html html={line} />
+                          )}
+                        </Bullet>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-0.5">
+                      <Bullet marker={defaultBulletMarker}>
+                        {editable ? (
+                          <RichText
+                            block
+                            html={proj.content}
+                            placeholder="Project description / bullet points"
+                            onCommit={(v) => setProj(i, v)}
+                            bullet={projKeysFor(i)}
+                            onEmptyBackspace={() => projectEmptyBackspace(i)}
+                          />
+                        ) : (
+                          <Html html={proj.content} />
+                        )}
+                      </Bullet>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Bullet marker={data.projectsBulletStyle === 'number' ? `${pos + 1}.` : defaultBulletMarker}>
+                  <div className="w-full">
+                    {editable ? (
+                      <RichText
+                        block
+                        html={proj.content}
+                        placeholder="Project Title (Technologies) – Description"
+                        onCommit={(v) => setProj(i, v)}
+                        bullet={projKeysFor(i)}
+                        onEmptyBackspace={() => projectEmptyBackspace(i)}
+                      />
+                    ) : (
+                      <Html html={proj.content} />
+                    )}
+                  </div>
+                </Bullet>
+              )}
+            </div>
+          );
+        })}
+      </section>
+    );
+  };
+
+  const renderWorkshops = () => {
+    if (!isStudent || (!editable && workshopList.length === 0)) return null;
+    return (
+      <section data-bullet-group="workshops">
+        <SectionHeading isLatex={isLatex}>Workshops</SectionHeading>
+        {workshopList.map((ws, pos) => {
+          const i = (data.workshops ?? []).indexOf(ws);
+          return (
+            <div key={i} data-cv-block className="mb-1">
+              <Bullet marker={data.workshopsBulletStyle === 'number' ? `${pos + 1}.` : defaultBulletMarker}>
+                {editable ? (
+                  <RichText
+                    block
+                    html={ws.content}
+                    placeholder="Workshop Title: Description"
+                    onCommit={(v) => setWs(i, v)}
+                    bullet={wsKeysFor(i)}
+                    onEmptyBackspace={() => workshopEmptyBackspace(i)}
+                  />
+                ) : (
+                  <Html html={ws.content} />
                 )}
-              </span>
+              </Bullet>
+            </div>
+          );
+        })}
+      </section>
+    );
+  };
+
+  const renderCertifications = () => {
+    if (!editable && certRows.length === 0) return null;
+    return (
+      <section>
+        {certRows.map((row, ri) => (
+          <div key={ri} data-cv-block>
+            {ri === 0 && <SectionHeading isLatex={isLatex}>{isLatex ? 'Certifications' : 'Professional Certifications'}</SectionHeading>}
+            <div className="grid grid-cols-2 gap-x-4 mb-1">
+              {row.map((cert) => {
+                const i = data.certifications.indexOf(cert);
+                return (
+                  <div key={i} className="relative group/cert-item">
+                    {editable && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          deleteCert(i);
+                        }}
+                        className="opacity-0 group-hover/cert-item:opacity-100 absolute -top-1.5 -right-1 w-4 h-4 rounded-full bg-slate-100 hover:bg-red-500 text-slate-400 hover:text-white flex items-center justify-center text-[9px] font-bold transition-all shadow-sm cursor-pointer z-10 print:hidden border border-slate-300 hover:border-red-500"
+                        title="Delete certification"
+                        aria-label="Delete certification"
+                      >
+                        ✕
+                      </button>
+                    )}
+                    <div className="font-bold pr-3">
+                      {editable ? <RichText html={cert.name} placeholder="Certification" onCommit={(v) => setCert(i, { name: v })} onEmptyBackspace={() => certEmptyBackspace(i)} /> : <Html html={cert.name} />}
+                    </div>
+                    {editable ? (
+                      <div className="text-slate-600">(<RichText html={cert.organization} placeholder="Organization" onCommit={(v) => setCert(i, { organization: v })} onEmptyBackspace={() => certEmptyBackspace(i)} />)</div>
+                    ) : (
+                      cert.organization && <div className="text-slate-600">(<Html html={cert.organization} />)</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </section>
+    );
+  };
+
+  const renderAdditional = () => {
+    if (!hasAdditional) return null;
+    return (
+      <section data-bullet-group="additional">
+        <div data-cv-block>
+          <SectionHeading isLatex={isLatex}>{isLatex ? 'Technical Skills' : 'Additional'}</SectionHeading>
+          {isLatex ? (
+            <div className="space-y-1 text-[13.5px]">
+              {editable ? (
+                <RichText
+                  block
+                  html={data.additional.skills}
+                  placeholder="Languages: ...&#10;Frameworks: ...&#10;Tools & Platforms: ..."
+                  onCommit={(v) => setAdditional({ skills: v })}
+                />
+              ) : (
+                (data.additional.skills || '')
+                  .split('\n')
+                  .filter((l) => l.trim())
+                  .map((line, si) => {
+                    const colonMatch = line.match(/^([^:]+):\s*(.*)$/);
+                    if (colonMatch && !line.includes('<strong') && !line.includes('<b>')) {
+                      return (
+                        <div key={si} className="leading-snug">
+                          <span className="font-bold text-slate-950">{colonMatch[1]}: </span>
+                          <span className="text-slate-800">{colonMatch[2]}</span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={si} className="leading-snug">
+                        <Html html={line} />
+                      </div>
+                    );
+                  })
+              )}
+              {(editable || data.additional.interests) && (
+                <div className="pt-0.5">
+                  <span className="font-bold text-slate-950">Interests: </span>
+                  {editable ? (
+                    <RichText
+                      html={data.additional.interests}
+                      placeholder="Interests…"
+                      onCommit={(v) => setAdditional({ interests: v })}
+                    />
+                  ) : (
+                    <Html html={data.additional.interests} />
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              <Bullet marker={data.additional.bulletStyle === 'number' ? '1.' : '•'}>
+                <span className="font-bold">Technical Skills:</span>{' '}
+                {editable ? <RichText html={data.additional.skills} placeholder="Skills…" onCommit={(v) => setAdditional({ skills: v })} /> : <Html html={data.additional.skills} />}
+              </Bullet>
+              {(editable || data.additional.interests) && (
+                <Bullet marker={data.additional.bulletStyle === 'number' ? '2.' : '•'}>
+                  <span className="font-bold">Interests:</span>{' '}
+                  {editable ? <RichText html={data.additional.interests} placeholder="Interests…" onCommit={(v) => setAdditional({ interests: v })} /> : <Html html={data.additional.interests} />}
+                </Bullet>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  };
+
+  return (
+    <div
+      className={`bg-white text-slate-900 ${
+        isLatex ? 'p-8 text-[13.5px] leading-normal' : 'p-8 text-[17px] leading-snug font-serif'
+      } relative`}
+      style={
+        isLatex
+          ? {
+              fontFamily:
+                "'CMU Serif', 'Latin Modern Roman', 'Computer Modern', 'Times New Roman', Times, serif",
+            }
+          : undefined
+      }
+    >
+      {/* Header */}
+      <div data-cv-block className={isLatex ? 'text-center mb-2.5' : ''}>
+        <h1
+          className={
+            isLatex
+              ? 'text-[28px] font-bold tracking-normal text-slate-950 text-center'
+              : 'text-[40px] font-bold tracking-wide text-center'
+          }
+        >
+          {editable ? (
+            <RichText html={p.fullName} placeholder="YOUR NAME" onCommit={(v) => setPersonal({ fullName: v })} />
+          ) : (
+            <Html html={p.fullName || 'YOUR NAME'} />
+          )}
+        </h1>
+
+        {isLatex ? (
+          <div className="flex flex-wrap items-center justify-center gap-x-2 text-[13px] text-slate-800 mt-1">
+            {editable ? (
+              <RichText html={p.phone} placeholder="Phone" onCommit={(v) => setPersonal({ phone: v })} />
+            ) : (
+              p.phone && <span>{p.phone}</span>
+            )}
+            {Boolean(p.email) && (
+              <>
+                <span className="text-slate-400">|</span>
+                {editable ? (
+                  <RichText html={p.email} placeholder="email@example.com" onCommit={(v) => setPersonal({ email: v })} />
+                ) : (
+                  <a href={`mailto:${p.email}`} className="text-blue-700 underline hover:text-blue-900">{p.email}</a>
+                )}
+              </>
+            )}
+            {Boolean(p.linkedin && p.linkedin.trim()) && (
+              <>
+                <span className="text-slate-400">|</span>
+                <span className="inline-flex items-center group relative">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openLinkModal('linkedin', p.linkedinLabel || 'LinkedIn', p.linkedin || '');
+                    }}
+                    className="text-blue-700 underline hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                    title="Click to change LinkedIn link"
+                  >
+                    {p.linkedinLabel || p.linkedin.replace(/^https?:\/\/(www\.)?/, '')}
+                  </button>
+                  {editable && (
+                    <button
+                      onClick={() => setPersonal({ linkedin: '', linkedinLabel: '' })}
+                      className="ml-1 flex items-center justify-center w-3 h-3 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
+                      title="Remove"
+                    >
+                      <span className="text-[9px] font-bold leading-none mb-[1px]">✕</span>
+                    </button>
+                  )}
+                </span>
+              </>
             )}
             {Boolean(p.github && p.github.trim()) && (
-              <span className="inline-flex items-center group relative">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openLinkModal('github', p.githubLabel || 'GitHub', p.github || '');
-                  }}
-                  className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
-                  title="Click to add or change GitHub link"
-                >
-                  {p.githubLabel || 'GitHub'}
-                </button>
-                {editable && (
+              <>
+                <span className="text-slate-400">|</span>
+                <span className="inline-flex items-center group relative">
                   <button
-                    onClick={() => setPersonal({ github: '', githubLabel: '' })}
-                    className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
-                    title="Remove"
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openLinkModal('github', p.githubLabel || 'GitHub', p.github || '');
+                    }}
+                    className="text-blue-700 underline hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                    title="Click to change GitHub link"
                   >
-                    <span className="text-[10px] font-bold leading-none mb-[1px]">✕</span>
+                    {p.githubLabel || p.github.replace(/^https?:\/\/(www\.)?/, '')}
                   </button>
-                )}
-              </span>
+                  {editable && (
+                    <button
+                      onClick={() => setPersonal({ github: '', githubLabel: '' })}
+                      className="ml-1 flex items-center justify-center w-3 h-3 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
+                      title="Remove"
+                    >
+                      <span className="text-[9px] font-bold leading-none mb-[1px]">✕</span>
+                    </button>
+                  )}
+                </span>
+              </>
             )}
             {Boolean(p.kaggle && p.kaggle.trim()) && (
-              <span className="inline-flex items-center group relative">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openLinkModal('kaggle', p.kaggleLabel || 'Kaggle', p.kaggle || '');
-                  }}
-                  className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
-                  title="Click to add or change Kaggle link"
-                >
-                  {p.kaggleLabel || 'Kaggle'}
-                </button>
-                {editable && (
+              <>
+                <span className="text-slate-400">|</span>
+                <span className="inline-flex items-center group relative">
                   <button
-                    onClick={() => setPersonal({ kaggle: '', kaggleLabel: '' })}
-                    className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
-                    title="Remove"
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openLinkModal('kaggle', p.kaggleLabel || 'Kaggle', p.kaggle || '');
+                    }}
+                    className="text-blue-700 underline hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                    title="Click to change Kaggle link"
                   >
-                    <span className="text-[10px] font-bold leading-none mb-[1px]">✕</span>
+                    {p.kaggleLabel || p.kaggle.replace(/^https?:\/\/(www\.)?/, '')}
                   </button>
-                )}
-              </span>
+                  {editable && (
+                    <button
+                      onClick={() => setPersonal({ kaggle: '', kaggleLabel: '' })}
+                      className="ml-1 flex items-center justify-center w-3 h-3 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
+                      title="Remove"
+                    >
+                      <span className="text-[9px] font-bold leading-none mb-[1px]">✕</span>
+                    </button>
+                  )}
+                </span>
+              </>
             )}
           </div>
-          <div className="text-right text-blue-700 underline whitespace-nowrap">
-            {editable ? (
-              <RichText html={p.email} placeholder="email@example.com" onCommit={(v) => setPersonal({ email: v })} />
-            ) : (
-              p.email && (
-                <a href={`mailto:${p.email}`} className="text-blue-700 underline">
-                  {p.email}
-                </a>
-              )
-            )}
+        ) : (
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center text-[16px] mt-1 text-slate-700 gap-2">
+            <div className="text-left whitespace-nowrap">
+              {editable ? <RichText html={p.phone} placeholder="Phone" onCommit={(v) => setPersonal({ phone: v })} /> : <Html html={p.phone} />}
+            </div>
+            <div className="flex flex-nowrap justify-center gap-x-3 whitespace-nowrap">
+              {Boolean(p.linkedin && p.linkedin.trim()) && (
+                <span className="inline-flex items-center group relative">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openLinkModal('linkedin', p.linkedinLabel || 'LinkedIn', p.linkedin || '');
+                    }}
+                    className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                    title="Click to add or change LinkedIn link"
+                  >
+                    {p.linkedinLabel || 'LinkedIn'}
+                  </button>
+                  {editable && (
+                    <button
+                      onClick={() => setPersonal({ linkedin: '', linkedinLabel: '' })}
+                      className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
+                      title="Remove"
+                    >
+                      <span className="text-[10px] font-bold leading-none mb-[1px]">✕</span>
+                    </button>
+                  )}
+                </span>
+              )}
+              {Boolean(p.github && p.github.trim()) && (
+                <span className="inline-flex items-center group relative">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openLinkModal('github', p.githubLabel || 'GitHub', p.github || '');
+                    }}
+                    className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                    title="Click to add or change GitHub link"
+                  >
+                    {p.githubLabel || 'GitHub'}
+                  </button>
+                  {editable && (
+                    <button
+                      onClick={() => setPersonal({ github: '', githubLabel: '' })}
+                      className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
+                      title="Remove"
+                    >
+                      <span className="text-[10px] font-bold leading-none mb-[1px]">✕</span>
+                    </button>
+                  )}
+                </span>
+              )}
+              {Boolean(p.kaggle && p.kaggle.trim()) && (
+                <span className="inline-flex items-center group relative">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openLinkModal('kaggle', p.kaggleLabel || 'Kaggle', p.kaggle || '');
+                    }}
+                    className="text-blue-700 underline font-serif text-[16px] hover:text-blue-900 cursor-pointer bg-transparent border-0 p-0"
+                    title="Click to add or change Kaggle link"
+                  >
+                    {p.kaggleLabel || 'Kaggle'}
+                  </button>
+                  {editable && (
+                    <button
+                      onClick={() => setPersonal({ kaggle: '', kaggleLabel: '' })}
+                      className="ml-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all focus:outline-none"
+                      title="Remove"
+                    >
+                      <span className="text-[10px] font-bold leading-none mb-[1px]">✕</span>
+                    </button>
+                  )}
+                </span>
+              )}
+            </div>
+            <div className="text-right text-blue-700 underline whitespace-nowrap">
+              {editable ? (
+                <RichText html={p.email} placeholder="email@example.com" onCommit={(v) => setPersonal({ email: v })} />
+              ) : (
+                p.email && (
+                  <a href={`mailto:${p.email}`} className="text-blue-700 underline">
+                    {p.email}
+                  </a>
+                )
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Social Link Edit Modal */}
@@ -683,277 +1378,26 @@ function CvPreviewBase({
         </div>
       )}
 
-      {(editable || eduList.length > 0) && (
-        <section>
-          {eduList.map((edu, pos) => {
-            const i = data.education.indexOf(edu);
-            return (
-              <div key={i} data-cv-block className="mb-1.5">
-                {pos === 0 && <SectionHeading>Education</SectionHeading>}
-                <div className="flex justify-between items-baseline gap-3">
-                  <span className="font-bold">
-                    {editable ? (
-                      <RichText
-                        html={edu.institution}
-                        placeholder="Institution"
-                        onCommit={(v) => setEdu(i, { institution: v })}
-                        onEmptyBackspace={() => eduEmptyBackspace(i)}
-                      />
-                    ) : (
-                      <Html html={edu.institution} />
-                    )}
-                  </span>
-                  <span className="text-slate-600 text-[16px] shrink-0 whitespace-nowrap">
-                    {editable ? (
-                      <>
-                        <RichText html={edu.start} placeholder="Start" onCommit={(v) => setEdu(i, { start: v })} />
-                        {' - '}
-                        <RichText html={edu.end} placeholder="End" onCommit={(v) => setEdu(i, { end: v })} />
-                      </>
-                    ) : (
-                      (edu.start || edu.end) && (
-                        <>
-                          {edu.start}
-                          {edu.start && edu.end ? ' - ' : ''}
-                          {edu.end}
-                        </>
-                      )
-                    )}
-                  </span>
-                </div>
-                {editable ? (
-                  <RichText
-                    block
-                    html={edu.degree}
-                    placeholder="Degree"
-                    onCommit={(v) => setEdu(i, { degree: v })}
-                    onEmptyBackspace={() => eduEmptyBackspace(i)}
-                  />
-                ) : (
-                  edu.degree && (
-                    <div>
-                      <Html html={edu.degree} />
-                    </div>
-                  )
-                )}
-              </div>
-            );
-          })}
-        </section>
-      )}
-
-      {/* Work Experience — professional layout only. */}
-      {!isStudent && (editable || workList.length > 0) && (
-        <section>
-          {workList.map((job, pos) => {
-            const i = data.workExperience.indexOf(job);
-            const lines = editable ? job.bullets.split('\n') : job.bullets.split('\n').filter((l) => l.trim());
-            return (
-              <div key={i} data-cv-block className="mb-2">
-                {pos === 0 && <SectionHeading>Work Experience</SectionHeading>}
-                <div className="flex justify-between items-baseline gap-3">
-                  <span className="font-bold">
-                    {editable ? (
-                      <>
-                        <RichText html={job.company} placeholder="Company" onCommit={(v) => setWork(i, { company: v })} onEmptyBackspace={() => workEmptyBackspace(i)} />
-                        {' – '}
-                        <RichText html={job.title} placeholder="Title" onCommit={(v) => setWork(i, { title: v })} onEmptyBackspace={() => workEmptyBackspace(i)} />
-                      </>
-                    ) : (
-                      <>
-                        <Html html={job.company} />
-                        {job.company && job.title ? ' – ' : ''}
-                        <Html html={job.title} />
-                      </>
-                    )}
-                  </span>
-                  <span className="text-slate-600 text-[16px] shrink-0 whitespace-nowrap">
-                    {editable ? (
-                      <>
-                        <RichText html={job.start} placeholder="Start" onCommit={(v) => setWork(i, { start: v })} />
-                        {'- '}
-                        <RichText html={job.end} placeholder="End" onCommit={(v) => setWork(i, { end: v })} />
-                      </>
-                    ) : (
-                      (job.start || job.end) && <>{job.start}- {job.end}</>
-                    )}
-                  </span>
-                </div>
-                {lines.length > 0 && (
-                  <div className="mt-0.5 space-y-0.5" data-bullet-group={`we-${i}`}>
-                    {lines.map((line, j) => (
-                      <Bullet key={j} marker={job.bulletStyle === 'number' ? `${j + 1}.` : '•'}>
-                        {editable ? <RichText block html={line} placeholder="Bullet point" onCommit={(v) => setBulletLine(i, j, v)} bullet={keysFor(i, j)} /> : <Html html={line} />}
-                      </Bullet>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </section>
-      )}
-
-      {(editable || projectList.length > 0) && (
-        <section data-bullet-group="projects">
-          <SectionHeading>Projects</SectionHeading>
-          {projectList.map((proj, pos) => {
-            const i = data.projects.indexOf(proj);
-            const hasLink = !!extractLinkFromProject(proj);
-            const isTargeted = editable && activeProjectIndex === i;
-            return (
-              <div
-                key={i}
-                data-cv-block
-                className="mb-1.5 relative group/proj-item"
-                onMouseEnter={() => setHoveredProjectIndex(i)}
-                onMouseLeave={() => setHoveredProjectIndex((prev) => (prev === i ? null : prev))}
-                onFocus={() => setFocusedProjectIndex(i)}
-                onBlur={() => setFocusedProjectIndex((prev) => (prev === i ? null : prev))}
-              >
-                {/* Floating "Add Link" / "Edit Link" pill above the project - ONLY for the targeted project */}
-                {isTargeted && (
-                  <div className="absolute -top-2.5 left-6 z-30 transition-all duration-150 flex items-center gap-1 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-100">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        openProjectLinkModal(i);
-                      }}
-                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[11px] font-sans font-medium shadow-lg hover:bg-blue-600 transition-colors cursor-pointer border border-white/20"
-                    >
-                      <span className="text-[10px]">🔗</span>
-                      <span>{hasLink ? 'Edit Link' : 'Add Link'}</span>
-                    </button>
-                    {hasLink && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const newContent = applyLinkToProjectContent(proj.content, '');
-                          setProj(i, { content: newContent, link: undefined, linkLabel: undefined });
-                        }}
-                        className="w-4 h-4 rounded-full bg-slate-800 text-slate-300 hover:text-white hover:bg-red-600 flex items-center justify-center text-[9px] transition-colors cursor-pointer shadow-md"
-                        title="Remove link"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                <Bullet marker={data.projectsBulletStyle === 'number' ? `${pos + 1}.` : '•'}>
-                  <div className="w-full">
-                    {editable ? (
-                      <RichText
-                        block
-                        html={proj.content}
-                        placeholder="Project Title (Technologies) – Description"
-                        onCommit={(v) => setProj(i, v)}
-                        bullet={projKeysFor(i)}
-                        onEmptyBackspace={() => projectEmptyBackspace(i)}
-                      />
-                    ) : (
-                      <Html html={proj.content} />
-                    )}
-                  </div>
-                </Bullet>
-              </div>
-            );
-          })}
-        </section>
-      )}
-
-      {/* Workshops — student layout only, right after Projects. */}
-      {isStudent && (editable || workshopList.length > 0) && (
-        <section data-bullet-group="workshops">
-          {workshopList.map((ws, pos) => {
-            const i = (data.workshops ?? []).indexOf(ws);
-            return (
-              <div key={i} data-cv-block className="mb-1">
-                {pos === 0 && <SectionHeading>Workshops</SectionHeading>}
-                <Bullet marker={data.workshopsBulletStyle === 'number' ? `${pos + 1}.` : '•'}>
-                  {editable ? (
-                    <RichText
-                      block
-                      html={ws.content}
-                      placeholder="Workshop Title: Description"
-                      onCommit={(v) => setWs(i, v)}
-                      bullet={wsKeysFor(i)}
-                      onEmptyBackspace={() => workshopEmptyBackspace(i)}
-                    />
-                  ) : (
-                    <Html html={ws.content} />
-                  )}
-                </Bullet>
-              </div>
-            );
-          })}
-        </section>
-      )}
-
-      {(editable || certRows.length > 0) && (
-        <section>
-          {certRows.map((row, ri) => (
-            <div key={ri} data-cv-block>
-              {ri === 0 && <SectionHeading>Professional Certifications</SectionHeading>}
-              <div className="grid grid-cols-2 gap-x-4 mb-1">
-                {row.map((cert) => {
-                  const i = data.certifications.indexOf(cert);
-                  return (
-                    <div key={i} className="relative group/cert-item">
-                      {editable && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            deleteCert(i);
-                          }}
-                          className="opacity-0 group-hover/cert-item:opacity-100 absolute -top-1.5 -right-1 w-4 h-4 rounded-full bg-slate-100 hover:bg-red-500 text-slate-400 hover:text-white flex items-center justify-center text-[9px] font-bold transition-all shadow-sm cursor-pointer z-10 print:hidden border border-slate-300 hover:border-red-500"
-                          title="Delete certification"
-                          aria-label="Delete certification"
-                        >
-                          ✕
-                        </button>
-                      )}
-                      <div className="font-bold pr-3">
-                        {editable ? <RichText html={cert.name} placeholder="Certification" onCommit={(v) => setCert(i, { name: v })} onEmptyBackspace={() => certEmptyBackspace(i)} /> : <Html html={cert.name} />}
-                      </div>
-                      {editable ? (
-                        <div className="text-slate-600">(<RichText html={cert.organization} placeholder="Organization" onCommit={(v) => setCert(i, { organization: v })} onEmptyBackspace={() => certEmptyBackspace(i)} />)</div>
-                      ) : (
-                        cert.organization && <div className="text-slate-600">(<Html html={cert.organization} />)</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {hasAdditional && (
-        <section data-bullet-group="additional">
-          <div data-cv-block>
-            <SectionHeading>Additional</SectionHeading>
-            <div className="space-y-0.5">
-              <Bullet marker={data.additional.bulletStyle === 'number' ? '1.' : '•'}>
-                <span className="font-bold">Technical Skills:</span>{' '}
-                {editable ? <RichText html={data.additional.skills} placeholder="Skills…" onCommit={(v) => setAdditional({ skills: v })} /> : <Html html={data.additional.skills} />}
-              </Bullet>
-              {(editable || data.additional.interests) && (
-                <Bullet marker={data.additional.bulletStyle === 'number' ? '2.' : '•'}>
-                  <span className="font-bold">Interests:</span>{' '}
-                  {editable ? <RichText html={data.additional.interests} placeholder="Interests…" onCommit={(v) => setAdditional({ interests: v })} /> : <Html html={data.additional.interests} />}
-                </Bullet>
-              )}
-            </div>
-          </div>
-        </section>
+      {/* Sections rendering with layout order support */}
+      {isLatex ? (
+        <>
+          {renderSummary()}
+          {renderWorkExperience()}
+          {renderProjects()}
+          {renderEducation()}
+          {renderCertifications()}
+          {renderAdditional()}
+        </>
+      ) : (
+        <>
+          {renderSummary()}
+          {renderEducation()}
+          {renderWorkExperience()}
+          {renderWorkshops()}
+          {renderProjects()}
+          {renderCertifications()}
+          {renderAdditional()}
+        </>
       )}
     </div>
   );

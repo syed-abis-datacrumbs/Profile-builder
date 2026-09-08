@@ -1,6 +1,31 @@
-# MOMENTUM (Profile Builder) — Developer & Context Guide
+# MOMENTUM (Profile Builder) — Developer & Agent Guide
 
-This document captures the complete architectural context, engineering conventions, environment setup with **Bun**, and critical **Do's and Don'ts** established for the MOMENTUM Profile Builder application.
+<!-- 
+=============================================================================
+🤖 AGENT MANDATORY DIRECTIVE: READ & SELF-UPDATE
+=============================================================================
+This file is the living single source of truth for the MOMENTUM codebase.
+1. Any AI agent operating in this repository MUST read and adhere to all rules,
+   architecture patterns, and constraints defined in this file.
+2. CONTINUOUS LEARNING / SELF-UPDATE: Whenever you solve a bug, receive a
+   correction from the user, discover a Next.js / library gotcha, or implement
+   new conventions, you MUST update this file (gemini.md) during your turn to
+   persist that knowledge for subsequent sessions.
+=============================================================================
+-->
+
+## 0. AI Agent Protocol & Self-Update Instructions
+
+> [!IMPORTANT]
+> **Operating Directives for AI Agents:**
+> - **Package Manager Strictness:** ALWAYS use `bun` and `bunx`. Never use `npm`, `npx`, or `yarn`.
+> - **Read Before Acting:** Consult this document before editing layouts, fonts, analytics, styles, or AI prompts.
+> - **Self-Update Requirement:** Whenever you:
+>   - Receive a correction or preference from the user.
+>   - Fix a non-obvious bug or framework gotcha (e.g., Next.js font preloading, GA4 routing, React 19 / Turbopack nuances).
+>   - Add or change an API route, studio feature, or database model.
+>   You **MUST update this `gemini.md` document** in the appropriate section (or append to the Solved Gotchas / Knowledge Base) before concluding your turn so that future agent instances retain this context.
+> - **Preserve Existing Rules:** Do not delete past rules or constraints when updating; append new gotchas and refine existing sections.
 
 ---
 
@@ -27,10 +52,13 @@ bunx prisma db push
 # 4. Start local development server (Turbopack on http://localhost:3000)
 bun run dev
 
-# 5. Run production build
+# 5. Run typecheck without emitting files
+bun x tsc --noEmit
+
+# 6. Run production build
 bun run build
 
-# 6. Start production server locally
+# 7. Start production server locally
 bun run start
 ```
 
@@ -65,6 +93,9 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
    - Streamlined saved profile version drawer (`/api/linkedin-saves`).
 4. **Admin Suite (`/app/admin/...`)**:
    - Manages user accounts, payment receipts, coupon codes, and reported issue logs.
+   - Wrapped by `AdminShell` with responsive sidebar navigation.
+5. **Proxy / Middleware (`/proxy.ts`)**:
+   - Note: Next.js 16 uses `proxy.ts` rather than `middleware.ts` convention for Clerk authentication.
 
 ---
 
@@ -104,12 +135,40 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
 
 ---
 
-## 4. Verification Workflow
+## 4. Solved Gotchas & Engineering Knowledge Base
 
-Before pushing code to production or creating a pull request:
-1. Run local build check:
+### 🔤 Font Optimization & Next.js Preloading (`next/font/google`)
+- **Root Layout Rule:** In `app/layout.tsx`, only the primary global body font (`Geist`) should keep `preload: true` (default). All secondary fonts (`Geist_Mono`, `Poppins`, `Bricolage_Grotesque`, `Dancing_Script`, `Playfair_Display`) **MUST** specify `preload: false`. This prevents the browser from preloading 10+ unused `.woff2` font files on the initial page load.
+- **No `next/font` in Subcomponents:** Do NOT declare `next/font/google` instances inside subcomponents (e.g., `LinkedinChatStudio`, `LinkedinTemplatePreview`). Doing so forces Next.js to extract a standalone CSS chunk that gets preloaded across parent and prefetched pages, triggering `link preload but not used within a few seconds` warnings in Chrome. Use standard `font-sans` instead.
+
+### ⚡ Router Prefetching in Navigation Shells
+- In persistent shells (e.g. `components/AdminShell.tsx`, `components/AdminSidebarNav.tsx`), always set **`prefetch={false}`** on sidebar / header navigation `<Link>` tags.
+- Eager viewport prefetching on pages with multiple navigation links causes Next.js to inject `<link rel="preload">` for all targets on load; if the user remains on the current page for >3 seconds, Chrome flags all unvisited preloads as unused.
+
+### 📊 GA4 Client-Side Route Tracking (`lib/gtag.ts` & `GoogleAnalytics.tsx`)
+- In Next.js App Router, do NOT re-call `gtag('config', ...)` on client-side route changes, as this reinitializes tracking and can cause `TypeError: Cannot read properties of undefined (reading 'startTime')` during soft navigations in Chrome DevTools / Web Vitals scripts.
+- Set `send_page_view: false` in the initial `gtag('config')` in `GoogleAnalytics.tsx`.
+- On SPA route changes in `lib/gtag.ts`, use:
+  ```typescript
+  window.gtag('event', 'page_view', {
+    page_path: url,
+    send_to: GA_MEASUREMENT_ID,
+  });
+  ```
+
+---
+
+## 5. Verification Workflow
+
+Before pushing code to production or concluding an agent turn:
+1. Run TypeScript validation:
+   ```bash
+   bun x tsc --noEmit
+   ```
+2. Run local production build check:
    ```bash
    bun run build
    ```
-2. Confirm the build output reports `✓ Compiled successfully` with exit code `0`.
-3. Test direct chat navigation, template switching, and template removal toasts.
+3. Confirm the build output reports `✓ Compiled successfully` with exit code `0`.
+4. Check that no unused font preloads or detached CSS chunks are emitted into HTML `<head>`.
+5. **Self-Update `gemini.md`:** Ensure any new lessons learned, user preferences, or bug fixes from the session are recorded here.

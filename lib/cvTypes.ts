@@ -21,6 +21,7 @@ export interface CvEducation {
   degree: string;
   start: string;
   end: string;
+  location?: string;
 }
 
 export interface CvWorkExperience {
@@ -28,6 +29,7 @@ export interface CvWorkExperience {
   title: string;
   start: string;
   end: string;
+  location?: string;
   /** One bullet per line ("\n"-separated); "**bold**" is the only markup. */
   bullets: string;
   /** Marker style for the bullets above. Absent = 'bullet' (back-compat). */
@@ -43,6 +45,10 @@ export interface CvProject {
    *  is exactly what silently broke "select and delete" when title/
    *  technologies/description were three adjacent fields on one line. */
   content: string;
+  title?: string;
+  technologies?: string;
+  date?: string;
+  bullets?: string;
   /** Optional attached project URL (e.g. GitHub repo, live demo). */
   link?: string;
   /** Optional display label for the project link (e.g. '[Live Demo]', '[GitHub]'). */
@@ -61,8 +67,14 @@ export interface CvWorkshop {
   content: string;
 }
 
+export type CvTheme = 'classic' | 'latex-ats';
+
 export interface CvData {
   resumeName?: string;
+  /** Visual layout style. Absent = classic ATS serif. */
+  theme?: CvTheme;
+  /** Professional summary / executive statement. */
+  summary?: string;
   /** Absent = professional (back-compat with the LMS). */
   cvType?: CvType;
   personalInfo: CvPersonalInfo;
@@ -120,12 +132,24 @@ function mergeWorkshopShape(raw: any): string {
 export function cvMarkdownToHtml(cv: CvData): CvData {
   return {
     ...cv,
-    workExperience: (cv.workExperience || []).map((w) => ({ ...w, bullets: mdBoldToHtml(w.bullets) })),
-    projects: (cv.projects || []).map((p) => ({ content: mergeProjectShape(p) })),
-    workshops: (cv.workshops || []).map((w) => ({ content: mergeWorkshopShape(w) })),
+    summary: cv.summary ? mdBoldToHtml(cv.summary) : undefined,
+    workExperience: (cv.workExperience || []).map((w) => ({
+      ...w,
+      bullets: mdBoldToHtml(w.bullets || ''),
+    })),
+    projects: (cv.projects || []).map((p) => ({
+      ...p,
+      content: mergeProjectShape(p),
+      bullets: p.bullets ? mdBoldToHtml(p.bullets) : undefined,
+    })),
+    workshops: (cv.workshops || []).map((w) => ({
+      ...w,
+      content: mergeWorkshopShape(w),
+    })),
     additional: {
       skills: mdBoldToHtml(cv.additional?.skills || ''),
       interests: mdBoldToHtml(cv.additional?.interests || ''),
+      bulletStyle: cv.additional?.bulletStyle,
     },
   };
 }

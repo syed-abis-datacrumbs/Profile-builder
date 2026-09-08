@@ -809,9 +809,14 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       if (data.error) {
         setMessages((m) => [...m, { role: 'assistant', content: `⚠️ ${data.error}` }]);
       } else {
-        if (data.cv) external(data.cv as CvData);
+        if (data.cv) {
+          const updatedCv: CvData = {
+            ...(data.cv as CvData),
+            theme: (data.cv as CvData).theme || cv.theme,
+          };
+          external(cvMarkdownToHtml(updatedCv));
+        }
         setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Done.' }]);
-
       }
     } catch {
       setMessages((m) => [...m, { role: 'assistant', content: '⚠️ Something went wrong. Please try again.' }]);

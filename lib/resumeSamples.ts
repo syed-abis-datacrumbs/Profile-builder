@@ -12,6 +12,83 @@ export interface LmsResumeSample {
 
 export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
+    label: "Software Engineer - Classic Overleaf ATS (1 page)",
+    data: {
+      theme: "latex-ats",
+      summary:
+        "Results-driven Software Engineer with 4+ years of experience building scalable web applications and leading cross-functional projects. Skilled in full-stack development, cloud infrastructure, and agile delivery.",
+      personalInfo: {
+        fullName: "Jordan A. Smith",
+        phone: "555-123-4567",
+        email: "jordan.smith@email.com",
+        linkedin: "https://linkedin.com/in/jordanasmith",
+        linkedinLabel: "linkedin.com/in/jordanasmith",
+        github: "https://github.com/jordanasmith",
+        githubLabel: "github.com/jordanasmith",
+      },
+      education: [
+        {
+          institution: "University of Texas at Austin",
+          location: "Austin, TX",
+          degree: "B.S. in Computer Science",
+          start: "Aug 2017",
+          end: "May 2021",
+        },
+      ],
+      workExperience: [
+        {
+          company: "Acme Technologies",
+          location: "San Francisco, CA",
+          title: "Senior Software Engineer",
+          start: "Jun 2023",
+          end: "Present",
+          bullets:
+            "Led a team of 4 engineers to redesign the core billing platform, reducing transaction latency by 35%\nArchitected a microservices migration that improved system uptime from 98.2% to 99.9%\nMentored 3 junior engineers and established code review standards adopted company-wide",
+        },
+        {
+          company: "Bright Path Solutions",
+          location: "Austin, TX",
+          title: "Software Engineer",
+          start: "Jul 2021",
+          end: "May 2023",
+          bullets:
+            "Developed RESTful APIs serving 200K+ daily active users using Node.js and PostgreSQL\nImplemented automated testing pipeline, increasing code coverage from 60% to 92%\nCollaborated with product team to ship 12 major features on a bi-weekly release cycle",
+        },
+        {
+          company: "StartUp Labs",
+          location: "Remote",
+          title: "Software Engineering Intern",
+          start: "May 2020",
+          end: "Aug 2020",
+          bullets:
+            "Built internal dashboard tools using React and Python, reducing manual reporting time by 10 hrs/week\nAssisted in debugging and optimizing legacy code, improving page load speed by 20%",
+        },
+      ],
+      projects: [
+        {
+          title: "TaskFlow",
+          technologies: "React, Node.js, MongoDB",
+          date: "Jan 2024",
+          bullets: "Built a full-stack task management app with real-time collaboration features for 500+ users",
+          content: "<strong>TaskFlow</strong> (React, Node.js, MongoDB) – Built a full-stack task management app with real-time collaboration features for 500+ users",
+        },
+        {
+          title: "Weather Insights API",
+          technologies: "Python, Flask, Docker",
+          date: "Sep 2022",
+          bullets: "Created a public API aggregating weather data from multiple sources with caching layer",
+          content: "<strong>Weather Insights API</strong> (Python, Flask, Docker) – Created a public API aggregating weather data from multiple sources with caching layer",
+        },
+      ],
+      certifications: [],
+      additional: {
+        skills:
+          "Languages: Python, JavaScript, TypeScript, Java, SQL\nFrameworks: React, Node.js, Express, Django, Flask\nTools & Platforms: AWS, Docker, Kubernetes, Git, CI/CD, PostgreSQL, MongoDB",
+        interests: "",
+      },
+    },
+  },
+  {
     label: "AI/ML Engineer (1 page)",
     data: {
       personalInfo: {

@@ -367,14 +367,14 @@ export default function Home() {
   };
 
   // Loads a field's ready-made resume (LMS CvData) into the chat Studio.
-  const loadResumeField = (sample: LmsResumeSample) => {
+  const loadResumeField = (sample: LmsResumeSample, initialPromptText?: string) => {
     if (!isLoggedIn) {
       setIsAuthOpen(true);
       return;
     }
     setStudioCv(cvMarkdownToHtml(sample.data as CvData));
     setStudioLabel(sample.label);
-    setResumeInitialPrompt('');
+    setResumeInitialPrompt(initialPromptText ?? '');
     setResumeMode('studio');
   };
 
@@ -549,7 +549,7 @@ export default function Home() {
                             const cleanPrompt = promptText.trim();
                             setResumeInitialPrompt(cleanPrompt);
                             if (attachedResumeTemplate) {
-                              loadResumeField(attachedResumeTemplate);
+                              loadResumeField(attachedResumeTemplate, cleanPrompt);
                               if (typeof window !== 'undefined') {
                                 localStorage.removeItem('profile_builder_resume_chat');
                               }
