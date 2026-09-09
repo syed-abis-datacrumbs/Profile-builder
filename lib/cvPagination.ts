@@ -8,7 +8,7 @@ export const PAGE_HEIGHT_PX = 1123;
 
 // Blank breathing room at the BOTTOM of every page and TOP of every
 // continuation page. First page top-spacing comes from CvPreview's own padding.
-export const PAGE_MARGIN_PX = 72;
+export const PAGE_MARGIN_PX = 48;
 
 export interface CvPage {
   /** Content-pixel offset where this page's visible slice begins. */

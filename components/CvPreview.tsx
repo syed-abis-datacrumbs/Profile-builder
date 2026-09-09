@@ -77,8 +77,8 @@ function SectionHeading({ children, isLatex }: { children: React.ReactNode; isLa
   }
   return (
     <>
-      <h2 className="text-[16px] font-bold tracking-wide uppercase mt-4 mb-1">{children}</h2>
-      <hr className="border-t border-slate-800 mb-2" />
+      <h2 className="text-[16px] font-bold tracking-wide uppercase mt-3.5 mb-0.5">{children}</h2>
+      <hr className="border-t border-slate-800 mb-1.5" />
     </>
   );
 }
@@ -413,7 +413,7 @@ function CvPreviewBase({
   const renderSummary = () => {
     if (!editable && (!data.summary || isBlank(data.summary))) return null;
     return (
-      <section data-cv-block className="mb-2">
+      <section data-cv-block className="mb-1.5">
         <SectionHeading isLatex={isLatex}>Summary</SectionHeading>
         <div className={isLatex ? 'text-[13.5px] leading-relaxed text-slate-800' : 'leading-snug'}>
           {editable ? (
@@ -559,7 +559,7 @@ function CvPreviewBase({
           const i = data.workExperience.indexOf(job);
           const lines = editable ? job.bullets.split('\n') : job.bullets.split('\n').filter((l) => l.trim());
           return (
-            <div key={i} data-cv-block className="mb-2">
+            <div key={i} data-cv-block className="mb-1.5">
               {pos === 0 && <SectionHeading isLatex={isLatex}>Experience</SectionHeading>}
               {isLatex ? (
                 <>
@@ -974,7 +974,7 @@ function CvPreviewBase({
   return (
     <div
       className={`bg-white text-slate-900 ${
-        isLatex ? 'p-8 text-[13.5px] leading-normal' : 'p-8 text-[17px] leading-snug font-serif'
+        isLatex ? 'p-8 text-[13.5px] leading-normal' : 'px-8 py-6 text-[17px] leading-snug font-serif'
       } relative`}
       style={
         isLatex

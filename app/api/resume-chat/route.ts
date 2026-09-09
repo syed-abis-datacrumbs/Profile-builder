@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { CvData } from '../../../lib/cvTypes';
+import type { CvData, CvProject } from '../../../lib/cvTypes';
 import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
@@ -76,8 +76,15 @@ Rules:
   5. "projects": REPLACE ALL outdated or mismatched projects with 3 detailed, high-impact role-aligned projects describing technical execution, tools/frameworks, and quantifiable business outcomes. Each project description MUST be rich and detailed (140-160 characters) so that each project occupies 2 full visual lines.
   6. "certifications": REPLACE outdated certifications with 4 industry-recognized credentials for that specific field in a 2x2 grid.
   7. "additional": Update both 'skills' (8-10 technical skills) and 'interests' (5-6 professional interests) tailored specifically to the target role.
-  8. MANDATORY PAGE FILL RULE: The output generated for all sections MUST be rich and substantial enough to fill 100% of Page 1 from top to bottom, leaving ZERO empty white gap at the bottom while fitting cleanly on Page 1!
-- CRITICAL — Filling Page 1 White Space ("fill the page", "fill remaining space", "increase content so space gets filled", "no empty space at end", "page has space at the end"):
+- CRITICAL — Condense to One Page ("make it 1 page", "fit on one page", "fit in 1 page", "condense", "shorter", "overflow", "too long", "single page", "trim"):
+  When the user asks to fit the resume on one page (or asks to make it shorter/condense it):
+  1. "summary": Condense to maximum 2 concise sentences, under 40 words total.
+  2. "workExperience": Maximum 3 high-impact bullets per role (maximum 5 bullets total across all roles), each bullet under 20 words. Prioritize bullets with quantified results (numbers, percentages) over generic descriptions.
+  3. "projects": Keep at most 2 projects, maximum 2 bullets each, under 20 words per bullet. CRITICAL: Whenever you shorten project bullets, YOU MUST ALSO REWRITE AND SHORTEN the project's 'content' field to match — do NOT leave 'content' with un-shortened sentences!
+  4. "additional.skills": Maximum 12-14 items, keep only the most relevant/senior ones so it fits on 1-2 lines.
+  5. "additional.interests": Maximum 3-4 items.
+  6. Do NOT add any new bullets, skills, interests, or content anywhere else in the resume while condensing.
+- CRITICAL — Filling Page 1 White Space ("fill the page", "fill remaining space", "increase content so space gets filled", "no empty space at end", "page has space at the end") [ONLY when user explicitly asks to fill white space, NEVER when asking to condense or fit to 1 page]:
   1. ALL CONTENT MUST RESIDE 100% ON PAGE 1! NEVER OVERFLOW OR SPILL ANY SECTION (SUCH AS ADDITIONAL) ONTO PAGE 2!
   2. To eliminate empty white space at the bottom of Page 1:
      - DO NOT add a 4th or 5th project (keep EXACTLY 3 projects).
@@ -137,6 +144,80 @@ function isPlaceholderToken(str?: string): boolean {
     l.includes('technical skills, frameworks') ||
     l.includes('professional interests, specializations')
   );
+}
+
+function syncProjectContent(proj: CvProject): CvProject {
+  const bulletLines = (proj.bullets || '')
+    .split('\n')
+    .map((b) => b.trim().replace(/^[•\-\*]\s*/, ''))
+    .filter(Boolean);
+
+  if (bulletLines.length === 0) {
+    return proj;
+  }
+
+  let title = (proj.title || '').trim();
+  let tech = (proj.technologies || '').trim();
+
+  if (!title && proj.content) {
+    const titleMatch = proj.content.match(/<strong>(.*?)<\/strong>/i) || proj.content.match(/<b>(.*?)<\/b>/i);
+    if (titleMatch) {
+      title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
+    }
+  }
+
+  if (!tech && proj.content) {
+    const techMatch = proj.content.match(/\(([^)]+)\)/);
+    if (techMatch) {
+      tech = techMatch[1].replace(/<[^>]*>/g, '').trim();
+    }
+  }
+
+  const descText = bulletLines
+    .map((line) => line.replace(/\.+$/, '').trim())
+    .filter(Boolean)
+    .join('. ');
+  const fullDesc = descText ? `${descText}.` : '';
+
+  let newContent = '';
+  if (title) {
+    newContent = `<strong>${title}</strong>`;
+    if (tech) newContent += ` (${tech})`;
+    if (fullDesc) newContent += ` – ${fullDesc}`;
+  } else if (tech) {
+    newContent = `(${tech}) – ${fullDesc}`;
+  } else {
+    newContent = fullDesc;
+  }
+
+  return {
+    ...proj,
+    title: title || proj.title,
+    technologies: tech || proj.technologies,
+    bullets: bulletLines.join('\n'),
+    content: newContent || proj.content,
+  };
+}
+
+function scoreBullet(bullet: string): number {
+  let score = 0;
+  if (/\d/.test(bullet)) score += 2;
+  if (/%/.test(bullet)) score += 1;
+  if (/\b(reduced|increasing|increased|improving|improved|cut|optimized|optimizing|boosted|boosting|grew|growing|engineered|built|delivered|saved|saving|led|spearheaded|developed)\b/i.test(bullet)) {
+    score += 1;
+  }
+  return score;
+}
+
+function trimBulletsByRank(bulletsText: string, max: number): string {
+  const bullets = bulletsText.split('\n').filter((b) => b.trim().length > 0);
+  if (bullets.length <= max) return bulletsText;
+  const ranked = bullets
+    .map((b, i) => ({ b, i, score: scoreBullet(b) }))
+    .sort((a, c) => c.score - a.score || a.i - c.i)
+    .slice(0, max)
+    .sort((a, c) => a.i - c.i);
+  return ranked.map((r) => r.b).join('\n');
 }
 
 function findBestMatchIndex<T>(items: T[], query: string, getText: (item: T) => string): number {
@@ -1526,12 +1607,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       ),
       workshops: (cvType === 'student' ? nextCv.workshops ?? [] : cv.workshops ?? []).filter((w) => (w.content || '').trim()),
       projects: (nextCv.projects ?? []).filter((p) => (p.content || '').trim() || (p.title || '').trim()).map((p) => {
-        if (!p.content && p.title) {
-          const tech = p.technologies ? ` (${p.technologies})` : '';
-          const desc = p.bullets ? ` – ${p.bullets.replace(/\n/g, ' ')}` : '';
-          return { ...p, content: `<strong>${p.title}</strong>${tech}${desc}` };
-        }
-        return p;
+        return syncProjectContent(p);
       }),
       certifications: uniqueCertifications,
       additional: nextCv.additional ?? cv.additional ?? defaultAdditional,
@@ -1963,15 +2039,60 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       }
     }
 
-    // Auto-fix: One Page Fitting request handler (ensures clean 1-page fit while preserving grammatical completeness)
-    if (/\b(one|1)\s*page\b/i.test(msgLower) && !isPageFillReq) {
+    // Auto-fix: One Page Fitting / Condensing request handler (ensures clean 1-page fit while preserving highest-impact content)
+    const isCondenseRequest = (/\b(one|1)\s*page\b|\bsingle\s*page\b|shorter|condense|too long|overflow|spilling|trim|fit\s*(?:in|on)\s*(?:one|1)?\s*page/i.test(msgLower) || /\bfit\s+(?:in|to)\s+1\b/i.test(msgLower)) && !isPageFillReq;
+
+    if (isCondenseRequest) {
+      // 1. Work Experience: Rank-based trimming (max 3 bullets per job, max 5 bullets total across all jobs)
+      let totalBulletsAllowed = 5;
       safeCv.workExperience = (safeCv.workExperience ?? []).map((w) => {
-        const bulletLines = (w.bullets || '').split('\n').filter((b) => b.trim().length > 0);
-        const topBullets = bulletLines.slice(0, 4);
-        return { ...w, bullets: topBullets.join('\n') };
+        const jobMax = Math.min(3, Math.max(1, totalBulletsAllowed));
+        const trimmed = trimBulletsByRank(w.bullets || '', jobMax);
+        const count = trimmed.split('\n').filter((b) => b.trim().length > 0).length;
+        totalBulletsAllowed = Math.max(1, totalBulletsAllowed - count);
+        return { ...w, bullets: trimmed };
       });
-      if (safeCv.projects && safeCv.projects.length > 3 && safeCv.certifications && safeCv.certifications.length > 0) {
-        safeCv.projects = safeCv.projects.slice(0, 3);
+
+      // 2. Projects: Keep at most 2 projects, max 2 bullets each, sync content
+      if (safeCv.projects && safeCv.projects.length > 0) {
+        safeCv.projects = safeCv.projects.slice(0, 2).map((proj) => {
+          const trimmedBullets = trimBulletsByRank(proj.bullets || '', 2);
+          return syncProjectContent({ ...proj, bullets: trimmedBullets });
+        });
+      }
+
+      // 3. Summary: Cap at 1 punchy sentence (or max 35 words) so it never consumes 4+ lines
+      if (safeCv.summary && safeCv.summary.trim()) {
+        const sentences = safeCv.summary.match(/[^.!?]+[.!?]+(?:\s+|$)/g) || [safeCv.summary];
+        if (sentences.length > 1) {
+          const firstWords = sentences[0].trim().split(/\s+/).length;
+          if (firstWords >= 16 || sentences.slice(0, 2).join(' ').split(/\s+/).length > 35) {
+            safeCv.summary = sentences[0].trim();
+          } else {
+            safeCv.summary = sentences.slice(0, 2).join(' ').trim();
+          }
+        }
+      }
+
+      // 4. Certifications: In condense mode, cap at 2 items (1 clean single row instead of 2 stacked rows)
+      if (safeCv.certifications && safeCv.certifications.length > 2) {
+        safeCv.certifications = safeCv.certifications.slice(0, 2);
+      }
+
+      // 5. Skills: In condense mode, cap at maximum 10 core items so it fits on 2 lines
+      if (safeCv.additional?.skills) {
+        const skillList = safeCv.additional.skills.split(',').map((s) => s.trim()).filter(Boolean);
+        if (skillList.length > 10) {
+          safeCv.additional.skills = skillList.slice(0, 10).join(', ');
+        }
+      }
+
+      // 6. Interests: Cap at maximum 3 items
+      if (safeCv.additional?.interests) {
+        const interestList = safeCv.additional.interests.split(',').map((s) => s.trim()).filter(Boolean);
+        if (interestList.length > 3) {
+          safeCv.additional.interests = interestList.slice(0, 3).join(', ');
+        }
       }
     }
 
@@ -2236,6 +2357,8 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         }
       }
     }
+
+    safeCv.projects = (safeCv.projects ?? []).map(syncProjectContent);
 
     return Response.json({
       reply,
