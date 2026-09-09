@@ -415,7 +415,7 @@ function CvPreviewBase({
     return (
       <section data-cv-block className="mb-2">
         <SectionHeading isLatex={isLatex}>Summary</SectionHeading>
-        <div className="text-[13.5px] leading-relaxed text-slate-800">
+        <div className={isLatex ? 'text-[13.5px] leading-relaxed text-slate-800' : 'leading-snug'}>
           {editable ? (
             <RichText
               block
