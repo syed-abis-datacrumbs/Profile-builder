@@ -5,7 +5,7 @@ export const defaultResumeData: ResumeData = {
     fullName: "Alex Rivera",
     jobTitle: "Senior AI & Full-Stack Architect",
     email: "alex.rivera@techcraft.io",
-    phone: "+1 (555) 234-5678",
+    phone: "+92 300 1234567",
     location: "San Francisco, CA (Hybrid)",
     website: "https://alexrivera.dev",
     linkedin: "linkedin.com/in/alex-rivera-dev",
@@ -135,7 +135,7 @@ export const DEFAULT_PLACEHOLDER_CV = {
   cvType: 'professional' as const,
   personalInfo: {
     fullName: 'Your Name',
-    phone: '+1 (555) 000-0000',
+    phone: '+92 300 0000000',
     email: 'your.email@example.com',
     linkedin: 'https://linkedin.com/in/your-profile',
     linkedinLabel: 'LinkedIn',

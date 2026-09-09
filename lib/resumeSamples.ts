@@ -19,7 +19,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
         "Results-driven Software Engineer with 4+ years of experience building scalable web applications and leading cross-functional projects. Skilled in full-stack development, cloud infrastructure, and agile delivery.",
       personalInfo: {
         fullName: "Jordan A. Smith",
-        phone: "555-123-4567",
+        phone: "+92 300 1234567",
         email: "jordan.smith@email.com",
         linkedin: "https://linkedin.com/in/jordanasmith",
         linkedinLabel: "linkedin.com/in/jordanasmith",

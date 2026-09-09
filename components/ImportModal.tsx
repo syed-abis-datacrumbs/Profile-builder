@@ -37,7 +37,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           fullName: name,
           jobTitle: title,
           email: "candidate@imported.dev",
-          phone: "+1 (555) 019-2831",
+          phone: "+92 300 1234567",
           location: "San Francisco, CA",
           website: "https://imported-profile.dev",
           linkedin: "linkedin.com/in/imported-candidate",
