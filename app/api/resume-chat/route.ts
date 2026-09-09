@@ -997,9 +997,14 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
 
     // 2e. Direct Social/Contact Link Replacement & Label Update
     // e.g. "update kaggle with behance", "change github to youtube", "replace kaggle with dribbble", "rename github to portfolio"
-    const linkUpdateMatch =
-      /\b(?:update|change|replace|rename|set|swap|switch)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|link|social)\s*(?:link|social)?\s*(?:with|to|as|for|into)\s+(?:the\s+)?([a-z0-9\s._-]+)$/i.exec(lastUserMessage) ||
-      /\b(?:update|change|replace|rename|set|swap|switch)\s+(?:the\s+)?([a-z0-9._-]+)\s+(?:link|social)?\s*(?:with|to|as|for|into)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|behance|dribbble|youtube|twitter|instagram|leetcode|hackerrank|artstation|itch\.io|substack|medium|gitlab|bitbucket|tryhackme|[a-z0-9._-]+)$/i.exec(lastUserMessage);
+    const isMultiInstructionForLink = lastUserMessage.includes(',') || /\band\b/i.test(lastUserMessage);
+    const mentionsOtherSectionsForLink = /\b(experience|work|job|bullet|project|projects|education|degree|school|university|college|cert|skills?|interests?)\b/i.test(lastUserMessage);
+
+    const linkUpdateMatch = (!isMultiInstructionForLink && !mentionsOtherSectionsForLink) ? (
+      /^\s*(?:update|change|replace|rename|set|swap|switch)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|link|social)\s*(?:link|social)?\s*(?:with|to|as|for|into)\s+(?:the\s+)?([a-z0-9\s._-]+)$/i.exec(lastUserMessage) ||
+      /^\s*(?:update|change|replace|rename|set|swap|switch)\s+(?:the\s+)?([a-z0-9._-]+)\s+(?:link|social)\s*(?:with|to|as|for|into)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|behance|dribbble|youtube|twitter|instagram|leetcode|hackerrank|artstation|itch\.io|substack|medium|gitlab|bitbucket|tryhackme)$/i.exec(lastUserMessage) ||
+      /^\s*(?:update|change|replace|rename|set|swap|switch)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|behance|dribbble|youtube|twitter|instagram|leetcode|hackerrank|artstation|itch\.io|substack|medium|gitlab|bitbucket|tryhackme)\s*(?:with|to|as|for|into)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|behance|dribbble|youtube|twitter|instagram|leetcode|hackerrank|artstation|itch\.io|substack|medium|gitlab|bitbucket|tryhackme|[a-z0-9._-]+)$/i.exec(lastUserMessage)
+    ) : null;
 
     if (linkUpdateMatch && cv.personalInfo) {
       const sourceSlot = linkUpdateMatch[1].toLowerCase().trim();
@@ -1383,6 +1388,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
 
     const raw = completion.choices[0]?.message?.content ?? '{}';
     let parsed: Record<string, unknown> = {};
+    let rawCv: Record<string, unknown> | null = null;
     let parseSuccess = false;
     let parseError: string | null = null;
     try {
@@ -1390,7 +1396,20 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       parseSuccess = true;
       if (!parsed || typeof parsed !== 'object') {
         parseError = 'Model returned non-object JSON';
-      } else if (!parsed.cv) {
+      } else if (parsed.cv && typeof parsed.cv === 'object') {
+        rawCv = parsed.cv as Record<string, unknown>;
+      } else if (
+        parsed.summary !== undefined ||
+        parsed.personalInfo !== undefined ||
+        parsed.workExperience !== undefined ||
+        parsed.education !== undefined ||
+        parsed.projects !== undefined ||
+        parsed.certifications !== undefined ||
+        parsed.additional !== undefined
+      ) {
+        // Auto-Recovery: Model returned the CV object directly at root level without wrapping in { "cv": { ... } }
+        rawCv = parsed;
+      } else {
         parseError = 'Model returned JSON without a "cv" object';
       }
     } catch (err: unknown) {
@@ -1399,7 +1418,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       console.error('[Resume AI JSON Parse Error]:', err, raw);
     }
 
-    const nextCv = (parsed?.cv ?? cv) as CvData;
+    const nextCv = (rawCv ?? cv) as CvData;
 
     // Force the locked type back onto the response regardless of what the
     // model returned, and preserve whichever section isn't active for this
@@ -1532,11 +1551,112 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     // Deterministic Section Locking Architecture:
     // When the user is NOT performing a total role transformation, any section not explicitly targeted
     // by the user's prompt (e.g. projects when editing interests) is STRICTLY LOCKED to its previous state.
-    const msgLower = userMessage.toLowerCase();
-    const isCertEdit = /\b(cert|certification|certs|certificates)/i.test(msgLower);
-    const isProjEdit = /\b(project|projects)\b/i.test(msgLower) && !/\b(as per\s+(?:my\s+)?projects?|based on\s+(?:my\s+)?projects?)\b/i.test(msgLower);
-    const isWorkEdit = /\b(work|experience|job|bullet|point|bullets|points)/i.test(msgLower);
-    const isEduEdit  = /\b(education|degree|school|university|college|educaton)/i.test(msgLower);
+    const msgLower = (lastUserMessage || userMessage).toLowerCase();
+
+    // ── Entity-Aware Section Matching (Fix 1) ───────────────────────────
+    // Check if the user's message references existing companies, titles, institutions,
+    // degrees, projects, or certifications currently present in their CV.
+    const mentionsWorkEntity = Array.isArray(cv.workExperience) && cv.workExperience.some((exp) => {
+      if (exp.company && exp.company.trim().length >= 3) {
+        const comp = exp.company.trim().toLowerCase();
+        if (msgLower.includes(comp)) return true;
+        const compTokens = comp.split(/[\s,.-]+/).filter(
+          (t) => t.length >= 4 && !['solutions', 'technologies', 'technology', 'company', 'corp', 'corporation', 'inc', 'incorporated', 'llc', 'ltd', 'limited', 'group', 'labs', 'lab', 'studio', 'studios', 'software', 'services', 'service', 'systems', 'system', 'enterprises', 'enterprise', 'global', 'international', 'holdings', 'media', 'network', 'digital'].includes(t)
+        );
+        if (compTokens.some((tok) => msgLower.includes(tok))) return true;
+      }
+      if (exp.title && exp.title.trim().length >= 3) {
+        const title = exp.title.trim().toLowerCase();
+        if (msgLower.includes(title)) return true;
+        const titleTokens = title.split(/[\s,.-]+/).filter(
+          (t) => t.length >= 4 && !['junior', 'senior', 'lead', 'staff', 'principal', 'intern', 'assistant', 'associate', 'developer', 'engineer', 'manager', 'specialist', 'consultant', 'analyst', 'officer', 'executive', 'director', 'vice', 'president', 'architect', 'designer'].includes(t)
+        );
+        if (titleTokens.some((tok) => msgLower.includes(tok))) return true;
+      }
+      if (exp.location && exp.location.trim().length >= 3 && msgLower.includes(exp.location.trim().toLowerCase())) {
+        return true;
+      }
+      return false;
+    });
+
+    const mentionsEduEntity = Array.isArray(cv.education) && cv.education.some((edu) => {
+      if (edu.institution && edu.institution.trim().length >= 3) {
+        const inst = edu.institution.trim().toLowerCase();
+        if (msgLower.includes(inst)) return true;
+        const instTokens = inst.split(/[\s,.-]+/).filter(
+          (t) => t.length >= 4 && !['university', 'college', 'school', 'institute', 'academy', 'state', 'department', 'faculty', 'center', 'centre', 'campus'].includes(t)
+        );
+        if (instTokens.some((tok) => msgLower.includes(tok))) return true;
+      }
+      if (edu.degree && edu.degree.trim().length >= 3) {
+        const deg = edu.degree.trim().toLowerCase();
+        if (msgLower.includes(deg)) return true;
+        const degTokens = deg.split(/[\s,.-]+/).filter(
+          (t) => t.length >= 4 && !['bachelor', 'bachelors', 'master', 'masters', 'doctor', 'doctorate', 'science', 'arts', 'degree', 'diploma', 'studies', 'program', 'certificate', 'honors', 'intermediate', 'matric'].includes(t)
+        );
+        if (degTokens.some((tok) => msgLower.includes(tok))) return true;
+      }
+      if (edu.location && edu.location.trim().length >= 3 && msgLower.includes(edu.location.trim().toLowerCase())) {
+        return true;
+      }
+      return false;
+    });
+
+    const mentionsProjEntity = Array.isArray(cv.projects) && cv.projects.some((proj) => {
+      if (proj.title && proj.title.trim().length >= 3) {
+        const title = proj.title.trim().toLowerCase();
+        if (msgLower.includes(title)) return true;
+        const projTokens = title.split(/[\s,.-]+/).filter(
+          (t) => t.length >= 4 && !['app', 'application', 'project', 'platform', 'system', 'tool', 'dashboard', 'portal', 'website'].includes(t)
+        );
+        if (projTokens.some((tok) => msgLower.includes(tok))) return true;
+      }
+      if (proj.content && proj.content.trim().length >= 3) {
+        const strongMatch = proj.content.match(/<strong>(.*?)<\/strong>/i);
+        const title = (strongMatch ? strongMatch[1] : proj.content.split(/[–(-]/)[0]).trim().toLowerCase();
+        if (title.length >= 3) {
+          if (msgLower.includes(title)) return true;
+          const projTokens = title.split(/[\s,.-]+/).filter(
+            (t) => t.length >= 4 && !['app', 'application', 'project', 'platform', 'system', 'tool', 'dashboard', 'portal', 'website'].includes(t)
+          );
+          if (projTokens.some((tok) => msgLower.includes(tok))) return true;
+        }
+      }
+      return false;
+    });
+
+    const mentionsCertEntity = Array.isArray(cv.certifications) && cv.certifications.some((cert) => {
+      if (cert.name && cert.name.trim().length >= 3) {
+        const name = cert.name.trim().toLowerCase();
+        if (msgLower.includes(name)) return true;
+        const certTokens = name.split(/[\s,.-]+/).filter(
+          (t) => t.length >= 4 && !['certified', 'certificate', 'certification', 'course', 'bootcamp', 'training', 'specialist', 'associate', 'professional', 'practitioner', 'architect', 'developer', 'administrator', 'expert', 'fundamentals', 'essentials', 'foundations', 'solutions', 'systems', 'services', 'level'].includes(t)
+        );
+        if (certTokens.some((tok) => msgLower.includes(tok))) return true;
+      }
+      if (cert.organization && cert.organization.trim().length >= 3 && msgLower.includes(cert.organization.trim().toLowerCase())) {
+        return true;
+      }
+      return false;
+    });
+
+    // ── Broadened Keyword & Entity Detection ─────────────────────────────
+    const isCertEdit =
+      /\b(cert|certification|certs|certificates|certificate|credential|credentials|license|licenses|course|courses|bootcamp|bootcamps)\b/i.test(msgLower) ||
+      mentionsCertEntity;
+
+    const isProjEdit =
+      (/\b(project|projects|repo|repos|repository|repositories|webapp|portfolio)\b/i.test(msgLower) &&
+        !/\b(as per\s+(?:my\s+)?projects?|based on\s+(?:my\s+)?projects?)\b/i.test(msgLower)) ||
+      mentionsProjEntity;
+
+    const isWorkEdit =
+      /\b(work|experience|experiences|job|jobs|bullet|bullets|point|points|company|companies|role|roles|title|titles|position|positions|firm|firms|employer|employers|tenure|employment|internship|internships|promoted|promotion)\b/i.test(msgLower) ||
+      mentionsWorkEntity;
+
+    const isEduEdit =
+      /\b(education|degree|degrees|school|schools|university|universities|college|colleges|educaton|academic|academics|gpa|major|majors|minor|graduated|graduation|bachelor|bachelors|master|masters|phd|matric|intermediate|diploma)\b/i.test(msgLower) ||
+      mentionsEduEntity;
 
     const isPageFillReq =
       /\b(fill|expand|increase)\b.*?\b(page|gap|space|empty|bottom|content)\b/i.test(msgLower) ||
