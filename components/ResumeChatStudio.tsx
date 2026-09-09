@@ -917,7 +917,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
 
   return (
-    <div className="flex flex-col lg:flex-row w-full h-[calc(100vh-64px)] overflow-hidden bg-slate-100/60 relative">
+    <div className="flex flex-col lg:flex-row w-full h-full overflow-hidden bg-slate-100/60 relative">
 
       {/* COLUMN 2 (AI CHAT - LEFT: Visible only on Desktop lg screens and up) */}
       <div className="hidden lg:flex lg:w-[380px] xl:w-[420px] 2xl:w-[460px] flex-col bg-white border-r border-slate-200 shrink-0 h-full overflow-hidden">

@@ -220,8 +220,8 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
 
       </div>
 
-      {/* Bottom Ask Expert Card & User Footer */}
-      <div className="space-y-3 pt-3 border-t border-slate-200">
+      {/* Bottom User Footer */}
+      <div className="space-y-3 pt-1">
 
         {/* User Profile Bar & Popover */}
         <div className="relative w-full" ref={popoverRef}>
