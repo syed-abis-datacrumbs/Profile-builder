@@ -180,23 +180,30 @@ export const LinkedinChatStudio: React.FC<{
   initialPrompt?: string;
   isPro?: boolean;
 }> = ({ profile, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt, isPro }) => {
-  const [messages, setMessages] = useState<Msg[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('profile_builder_linkedin_chat');
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return [
-      {
-        role: 'assistant',
-        content:
-          'Loaded your profile from the template. Click any text on the right to edit it directly, or ask me — e.g. "make my headline more keyword-rich", "add a bullet about leading a team", or "add Python to skills".',
-      },
-    ];
-  });
+  const [messages, setMessages] = useState<Msg[]>([
+    {
+      role: 'assistant',
+      content:
+        'Loaded your profile from the template. Click any text on the right to edit it directly, or ask me — e.g. "make my headline more keyword-rich", "add a bullet about leading a team", or "add Python to skills".',
+    },
+  ]);
+  const hasLoadedFromStorage = useRef(false);
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem('profile_builder_linkedin_chat');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+    } catch {}
+    hasLoadedFromStorage.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedFromStorage.current) return;
     if (typeof window !== 'undefined') {
       localStorage.setItem('profile_builder_linkedin_chat', JSON.stringify(messages));
     }

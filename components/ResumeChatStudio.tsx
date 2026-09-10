@@ -125,24 +125,27 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   // consistent everywhere without threading a colour prop around.
   const accent = getResumeAccentColor(fieldLabel ? { label: fieldLabel } : null);
 
-  const [messages, setMessages] = useState<Msg[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('profile_builder_resume_chat');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            return parsed.map((m: any) => ({
+  const [messages, setMessages] = useState<Msg[]>([]);
+  const hasLoadedFromStorage = useRef(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('profile_builder_resume_chat');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(
+            parsed.map((m: any) => ({
               id: m.id || crypto.randomUUID(),
               role: m.role,
               content: m.content,
-            }));
-          }
+            }))
+          );
         }
-      } catch {}
-    }
-    return [];
-  });
+      }
+    } catch {}
+    hasLoadedFromStorage.current = true;
+  }, []);
 
   const pendingMessagesRef = useRef<Msg[] | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -164,6 +167,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   }, []);
 
   useEffect(() => {
+    if (!hasLoadedFromStorage.current) return;
     pendingMessagesRef.current = messages;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
@@ -171,7 +175,9 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     }, 200);
 
     return () => {
-      flushPendingMessages();
+      if (hasLoadedFromStorage.current) {
+        flushPendingMessages();
+      }
     };
   }, [messages, flushPendingMessages]);
 

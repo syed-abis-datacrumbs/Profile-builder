@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import type { LinkedinProfileData } from '../../../types';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
+import { BUILDER_ACCESS_EMAILS } from '@/lib/accessConfig';
 
 export const runtime = 'nodejs';
 
@@ -46,6 +47,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    const user = await currentUser();
+    const primaryEmail = user?.primaryEmailAddress?.emailAddress;
+    if (!primaryEmail || !BUILDER_ACCESS_EMAILS.has(primaryEmail)) {
+      return Response.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
+    }
     const body = (await request.json()) as { messages?: ChatMessage[]; linkedin?: LinkedinProfileData; sessionId?: string; builderType?: string };
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const linkedin = body.linkedin ?? {};
@@ -68,8 +74,6 @@ export async function POST(request: Request) {
     const raw = completion.choices[0]?.message?.content ?? '{}';
     const parsed = JSON.parse(raw);
     const reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your profile.';
-
-    const user = await currentUser();
     if (sessionId !== 'unknown') {
       await db.profileBuilderChatLog.create({
         data: {

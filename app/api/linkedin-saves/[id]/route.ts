@@ -1,13 +1,24 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUserId } from '../../../../lib/serverAuth';
+import { currentUser } from '@clerk/nextjs/server';
 import { db } from '../../../../lib/db';
+import { BUILDER_ACCESS_EMAILS } from '@/lib/accessConfig';
 
 export const runtime = 'nodejs';
 
+async function getAuthorizedUser() {
+  const user = await currentUser();
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress;
+  if (!primaryEmail || !BUILDER_ACCESS_EMAILS.has(primaryEmail)) {
+    return null;
+  }
+  return user;
+}
+
 /** Full profile snapshot of one saved LinkedIn profile (ownership enforced). */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const user = await getAuthorizedUser();
+  if (!user) return NextResponse.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
+  const userId = user.id;
 
   const { id } = await params;
   const row = await db.linkedinSave.findFirst({ where: { id, userId }, select: { data: true } });
@@ -17,8 +28,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const user = await getAuthorizedUser();
+  if (!user) return NextResponse.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
+  const userId = user.id;
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
@@ -41,8 +53,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const user = await getAuthorizedUser();
+  if (!user) return NextResponse.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
+  const userId = user.id;
 
   const { id } = await params;
   await db.linkedinSave.deleteMany({ where: { id, userId } });

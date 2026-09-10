@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUserId } from '../../../lib/serverAuth';
+import { currentUser } from '@clerk/nextjs/server';
 import { db } from '../../../lib/db';
 import type { LinkedinProfileData } from '../../../types';
+import { BUILDER_ACCESS_EMAILS } from '@/lib/accessConfig';
 
 export const runtime = 'nodejs';
 
 /** Newest-first list of the current user's saved LinkedIn profiles (metadata only). */
 export async function GET() {
-  const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const user = await currentUser();
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress;
+  if (!primaryEmail || !BUILDER_ACCESS_EMAILS.has(primaryEmail)) {
+    return NextResponse.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
+  }
+  const userId = user.id;
 
   const rows = await db.linkedinSave.findMany({
     where: { userId },
@@ -20,8 +25,12 @@ export async function GET() {
 
 /** Saves the current LinkedIn profile as a named version. */
 export async function POST(request: Request) {
-  const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const user = await currentUser();
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress;
+  if (!primaryEmail || !BUILDER_ACCESS_EMAILS.has(primaryEmail)) {
+    return NextResponse.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
+  }
+  const userId = user.id;
 
   const body = await request.json().catch(() => null);
   const data = body?.data as LinkedinProfileData | undefined;

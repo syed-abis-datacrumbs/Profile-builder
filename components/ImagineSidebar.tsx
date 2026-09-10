@@ -395,12 +395,16 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   const isLoggedIn = !!user;
   const userEmail = user?.primaryEmailAddress?.emailAddress || undefined;
   
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('profile_builder_sidebar_collapsed') === 'true';
-    }
-    return false;
-  });
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('profile_builder_sidebar_collapsed');
+      if (saved !== null) {
+        setIsCollapsed(saved === 'true');
+      }
+    } catch {}
+  }, []);
 
   const toggleCollapse = () => {
     setIsCollapsed((prev) => {
