@@ -42,10 +42,18 @@ JSON Patch Path Guide & Examples:
   { "op": "add", "path": "/education/0", "value": { "institution": "NED University", "degree": "B.E. in Computer Science", "start": "Aug 2017", "end": "May 2021", "location": "Karachi, Pakistan" } }
 - Add project at top:
   { "op": "add", "path": "/projects/0", "value": { "title": "Title", "technologies": "React, Node", "date": "Jan 2024", "bullets": "bullet", "content": "<strong>Title</strong> (React, Node) – Description." } }
-- Add certification:
-  { "op": "add", "path": "/certifications/-", "value": { "name": "AWS Solutions Architect", "organization": "Amazon Web Services" } }
-- Explicit deletion (ONLY when user explicitly asks to remove/delete an item, e.g. "delete project 2"):
+- Explicit deletion (ONLY when user explicitly asks to remove/delete an entire item, e.g. "delete project 2"):
   { "op": "remove", "path": "/projects/1" }
+- CRITICAL FOR BULLETS & TEXT FIELDS:
+  NEVER use "op": "remove" on text or string properties (e.g. "/workExperience/0/bullets", "/projects/0/bullets", "/additional/skills")!
+  "remove" deletes the entire property from the resume, completely wiping out all bullets!
+  To shorten or remove bullet points, ALWAYS use "op": "replace" with the final desired remaining bullet lines:
+  { "op": "replace", "path": "/workExperience/0/bullets", "value": "Bullet 1\nBullet 2" }
+- CRITICAL FOR 1-PAGE CONDENSING ("make it in one page please", "fit on 1 page", "condense to 1 page"):
+  1. NEVER delete work experience bullets completely! Every job MUST retain 2 to 3 punchy, high-impact bullet points.
+  2. Condense bullets to 1-2 tight lines by cutting filler words while preserving quantified metrics and action verbs.
+  3. Keep at most 2 projects with 1-2 punchy bullets each.
+  4. Always use "op": "replace" with the condensed bullets string. NEVER use "op": "remove" on bullets!
 
 MODE 2: ONLY FOR FULL RESUME REWRITES OR COMPLETE ROLE TRANSFORMATIONS:
 When the user explicitly asks to build a completely new resume from scratch or transform the entire CV for a new role (e.g. "Create CV for Software Engineer", "Build ATS resume for Data Analyst", "Switch whole resume to Marketing"):
@@ -2095,9 +2103,10 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     if (isCondenseRequest) {
       // 1. Work Experience: Rank-based trimming (max 3 bullets per job, max 5 bullets total across all jobs)
       let totalBulletsAllowed = 5;
-      safeCv.workExperience = (safeCv.workExperience ?? []).map((w) => {
+      safeCv.workExperience = (safeCv.workExperience ?? []).map((w, idx) => {
+        const rawBullets = (w.bullets && w.bullets.trim()) ? w.bullets : (cv.workExperience?.[idx]?.bullets || '');
         const jobMax = Math.min(3, Math.max(1, totalBulletsAllowed));
-        const trimmed = trimBulletsByRank(w.bullets || '', jobMax);
+        const trimmed = trimBulletsByRank(rawBullets, jobMax);
         const count = trimmed.split('\n').filter((b) => b.trim().length > 0).length;
         totalBulletsAllowed = Math.max(1, totalBulletsAllowed - count);
         return { ...w, bullets: trimmed };
@@ -2105,8 +2114,9 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
 
       // 2. Projects: Keep at most 2 projects, max 2 bullets each, sync content
       if (safeCv.projects && safeCv.projects.length > 0) {
-        safeCv.projects = safeCv.projects.slice(0, 2).map((proj) => {
-          const trimmedBullets = trimBulletsByRank(proj.bullets || '', 2);
+        safeCv.projects = safeCv.projects.slice(0, 2).map((proj, idx) => {
+          const rawBullets = (proj.bullets && proj.bullets.trim()) ? proj.bullets : (cv.projects?.[idx]?.bullets || '');
+          const trimmedBullets = trimBulletsByRank(rawBullets, 2);
           return syncProjectContent({ ...proj, bullets: trimmedBullets });
         });
       }

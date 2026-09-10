@@ -145,7 +145,22 @@ function applySingleOp(doc: unknown, operation: JsonPatchOperation): void {
         }
         parent.splice(idx, 1);
       } else if (isObject(parent)) {
-        delete parent[key];
+        const opVal = (operation as { value?: unknown }).value;
+        if (typeof parent[key] === 'string' && typeof opVal === 'string' && opVal.trim().length > 0) {
+          // Model provided a `value` in `remove` to indicate lines to subtract, NOT wipe the entire property!
+          const removeLines = new Set(
+            opVal.split('\n').map((l) => l.trim().toLowerCase()).filter(Boolean)
+          );
+          const currentLines = parent[key].split('\n');
+          const remainingLines = currentLines.filter(
+            (line) => !removeLines.has(line.trim().toLowerCase())
+          );
+          if (remainingLines.length > 0) {
+            parent[key] = remainingLines.join('\n');
+          }
+        } else {
+          delete parent[key];
+        }
       } else {
         throw new Error(`Cannot remove property from non-object parent at ${operation.path}`);
       }

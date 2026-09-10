@@ -668,7 +668,9 @@ function CvPreviewBase({
     if (!editable && projectList.length === 0) return null;
     return (
       <section data-bullet-group="projects">
-        <SectionHeading isLatex={isLatex}>Projects</SectionHeading>
+        {projectList.length === 0 && editable && (
+          <SectionHeading isLatex={isLatex}>Projects</SectionHeading>
+        )}
         {projectList.map((proj, pos) => {
           const i = data.projects.indexOf(proj);
           const hasLink = !!extractLinkFromProject(proj);
@@ -684,6 +686,7 @@ function CvPreviewBase({
               onFocus={() => setFocusedProjectIndex(i)}
               onBlur={() => setFocusedProjectIndex((prev) => (prev === i ? null : prev))}
             >
+              {pos === 0 && <SectionHeading isLatex={isLatex}>Projects</SectionHeading>}
               {isTargeted && (
                 <div className="absolute -top-2.5 left-6 z-30 transition-all duration-150 flex items-center gap-1 -translate-y-1/2 animate-in fade-in zoom-in-95 duration-100">
                   <button
@@ -830,11 +833,14 @@ function CvPreviewBase({
     if (!isStudent || (!editable && workshopList.length === 0)) return null;
     return (
       <section data-bullet-group="workshops">
-        <SectionHeading isLatex={isLatex}>Workshops</SectionHeading>
+        {workshopList.length === 0 && editable && (
+          <SectionHeading isLatex={isLatex}>Workshops</SectionHeading>
+        )}
         {workshopList.map((ws, pos) => {
           const i = (data.workshops ?? []).indexOf(ws);
           return (
             <div key={i} data-cv-block className="mb-1">
+              {pos === 0 && <SectionHeading isLatex={isLatex}>Workshops</SectionHeading>}
               <Bullet marker={data.workshopsBulletStyle === 'number' ? `${pos + 1}.` : defaultBulletMarker}>
                 {editable ? (
                   <RichText
