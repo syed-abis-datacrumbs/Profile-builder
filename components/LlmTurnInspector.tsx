@@ -84,6 +84,37 @@ export function LlmTurnInspector({
       };
     }
 
+    const patches = Array.isArray(turn.rawOutput?.patches)
+      ? (turn.rawOutput.patches as Array<{ op: string; path: string; value?: unknown }>)
+      : null;
+
+    if (patches && patches.length > 0) {
+      const patchChanges: ChangeItem[] = patches.map((p) => {
+        let valStr = '';
+        if (p.value !== undefined) {
+          if (typeof p.value === 'string') {
+            valStr = `: "${p.value.slice(0, 100)}${p.value.length > 100 ? '…' : ''}"`;
+          } else if (typeof p.value === 'object' && p.value !== null) {
+            valStr = `: ${JSON.stringify(p.value).slice(0, 120)}…`;
+          } else {
+            valStr = `: ${String(p.value)}`;
+          }
+        }
+        return {
+          section: p.path,
+          type: p.op === 'add' ? 'added' : p.op === 'remove' ? 'removed' : 'modified',
+          summary: `${p.op.toUpperCase()}${valStr}`,
+        };
+      });
+
+      return {
+        hasData: true,
+        changes: patchChanges,
+        isIdentical: false,
+        isInitial: false,
+      };
+    }
+
     if (!prevData && currData) {
       return {
         hasData: true,

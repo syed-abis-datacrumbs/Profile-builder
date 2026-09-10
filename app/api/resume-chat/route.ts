@@ -34,6 +34,12 @@ JSON Patch Path Guide & Examples:
   { "op": "add", "path": "/workExperience/0", "value": { "company": "Acme", "title": "Lead", "start": "Jan 2024", "end": "Present", "location": "City, State", "bullets": "one bullet per line\nsecond bullet" } }
 - Update 1st work experience bullets:
   { "op": "replace", "path": "/workExperience/0/bullets", "value": "first bullet\nsecond bullet" }
+- Edit / Replace education (e.g. university, degree, or tenure):
+  { "op": "replace", "path": "/education/0", "value": { "institution": "NED University", "degree": "B.E. in Computer Science", "start": "Aug 2017", "end": "May 2021", "location": "Karachi, Pakistan" } }
+- Edit single education field (e.g. institution name or degree):
+  { "op": "replace", "path": "/education/0/institution", "value": "NED University" }
+- Add education at top:
+  { "op": "add", "path": "/education/0", "value": { "institution": "NED University", "degree": "B.E. in Computer Science", "start": "Aug 2017", "end": "May 2021", "location": "Karachi, Pakistan" } }
 - Add project at top:
   { "op": "add", "path": "/projects/0", "value": { "title": "Title", "technologies": "React, Node", "date": "Jan 2024", "bullets": "bullet", "content": "<strong>Title</strong> (React, Node) – Description." } }
 - Add certification:
@@ -1542,6 +1548,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       console.error('[Resume AI JSON Parse Error]:', err, raw);
     }
 
+    const isPatchMode = Array.isArray(parsed?.patches);
     const nextCv = (rawCv ?? cv) as CvData;
 
     // Force the locked type back onto the response regardless of what the
@@ -1607,8 +1614,8 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       }
     }
 
-    // Preserve user's clean education list if this was not an education removal request
-    if (!isEduRemoval && Array.isArray(cv.education) && cv.education.length > 0) {
+    // Preserve user's clean education list if this was not an education removal request (Mode 2 full-generation only)
+    if (!isPatchMode && !isEduRemoval && Array.isArray(cv.education) && cv.education.length > 0) {
       if (cleanEducation.length === 0) {
         cleanEducation.push(...cv.education);
       } else if (cv.education.length > cleanEducation.length) {
@@ -1774,7 +1781,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       mentionsWorkEntity;
 
     const isEduEdit =
-      /\b(education|degree|degrees|school|schools|university|universities|college|colleges|educaton|academic|academics|gpa|major|majors|minor|graduated|graduation|bachelor|bachelors|master|masters|phd|matric|intermediate|diploma)\b/i.test(msgLower) ||
+      /\b(education|degree|degrees|school|schools|university|universities|college|colleges|educaton|academic|academics|gpa|major|majors|minor|graduated|graduation|bachelor|bachelors|master|masters|phd|matric|intermediate|diploma|studied|studying|study|b\.?e\.?|b\.?s\.?|m\.?s\.?|b\.?tech|m\.?tech|bsc|msc|ned|neduet|fast|nust|giki|lums|iba)\b/i.test(msgLower) ||
       mentionsEduEntity;
 
     const isPageFillReq =
@@ -1794,7 +1801,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     // Page fill requests, section edits, or minor requests never trigger a full role rewrite.
     const isRoleTransform = !isPageFillReq && (isFullRolePrompt || isMultiSentenceOrStory);
 
-    if (!isRoleTransform) {
+    if (!isRoleTransform && !isPatchMode) {
       if (!isProjEdit && cv.projects) {
         safeCv.projects = cv.projects;
       }
