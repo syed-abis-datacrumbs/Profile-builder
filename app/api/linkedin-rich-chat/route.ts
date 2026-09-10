@@ -508,9 +508,11 @@ The ONLY fields to leave untouched are literal contact details you have no real 
       }
     }
 
-    const proposedCoverFieldValues = (parsedObj.profile as { coverFieldValues?: unknown }).coverFieldValues;
+    const proposedCoverFieldValues = isPatchMode
+      ? (contentResult as Record<string, unknown> | null)?.coverFieldValues
+      : (parsedObj.profile as { coverFieldValues?: unknown } | undefined)?.coverFieldValues;
     const userMentionsCover = /\b(cover|banner|header\s+image|banner\s+text|cover\s+tagline|cover\s+headline)\b/i.test(userMessage);
-    const finalCoverFieldValues = userMentionsCover
+    const finalCoverFieldValues = ((isPatchMode && (contentResult as Record<string, unknown> | null)?.coverFieldValues) || userMentionsCover)
       ? mergeCoverFieldValues(coverTemplateId, fullProfile.coverFieldValues ?? {}, proposedCoverFieldValues)
       : (fullProfile.coverFieldValues ?? {});
 
