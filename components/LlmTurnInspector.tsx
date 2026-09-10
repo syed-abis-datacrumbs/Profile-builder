@@ -237,7 +237,14 @@ export function LlmTurnInspector({
 
         {turn.tokens && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white text-slate-700 font-medium border border-slate-200 shadow-2xs">
-            <Cpu className="w-3 h-3 text-slate-400" /> {turn.tokens.toLocaleString()} tokens
+            <Cpu className="w-3 h-3 text-slate-400" />
+            {turn.rawOutput?.usage?.completionTokens != null ? (
+              <span>
+                <strong className="text-emerald-600 font-semibold">{turn.rawOutput.usage.completionTokens.toLocaleString()}</strong> out &middot; {turn.rawOutput.usage.promptTokens?.toLocaleString() ?? 0} in
+              </span>
+            ) : (
+              <span>{turn.tokens.toLocaleString()} tokens</span>
+            )}
           </span>
         )}
 

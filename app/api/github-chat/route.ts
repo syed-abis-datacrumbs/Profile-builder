@@ -3,12 +3,50 @@ import type { GithubProfileData } from '../../../types';
 import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
+import { applyJsonPatches } from '@/lib/jsonPatch';
 
 export const runtime = 'nodejs';
 
 const SYSTEM_PROMPT = `You are an expert technical resume & GitHub README specialist helping a developer craft their GitHub profile README in a live editor. You are given the current profile as JSON plus a conversation. Apply the user's request, then reply.
 
 Respond with ONLY a JSON object (no markdown fences, no prose outside it):
+
+MODE 1: FOR TARGETED EDITS, ADDITIONS, UPDATES, OR REMOVALS (STRONGLY PREFERRED FOR SURGICAL EDITS):
+Use RFC 6902 JSON Patches to modify ONLY the affected fields. This keeps responses instant and prevents accidental modifications elsewhere:
+{
+  "reply": "<a short, friendly chat message describing what you changed, or a clarifying question>",
+  "patches": [
+    { "op": "replace" | "add" | "remove", "path": "/<field or array/index>", "value": ... }
+  ]
+}
+
+JSON Patch Path Guide & Examples:
+- Update title/headline:
+  { "op": "replace", "path": "/title", "value": "Full Stack Developer" }
+- Update name or username:
+  { "op": "replace", "path": "/name", "value": "Jane Doe" }
+  { "op": "replace", "path": "/username", "value": "janedoe" }
+- Update About Me:
+  { "op": "replace", "path": "/about", "value": "Rich 2-paragraph summary..." }
+- Add tech stack badge:
+  { "op": "add", "path": "/techStack/-", "value": "TypeScript" }
+- Remove tech stack badge:
+  { "op": "remove", "path": "/techStack/2" }
+- Update theme:
+  { "op": "replace", "path": "/theme", "value": "tokyonight" }
+- Update social links:
+  { "op": "replace", "path": "/socialLinks/twitter", "value": "https://twitter.com/janedoe" }
+- Update banner URL:
+  { "op": "replace", "path": "/bannerUrl", "value": "https://..." }
+- Update cards visibility:
+  { "op": "replace", "path": "/showStatsCard", "value": false }
+- Update custom section content (e.g. Featured Projects at index 1):
+  { "op": "replace", "path": "/customSections/1/content", "value": "..." }
+- Add a new custom section:
+  { "op": "add", "path": "/customSections/-", "value": { "title": "🏆 Achievements", "content": "..." } }
+
+MODE 2: ONLY FOR UNIVERSAL FULL-PROFILE ROLE TRANSFORMATION:
+When the user asks to transform, convert, build, rewrite, or switch the entire profile for ANY target role (e.g. "Transform the git for full stack developer", "Make this for backend engineer"):
 {
   "reply": "<a short, friendly chat message describing what you changed, or a clarifying question>",
   "github": <the FULL updated profile JSON in the EXACT schema below>
@@ -34,6 +72,7 @@ Profile JSON schema (keep this exact shape and keys):
 CRITICAL CONTENT QUALITY RULES:
 - NEVER output generic placeholder text like "Add your projects here", "Insert description here", or "Fill in details".
 - ALWAYS generate comprehensive, highly detailed, and lengthy content (2-3 full paragraphs or extensive bullet points) to ensure the profile looks rich and professional. Do NOT generate short, one-sentence sections.
+- NEVER ACCIDENTALLY DELETE WHEN ADDING: When adding new badges to techStack or adding new sections, use ONLY "add" patches. NEVER remove or delete existing items unless the user explicitly requested removal!
 - CRITICAL — UNIVERSAL ROLE TRANSFORMATION RULE:
   When the user asks to transform, convert, build, rewrite, switch, or adapt the profile for ANY target role (e.g. "Transform the git for full stack developer", "Make this for backend engineer", "Build AI/ML profile", "Frontend developer README", "DevOps engineer", "Data Engineer"):
   1. THIS IS A COMPLETE PROFILE RE-ALIGNMENT: YOU MUST OVERWRITE AND REGENERATE ALL SECTIONS IN THE RETURNED JSON TO MATCH THE TARGET ROLE!
@@ -116,7 +155,7 @@ CRITICAL CONTENT QUALITY RULES:
   6. NEVER reply saying you updated the name without actually modifying 'name', 'username', 'title', and 'about' in the returned 'github' JSON object!
 
 General Rules:
-- Return the WHOLE github object every time; preserve every field the user did not ask to change.
+- For focused or surgical changes, ALWAYS use Mode 1 with "patches". Return the WHOLE github object in Mode 2 ONLY when transforming the whole role or generating a new profile. Preserve every field the user did not ask to change.
 - NEVER invent or hallucinate a fake name (like "Alex Rivera") if the user does not provide one. Use a generic greeting like "Hi 👋" for the title if no name is known.
 - "add my github: <username>", "my github is <username>", or "change username to <x>" -> set the "username" field to the handle (e.g. "syed-abis-datacrumbs"). If a URL like "https://github.com/username" is given, extract just the handle "username".
 - "add/remove a badge" -> edit techStack (use clean readable names like "Python", "TypeScript", "Docker").
@@ -436,6 +475,8 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
 
     const latencyMs = Date.now() - startTime;
     const tokens = completion.usage?.total_tokens ?? null;
+    const promptTokens = completion.usage?.prompt_tokens ?? null;
+    const completionTokens = completion.usage?.completion_tokens ?? null;
     const modelUsed = completion.model || 'gpt-4o-mini';
 
     const raw = completion.choices[0]?.message?.content ?? '{}';
@@ -447,8 +488,14 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
       parseSuccess = true;
       if (!parsed || typeof parsed !== 'object') {
         parseError = 'Model returned non-object JSON';
+      } else if (Array.isArray(parsed.patches)) {
+        const patchRes = applyJsonPatches(github, parsed.patches, { allowPartial: true });
+        parsed.github = patchRes.document;
+        if (!patchRes.success && patchRes.errors.length > 0) {
+          console.warn('[GitHub AI JSON Patch Warnings]:', patchRes.errors);
+        }
       } else if (!parsed.github) {
-        parseError = 'Model returned JSON without a "github" object';
+        parseError = 'Model returned JSON without "patches" or "github" object';
       }
     } catch (err: unknown) {
       parseSuccess = false;
@@ -475,7 +522,13 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
             rawOutput: {
               reply,
               github: updatedGithub,
+              patches: Array.isArray(parsed?.patches) ? parsed.patches : undefined,
               rawParsed: parseSuccess ? parsed : null,
+              usage: {
+                promptTokens,
+                completionTokens,
+                totalTokens: tokens,
+              },
             } as unknown as Prisma.InputJsonValue,
             rawText: raw,
             parseSuccess,
@@ -507,6 +560,12 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
     return Response.json({
       reply,
       github: updatedGithub,
+      patches: Array.isArray(parsed?.patches) ? parsed.patches : undefined,
+      usage: {
+        promptTokens,
+        completionTokens,
+        totalTokens: tokens,
+      },
     });
   } catch (err: unknown) {
     console.error('[GitHub AI Error]:', err);

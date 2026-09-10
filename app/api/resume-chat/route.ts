@@ -3,14 +3,48 @@ import type { CvData, CvProject } from '../../../lib/cvTypes';
 import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
+import { applyJsonPatches } from '@/lib/jsonPatch';
 
 export const runtime = 'nodejs';
 
 const SYSTEM_PROMPT = `You are an expert resume-writing assistant helping a student build their CV in a live editor. You are given their current resume as JSON plus a conversation. Apply the user's request, then reply.
 
-Respond with ONLY a JSON object (no markdown, no prose outside it):
+Respond with ONLY a JSON object (no markdown fences, no prose outside it):
+
+MODE 1: FOR TARGETED EDITS, ADDITIONS, UPDATES, OR REMOVALS (STRONGLY PREFERRED FOR SURGICAL CHANGES):
+Use RFC 6902 JSON Patches to modify ONLY the affected fields. This keeps output fast and precise:
 {
   "reply": "<a short, friendly chat message describing what you changed>",
+  "patches": [
+    { "op": "replace" | "add" | "remove", "path": "/<section>/...", "value": ... }
+  ]
+}
+
+JSON Patch Path Guide & Examples:
+- Edit contact/name:
+  { "op": "replace", "path": "/personalInfo/fullName", "value": "Jane Doe" }
+  { "op": "replace", "path": "/personalInfo/email", "value": "jane@example.com" }
+  { "op": "replace", "path": "/personalInfo/phone", "value": "+1 555-0199" }
+- Edit summary:
+  { "op": "replace", "path": "/summary", "value": "2-3 sentence impactful summary..." }
+- Edit skills or interests:
+  { "op": "replace", "path": "/additional/skills", "value": "JavaScript, Python, React, Next.js" }
+  { "op": "replace", "path": "/additional/interests", "value": "AI, Cloud Computing, Distributed Systems" }
+- Add work experience at top (reverse-chronological):
+  { "op": "add", "path": "/workExperience/0", "value": { "company": "Acme", "title": "Lead", "start": "Jan 2024", "end": "Present", "location": "City, State", "bullets": "one bullet per line\nsecond bullet" } }
+- Update 1st work experience bullets:
+  { "op": "replace", "path": "/workExperience/0/bullets", "value": "first bullet\nsecond bullet" }
+- Add project at top:
+  { "op": "add", "path": "/projects/0", "value": { "title": "Title", "technologies": "React, Node", "date": "Jan 2024", "bullets": "bullet", "content": "<strong>Title</strong> (React, Node) – Description." } }
+- Add certification:
+  { "op": "add", "path": "/certifications/-", "value": { "name": "AWS Solutions Architect", "organization": "Amazon Web Services" } }
+- Explicit deletion (ONLY when user explicitly asks to remove/delete an item, e.g. "delete project 2"):
+  { "op": "remove", "path": "/projects/1" }
+
+MODE 2: ONLY FOR FULL RESUME REWRITES OR COMPLETE ROLE TRANSFORMATIONS:
+When the user explicitly asks to build a completely new resume from scratch or transform the entire CV for a new role (e.g. "Create CV for Software Engineer", "Build ATS resume for Data Analyst", "Switch whole resume to Marketing"):
+{
+  "reply": "<short chat message describing what you generated>",
   "cv": <the FULL updated resume JSON, in the EXACT schema below>
 }
 
@@ -19,9 +53,9 @@ Resume JSON schema (keep this exact shape and keys — do NOT include a "cvType"
   "summary": "2-3 sentence impactful professional summary tailored to the target role",
   "personalInfo": { "fullName": "", "phone": "", "email": "", "linkedin": "", "linkedinLabel": "Linkedin", "github": "", "githubLabel": "GitHub", "kaggle": "", "kaggleLabel": "Kaggle" },
   "education": [ { "institution": "", "degree": "", "start": "", "end": "", "location": "City, State or Country" } ],
-  "workExperience": [ { "company": "", "title": "", "start": "", "end": "", "location": "City, State or Country", "bullets": "one bullet per line\\nseparated by newlines" } ],
+  "workExperience": [ { "company": "", "title": "", "start": "", "end": "", "location": "City, State or Country", "bullets": "one bullet per line\nseparated by newlines" } ],
   "workshops": [ { "content": "<strong>Workshop Title</strong>: One or two descriptive sentences." } ],
-  "projects": [ { "title": "Project Title", "technologies": "Technologies used", "date": "Month Year", "bullets": "one bullet per line\\nseparated by newlines", "content": "<strong>Project Title</strong> (Technologies used) – Description with impact." } ],
+  "projects": [ { "title": "Project Title", "technologies": "Technologies used", "date": "Month Year", "bullets": "one bullet per line\nseparated by newlines", "content": "<strong>Project Title</strong> (Technologies used) – Description with impact." } ],
   "certifications": [ { "name": "", "organization": "" } ],
   "additional": { "skills": "", "interests": "" }
 }
@@ -30,13 +64,14 @@ You'll be told the CURRENT resume type (professional or student) as separate con
 
 Rules:
 - RULE 0: STRICT SURGICAL EDITING & ABSOLUTE SECTION/ITEM PRESERVATION (HIGHEST PRIORITY):
-  1. When the user asks for a specific, targeted change (such as changing dates/tenure, updating an institution name, adding/removing a skill, changing email/phone, adding a college, or editing a bullet point), YOU MUST ONLY MODIFY THAT EXACT SPECIFIC TARGET.
+  1. When the user asks for a specific, targeted change (such as changing dates/tenure, updating an institution name, adding/removing a skill, changing email/phone, adding a college, or editing a bullet point), YOU MUST PREFER MODE 1 WITH JSON PATCHES TO ONLY MODIFY THAT EXACT SPECIFIC TARGET.
   2. YOU MUST PRESERVE EVERY OTHER SECTION, ARRAY, OBJECT, AND FIELD 100% UNCHANGED EXACTLY AS IN THE CURRENT RESUME JSON.
   3. NEVER DROP, OMIT, TRUNCATE, OR FORGET OTHER EDUCATION ENTRIES, PROJECTS, WORK EXPERIENCES, CERTIFICATIONS, OR CONTACT LINKS!
-  4. Example: If the current resume has 2 education entries (e.g. University + College) and the user asks to change the university's tenure/dates or name, YOU MUST RETURN BOTH EDUCATION ENTRIES in the "education" array — the university with the updated dates/name, and the college entry 100% PRESERVED EXACTLY AS IT WAS.
-  5. ONLY perform a full multi-section rewrite when the user explicitly requests a full role transformation or new resume (e.g. "transform whole resume for video editor", "build ATS resume for data analyst"). In ALL other turns, treat the request as a surgical edit and preserve everything else!
+  4. Example: If the current resume has 2 education entries (e.g. University + College) and the user asks to change the university's tenure/dates or name, patch ONLY that university's fields — leaving the college entry 100% PRESERVED.
+  5. ONLY perform a full multi-section rewrite (Mode 2) when the user explicitly requests a full role transformation or new resume (e.g. "transform whole resume for video editor", "build ATS resume for data analyst"). In ALL other turns, treat the request as a surgical edit with JSON patches!
   6. Cross-Section Project Alignment: When the user asks to update work experience, skills, or interests "as per my projects" (or based on projects), you MUST examine the user's active projects, extract all technologies, frameworks, APIs, and achievements (e.g. Meta API, React Native, WhatsApp integrations, AI generators, Python, YOLO, dlib, Arduino), and rewrite the work experience bullets, technical skills, and interests to authentically reflect those exact technologies while keeping existing projects intact!
   7. Strict Information Purge Rule ("just keep what information I have given you and remove what was already written before"): When the user asks to keep only the information they provided and remove previous/old content, you MUST strictly purge any previous companies, unmentioned projects, old degrees, and template certifications. You MUST return ONLY the authentic entities and items the user explicitly provided in the conversation (e.g. DataCrumbs, Habib University, Saylani Mass IT, and the specific user projects), with ZERO leftover template or unmentioned data!
+  8. NEVER ACCIDENTALLY DELETE WHEN ADDING (CRITICAL): When the user asks to "add" an experience, project, education, or certification (e.g. "add full stack engineer at datacrumbs as experience"), YOU MUST ONLY EMIT AN "add" PATCH OPERATION. NEVER pair an "add" with a "remove" operation! All existing experiences, projects, and education MUST REMAIN INTACT in the array. If replacing an empty/generic placeholder (e.g. "Company / Organization Name"), use a single { "op": "replace", "path": "/workExperience/0", "value": ... } patch. NEVER emit a "remove" patch unless the user specifically and explicitly requested to delete/remove an item!
 
 - ALWAYS make forward progress on resume generation and editing requests. Never respond with only a clarifying question and no changes to the cv when the user is asking to build or update a resume — a beginner providing their details should still get a complete, realistic, ready-to-edit resume back immediately. If you have a genuine follow-up question, ask it in "reply" AFTER you've already filled in a full, plausible draft — never before.
 - EXCEPTIONS FOR RETURNING UNCHANGED CV:
@@ -47,8 +82,8 @@ Rules:
 - Write concise, quantified, professional resume content. For emphasis inside bullets/descriptions use inline HTML tags — <strong>…</strong> for bold, <em>…</em> for italic, <u>…</u> for underline. Do NOT use markdown "**".
 - "workExperience" bullets: one bullet per line, newline-separated (no leading "-" or "•").
 - "projects"/"workshops" entries are ONE combined "content" field each (title, technologies if any, and description all together as shown in the schema) — not separate fields. Bold the title with <strong>.
-- CRITICAL — Chronological Order: ALWAYS sort array items in reverse-chronological order (newest first, oldest last). When adding a new "workExperience", "education", or "project", insert it at the correct index so that the most recent or current item is the very first item in the array, NOT appended to the end.
-- Return the WHOLE cv every time. Preserve existing fields unless the user specifically asks to edit, remove, or add to them. If the user asks to add new projects, experiences, or education, YOU MUST place them in the correct reverse-chronological order with realistic content!
+- CRITICAL — Chronological Order: ALWAYS sort array items in reverse-chronological order (newest first, oldest last). When adding a new "workExperience", "education", or "project", insert it at the correct index (index 0 for current/most recent) so that the most recent item is the first item in the array.
+- For targeted edits/additions/deletions, ALWAYS return "patches" (RFC 6902) to modify only the needed paths. If generating a full "cv" (Mode 2), preserve existing fields unless the user specifically asks to edit, remove, or add to them. If the user asks to add new projects, experiences, or education, YOU MUST place them in the correct reverse-chronological order with realistic content!
 - If the user asks to remove/delete an entry (a certification, education entry, project, work experience, workshop, etc.), remove that WHOLE object from its array. Never leave it in place with its fields blanked out — an empty entry left behind still shows up in the resume as an empty placeholder slot, which looks broken. IMPORTANT: When you remove entries, you MUST actually produce a shorter array in the JSON — if the current array has 4 items and the user says remove 2, the output array MUST have exactly 2 items. Do NOT claim you removed something while keeping the array length the same. That is a critical failure.
 - CRITICAL — Unambiguous quantity removals (remove first/last N): Phrases like "remove the last 2 projects", "remove the first 3 certifications", "delete the last project" are CLEAR and unambiguous. Act on them immediately without asking. To remove the LAST N items from an array, take the array, count its length, and slice off the last N entries — the output array length must equal original length minus N. To remove the FIRST N items, drop the first N entries. Always verify your output array length is correct before responding.
 - CRITICAL — Ambiguous removal requests: The ONLY ambiguous case is when the user writes a bare number with no positional word, e.g. "remove 2 projects" or "delete 3 certifications" — this is ambiguous because "2" could mean the 2nd item (ordinal) OR two items (quantity). In this case ONLY, you MUST ask for clarification before making any deletion. Return the cv completely unchanged and in your "reply" ask: "Do you mean remove the 2nd project specifically, or remove two projects from the list? If you want to remove specific ones, which ones?" Do NOT ask for clarification when the user says "last 2", "first 2", "last one", "all", or names a specific entry — those are clear.
@@ -1465,6 +1500,8 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
 
     const latencyMs = Date.now() - startTime;
     const tokens = completion.usage?.total_tokens ?? null;
+    const promptTokens = completion.usage?.prompt_tokens ?? null;
+    const completionTokens = completion.usage?.completion_tokens ?? null;
     const modelUsed = completion.model || 'gpt-4o-mini';
 
     const raw = completion.choices[0]?.message?.content ?? '{}';
@@ -1477,6 +1514,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       parseSuccess = true;
       if (!parsed || typeof parsed !== 'object') {
         parseError = 'Model returned non-object JSON';
+      } else if (Array.isArray(parsed.patches)) {
+        const patchRes = applyJsonPatches(cv, parsed.patches, { allowPartial: true });
+        rawCv = patchRes.document as unknown as Record<string, unknown>;
+        if (!patchRes.success && patchRes.errors.length > 0) {
+          console.warn('[Resume AI JSON Patch Warnings]:', patchRes.errors);
+        }
       } else if (parsed.cv && typeof parsed.cv === 'object') {
         rawCv = parsed.cv as Record<string, unknown>;
       } else if (
@@ -1491,7 +1534,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         // Auto-Recovery: Model returned the CV object directly at root level without wrapping in { "cv": { ... } }
         rawCv = parsed;
       } else {
-        parseError = 'Model returned JSON without a "cv" object';
+        parseError = 'Model returned JSON without "patches" or "cv" object';
       }
     } catch (err: unknown) {
       parseSuccess = false;
@@ -2329,7 +2372,13 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             rawOutput: {
               reply,
               cv: safeCv,
+              patches: Array.isArray(parsed?.patches) ? parsed.patches : undefined,
               rawParsed: parseSuccess ? parsed : null,
+              usage: {
+                promptTokens,
+                completionTokens,
+                totalTokens: tokens,
+              },
             } as unknown as Prisma.InputJsonValue,
             rawText: raw,
             parseSuccess,
@@ -2363,6 +2412,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     return Response.json({
       reply,
       cv: safeCv,
+      patches: Array.isArray(parsed?.patches) ? parsed.patches : undefined,
+      usage: {
+        promptTokens,
+        completionTokens,
+        totalTokens: tokens,
+      },
     });
   } catch (err: unknown) {
     console.error('[Resume AI Error]:', err);

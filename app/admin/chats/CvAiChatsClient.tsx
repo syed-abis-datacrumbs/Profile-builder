@@ -348,7 +348,9 @@ export function CvAiChatsClient({
 
                           {t.tokens && (
                             <span className="text-[10px] text-slate-500 font-mono px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200/60">
-                              {t.tokens} tok
+                              {t.rawOutput?.usage?.completionTokens != null
+                                ? `${t.rawOutput.usage.completionTokens} out / ${t.tokens} tok`
+                                : `${t.tokens} tok`}
                             </span>
                           )}
 

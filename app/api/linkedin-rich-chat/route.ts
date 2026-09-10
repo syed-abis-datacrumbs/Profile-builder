@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
 import { COVER_ART } from '../../../lib/linkedinRichProfile';
 import { overageCeiling } from '../../../lib/linkedinCoverArt';
+import { applyJsonPatches } from '@/lib/jsonPatch';
 
 export const runtime = 'nodejs';
 
@@ -43,6 +44,39 @@ const SYSTEM_PROMPT_BASE = `You are an expert LinkedIn coach helping a professio
 The user will often paste in raw, unstructured facts about themselves (job history, projects, education, location) all at once, expecting you to restructure ALL of it into the right fields in one pass — do not skip or summarize away any fact they gave you; if they describe multiple projects, add ALL of them as separate entries in "projects", not just one.
 
 Respond with ONLY a JSON object (no markdown fences, no prose outside it):
+
+MODE 1: FOR TARGETED EDITS, ADDITIONS, UPDATES, OR REMOVALS (STRONGLY PREFERRED FOR SURGICAL EDITS):
+Use RFC 6902 JSON Patches to modify ONLY the affected fields. This drastically reduces latency and keeps the rest of the profile untouched:
+{
+  "reply": "<a short, friendly chat message describing what you changed, or a clarifying question>",
+  "patches": [
+    { "op": "replace" | "add" | "remove", "path": "/<field or array/index>", "value": ... }
+  ]
+}
+
+JSON Patch Path Guide & Examples:
+- Update headline:
+  { "op": "replace", "path": "/headline", "value": "Senior AI Engineer | LLMs & PyTorch" }
+- Update about section:
+  { "op": "replace", "path": "/about", "value": "One crisp, punchy first-person paragraph..." }
+- Update location or current company:
+  { "op": "replace", "path": "/location", "value": "San Francisco, CA" }
+  { "op": "replace", "path": "/currentCompany", "value": "DataCrumbs" }
+- Add a skill:
+  { "op": "add", "path": "/skills/-", "value": "LangChain" }
+- Add experience at top:
+  { "op": "add", "path": "/experience/0", "value": { "title": "AI Engineer", "company": "DataCrumbs", "start": "Feb 2025", "end": "Present", "description": "bullet 1\\nbullet 2\\nbullet 3" } }
+- Update 1st experience description:
+  { "op": "replace", "path": "/experience/0/description", "value": "updated bullet points..." }
+- Add a project:
+  { "op": "add", "path": "/projects/0", "value": { "title": "RAG System", "description": "Production LLM pipeline with Qdrant..." } }
+- Remove 2nd certification:
+  { "op": "remove", "path": "/certifications/1" }
+- Update banner wording:
+  { "op": "replace", "path": "/coverFieldValues/tagline", "value": "Architecting Scalable Machine Learning" }
+
+MODE 2: ONLY FOR FULL PROFILE ROLE SYNCHRONIZATION OR COMPREHENSIVE OVERHAULS:
+When the user mentions a complete role switch, new domain, or requests to synchronize/build the entire profile from scratch:
 {
   "reply": "<a short, friendly chat message describing what you changed, or a clarifying question>",
   "profile": <the FULL updated profile JSON in the EXACT schema below>
@@ -68,7 +102,8 @@ Profile JSON schema (keep this exact shape and keys):
 }
 
 Rules:
-- Return the WHOLE profile object every time; preserve every field and array item the user did not ask to change.
+- For focused or surgical changes, ALWAYS use Mode 1 with "patches". Return the WHOLE profile object in Mode 2 ONLY when synchronizing the full role or overhauling the whole background. Preserve every field and array item the user did not ask to change.
+- NEVER ACCIDENTALLY DELETE WHEN ADDING: When adding a new experience, project, skill, education, award, or certification, use ONLY "add" patches. NEVER remove or delete existing items unless the user explicitly requested removal!
 - CRITICAL — EXPERIENCE BULLET POINTS GENERATION:
   Whenever the user asks to add an experience role (e.g. "add experience as an AI Engineer at XYZ", "Data Engineer at ABC", "Software Engineer at ..."), YOU MUST NEVER leave "description" empty or with just one generic sentence.
   Always generate 3 to 4 domain-relevant, highly professional accomplishment bullet points separated by "\\n" (one impactful sentence per line). Highlight key technical skills, architectural workflows, tools, and quantified impact (e.g. for AI Engineer: designing LLM/RAG pipelines, model fine-tuning with PyTorch/HuggingFace, reducing inference latency by 35%, deploying Dockerized ML APIs; for Data Engineer: building ETL/ELT pipelines in Airflow/Spark, data warehousing in Snowflake/BigQuery, reducing query runtimes, data modeling with dbt).
@@ -395,6 +430,8 @@ The ONLY fields to leave untouched are literal contact details you have no real 
 
     const latencyMs = Date.now() - startTime;
     const tokens = completion.usage?.total_tokens ?? null;
+    const promptTokens = completion.usage?.prompt_tokens ?? null;
+    const completionTokens = completion.usage?.completion_tokens ?? null;
     const modelUsed = completion.model || 'gpt-4o-mini';
 
     const choice = completion.choices[0];
@@ -410,53 +447,64 @@ The ONLY fields to leave untouched are literal contact details you have no real 
       return Response.json({ error: "The AI's response wasn't valid — please try rephrasing or send it again." });
     }
 
-    const parsedObj = (parsed ?? {}) as { reply?: unknown; profile?: unknown };
-    if (!isValidContentProfile(parsedObj.profile)) {
+    const parsedObj = (parsed ?? {}) as { reply?: unknown; profile?: unknown; patches?: unknown };
+    let contentResult: Partial<LinkedinContentProfile> | null = null;
+    let isPatchMode = false;
+
+    if (Array.isArray(parsedObj.patches)) {
+      const patchRes = applyJsonPatches(contentProfile, parsedObj.patches, { allowPartial: true });
+      contentResult = patchRes.document;
+      isPatchMode = true;
+      if (!patchRes.success && patchRes.errors.length > 0) {
+        console.warn('[LinkedIn AI JSON Patch Warnings]:', patchRes.errors);
+      }
+    } else if (isValidContentProfile(parsedObj.profile)) {
+      contentResult = parsedObj.profile as Partial<LinkedinContentProfile>;
+    } else {
       // Don't silently report success while leaving the profile untouched —
       // that's the exact bug where the chat says "Done" but nothing changed.
       return Response.json({
-        error: "The AI's response didn't match the expected profile shape, so nothing was changed — please try again, or try breaking your request into smaller pieces.",
+        error: "The AI's response didn't match the expected profile or patch shape, so nothing was changed — please try again, or try breaking your request into smaller pieces.",
       });
     }
 
-    // The model is told to preserve fields the user didn't ask about, but it
-    // routinely drops or blanks ones the latest message simply didn't mention
-    // (e.g. wiping `location` when the user only talked about their job
-    // history). Silently keeping the prior value is always the right call:
-    // clearing a field is never something a user asks for implicitly, and an
-    // empty scalar renders as a bare placeholder on the profile.
-    const preserved = { ...(parsedObj.profile as Record<string, unknown>) };
-    for (const key of ['fullName', 'title', 'headline', 'location', 'currentCompany', 'school', 'about'] as const) {
-      const next = preserved[key];
-      const prev = (fullProfile as unknown as Record<string, unknown>)[key];
-      const isPlaceholderLorem = key === 'about' && typeof prev === 'string' && prev.includes('Lorem ipsum');
-      if (!isPlaceholderLorem && (typeof next !== 'string' || !next.trim()) && typeof prev === 'string' && prev.trim()) {
-        preserved[key] = prev;
+    // The model is told to preserve fields the user didn't ask about, but in
+    // full-mode it routinely drops or blanks ones the latest message simply didn't
+    // mention. If patches were used, untouched fields are inherently preserved.
+    const preserved = { ...(contentResult as Record<string, unknown>) };
+    if (!isPatchMode) {
+      for (const key of ['fullName', 'title', 'headline', 'location', 'currentCompany', 'school', 'about'] as const) {
+        const next = preserved[key];
+        const prev = (fullProfile as unknown as Record<string, unknown>)[key];
+        const isPlaceholderLorem = key === 'about' && typeof prev === 'string' && prev.includes('Lorem ipsum');
+        if (!isPlaceholderLorem && (typeof next !== 'string' || !next.trim()) && typeof prev === 'string' && prev.trim()) {
+          preserved[key] = prev;
+        }
       }
-    }
 
-    // Preserve arrays if the model returned an empty list or omitted them,
-    // unless the user specifically asked to clear/delete them.
-    for (const key of ['experience', 'education', 'certifications', 'projects', 'skills', 'awards', 'recommendations'] as const) {
-      const next = preserved[key];
-      const prev = (fullProfile as unknown as Record<string, unknown>)[key];
-      const userAskedToClear = /\b(clear|remove|delete|reset|wipe)\b/i.test(userMessage) &&
-        new RegExp(`\\b(${key}|all|everything)\\b`, 'i').test(userMessage);
+      // Preserve arrays if the model returned an empty list or omitted them,
+      // unless the user specifically asked to clear/delete them.
+      for (const key of ['experience', 'education', 'certifications', 'projects', 'skills', 'awards', 'recommendations'] as const) {
+        const next = preserved[key];
+        const prev = (fullProfile as unknown as Record<string, unknown>)[key];
+        const userAskedToClear = /\b(clear|remove|delete|reset|wipe)\b/i.test(userMessage) &&
+          new RegExp(`\\b(${key}|all|everything)\\b`, 'i').test(userMessage);
 
-      // Check if prev was purely blank placeholders
-      const isBlankPlaceholderArray = Array.isArray(prev) && prev.length > 0 && prev.every((item: unknown) => {
-        if (!item || typeof item !== 'object') return true;
-        const rec = item as Record<string, string | undefined>;
-        if (key === 'certifications') return !rec.name?.trim();
-        if (key === 'recommendations') return !rec.recommenderName?.trim() && !rec.text?.trim();
-        if (key === 'experience') return !rec.title?.trim() && !rec.company?.trim();
-        if (key === 'education') return !rec.school?.trim();
-        if (key === 'projects') return !rec.title?.trim();
-        return false;
-      });
+        // Check if prev was purely blank placeholders
+        const isBlankPlaceholderArray = Array.isArray(prev) && prev.length > 0 && prev.every((item: unknown) => {
+          if (!item || typeof item !== 'object') return true;
+          const rec = item as Record<string, string | undefined>;
+          if (key === 'certifications') return !rec.name?.trim();
+          if (key === 'recommendations') return !rec.recommenderName?.trim() && !rec.text?.trim();
+          if (key === 'experience') return !rec.title?.trim() && !rec.company?.trim();
+          if (key === 'education') return !rec.school?.trim();
+          if (key === 'projects') return !rec.title?.trim();
+          return false;
+        });
 
-      if (!userAskedToClear && Array.isArray(prev) && prev.length > 0 && !isBlankPlaceholderArray && (!Array.isArray(next) || next.length === 0)) {
-        preserved[key] = prev;
+        if (!userAskedToClear && Array.isArray(prev) && prev.length > 0 && !isBlankPlaceholderArray && (!Array.isArray(next) || next.length === 0)) {
+          preserved[key] = prev;
+        }
       }
     }
 
@@ -529,7 +577,13 @@ The ONLY fields to leave untouched are literal contact details you have no real 
             rawOutput: {
               reply,
               profile: mergedProfile,
+              patches: Array.isArray(parsedObj?.patches) ? parsedObj.patches : undefined,
               rawParsed: parsedObj,
+              usage: {
+                promptTokens,
+                completionTokens,
+                totalTokens: tokens,
+              },
             } as unknown as Prisma.InputJsonValue,
             rawText: raw,
             parseSuccess: true,
@@ -561,6 +615,12 @@ The ONLY fields to leave untouched are literal contact details you have no real 
     return Response.json({
       reply,
       profile: mergedProfile,
+      patches: Array.isArray(parsedObj?.patches) ? parsedObj.patches : undefined,
+      usage: {
+        promptTokens,
+        completionTokens,
+        totalTokens: tokens,
+      },
     });
   } catch (err: unknown) {
     console.error('[LinkedIn AI Error]:', err);
