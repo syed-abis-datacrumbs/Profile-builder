@@ -7,9 +7,10 @@ export async function POST() {
   if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    await (db.paymentUnlock as any).updateMany({
+    await (db.paymentUnlock as any).upsert({
       where: { userId },
-      data: { celebratedAt: new Date() },
+      update: { celebratedAt: new Date() },
+      create: { userId, celebratedAt: new Date() },
     });
     return Response.json({ success: true });
   } catch (err: any) {

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { ImagineSidebar, MobileNavBar } from './ImagineSidebar';
 import { AuthModal } from './AuthModal';
 import { UpgradeModal } from './UpgradeModal';
@@ -31,11 +30,12 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
     setIsUpgradeOpen,
     showBlockModal,
     setShowBlockModal,
+    showProCelebrationModal,
+    setShowProCelebrationModal,
   } = useWorkspace();
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [showProCelebrationModal, setShowProCelebrationModal] = useState(false);
 
   // Scroll listener on main container
   useEffect(() => {
@@ -55,24 +55,6 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
       container.removeEventListener('scroll', handleScroll);
     };
   }, [mainContentRef]);
-
-  // Listen to celebration event from background payment status check
-  useEffect(() => {
-    const handleUnlocked = () => {
-      // Confetti celebratory trigger
-      try {
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.5 },
-          colors: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'],
-        });
-      } catch {}
-    };
-
-    window.addEventListener('profile_builder_unlocked', handleUnlocked);
-    return () => window.removeEventListener('profile_builder_unlocked', handleUnlocked);
-  }, []);
 
   return (
     <div className="min-h-screen flex bg-[#FAFAFA] text-slate-900 font-sans">

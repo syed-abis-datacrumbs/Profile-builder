@@ -48,6 +48,8 @@ export interface WorkspaceContextType {
   setIsUpgradeOpen: (open: boolean) => void;
   showBlockModal: boolean;
   setShowBlockModal: (open: boolean) => void;
+  showProCelebrationModal: boolean;
+  setShowProCelebrationModal: (open: boolean) => void;
 
   // Shared profile data
   resumeData: ResumeData;
@@ -194,17 +196,25 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
         }
 
         if (d.unlocked && d.shouldCelebrate) {
-          setShowProCelebrationModal(true);
-          fetch('/api/payment/celebrate', { method: 'POST' }).catch(() => {});
-          try {
-            confetti({
-              particleCount: 120,
-              spread: 80,
-              origin: { y: 0.5 },
-              colors: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'],
-            });
-          } catch (e) {
-            console.error('[Confetti error]:', e);
+          const celebrationKey = user?.id ? `has_celebrated_pro_unlock_${user.id}` : 'has_celebrated_pro_unlock_default';
+          const alreadyCelebrated = typeof window !== 'undefined' && localStorage.getItem(celebrationKey);
+
+          if (!alreadyCelebrated) {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(celebrationKey, 'true');
+            }
+            setShowProCelebrationModal(true);
+            fetch('/api/payment/celebrate', { method: 'POST' }).catch(() => {});
+            try {
+              confetti({
+                particleCount: 120,
+                spread: 80,
+                origin: { y: 0.5 },
+                colors: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'],
+              });
+            } catch (e) {
+              console.error('[Confetti error]:', e);
+            }
           }
         }
       })
@@ -262,6 +272,8 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
         setIsUpgradeOpen,
         showBlockModal,
         setShowBlockModal,
+        showProCelebrationModal,
+        setShowProCelebrationModal,
         resumeData,
         setResumeData,
         githubData,

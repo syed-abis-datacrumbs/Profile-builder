@@ -21,9 +21,11 @@ export async function GET() {
   if (primaryEmail && BUILDER_ACCESS_EMAILS.has(primaryEmail)) {
     let unlock = await db.paymentUnlock.findUnique({ where: { userId } });
     if (!unlock) {
-      unlock = await db.paymentUnlock.create({ data: { userId } });
+      unlock = await (db.paymentUnlock as any).create({
+        data: { userId, celebratedAt: new Date() },
+      });
     }
-    const lastApprovedAt = unlock.unlockedAt ? unlock.unlockedAt.toISOString() : 'team_access_permanent';
+    const lastApprovedAt = unlock?.unlockedAt ? unlock.unlockedAt.toISOString() : 'team_access_permanent';
     const shouldCelebrate = !(unlock as any)?.celebratedAt;
     return Response.json({ unlocked: true, aiMessagesUsed, lastApprovedAt, shouldCelebrate });
   }
