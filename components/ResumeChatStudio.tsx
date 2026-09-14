@@ -23,6 +23,8 @@ import {
   Bug,
   LayoutTemplate,
   AlertTriangle,
+  Upload,
+  RefreshCw,
 } from 'lucide-react';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { getResumeAccentColor } from '../lib/resumeHelpers';
@@ -106,6 +108,8 @@ interface ResumeChatStudioProps {
    *  user's very first visit (no need to type it manually). */
   clerkName?: string;
   isPro?: boolean;
+  onOpenSync?: () => void;
+  onOpenImport?: () => void;
 }
 
 export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
@@ -119,6 +123,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   setMobileHeaderRight,
   clerkName,
   isPro,
+  onOpenSync,
+  onOpenImport,
 }) => {
   // Same accent stripe the template's grid card and preview popup show —
   // derived from fieldLabel (the loaded template's name), so it stays
@@ -655,7 +661,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             }`}
           >
             <div className={`w-1.5 h-1.5 rounded-full ${targetJob.trim() ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-            <span>Target Job</span>
+            <span className="hidden sm:inline">Target Job</span>
+            <span className="sm:hidden">Job</span>
           </button>
         </div>
       </div>
@@ -1080,47 +1087,66 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       </div>
 
       {/* COLUMN 3 (RESUME CANVAS - RIGHT: Full screen on Mobile) */}
-      <div className="w-full h-full lg:flex-1 shrink-0 lg:h-full flex flex-col bg-slate-100/90 overflow-hidden relative">
+      <div className="w-full lg:w-auto flex-1 min-w-0 h-full flex flex-col bg-slate-100/90 overflow-hidden relative">
 
         {/* MacOS Window Single Unified Toolbar Header */}
-        <div className="shrink-0 bg-white border-b border-slate-200 px-2 sm:px-4 py-2 flex items-center justify-between gap-1 text-xs shadow-2xs z-30 whitespace-nowrap min-w-0">
+        <div className="shrink-0 bg-white border-b border-slate-200 px-2 sm:px-3 py-1.5 flex items-center justify-between gap-1.5 text-xs shadow-2xs z-30 min-w-0 overflow-visible">
 
           {/* Left Controls Group */}
-          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-            {/* MacOS Traffic Light Dots */}
-            <div className="hidden sm:flex items-center gap-1.5 pr-1">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <div className="w-3 h-3 rounded-full bg-amber-400" />
-              <div className="w-3 h-3 rounded-full bg-emerald-500" />
-            </div>
-
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {/* Resume Templates Button */}
             <button
               type="button"
               onClick={() => setShowTemplateModal(true)}
-              className="h-7 px-1.5 sm:px-2 rounded-lg bg-slate-100 text-[11px] sm:text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1 leading-none cursor-pointer"
+              className="h-7 px-2 rounded-lg bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors border border-slate-200/80 flex items-center justify-center gap-1.5 leading-none cursor-pointer shrink-0"
               title="Change Resume Template"
             >
-              <LayoutTemplate className="w-3.5 h-3.5 text-slate-800 shrink-0" />
-              <span className="leading-none hidden xs:inline">Templates</span>
+              <LayoutTemplate className="w-3.5 h-3.5 text-slate-700 shrink-0" />
+              <span className="hidden md:inline">Templates</span>
             </button>
 
-            {/* Remove Template Button with Confirmation Popover */}
-            <div className="relative">
+            {/* Import Button */}
+            {onOpenImport && (
+              <button
+                type="button"
+                onClick={onOpenImport}
+                className="h-7 px-2 rounded-lg bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors border border-slate-200/80 flex items-center justify-center gap-1.5 leading-none cursor-pointer shrink-0"
+                title="Import from PDF or GitHub"
+              >
+                <Upload className="w-3.5 h-3.5 text-slate-700 shrink-0" />
+                <span className="hidden md:inline">Import</span>
+              </button>
+            )}
+
+            {/* Sync to LinkedIn & GitHub Button */}
+            {onOpenSync && (
+              <button
+                type="button"
+                onClick={onOpenSync}
+                className="h-7 px-2 sm:px-2.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-xs font-semibold text-indigo-700 transition-colors border border-indigo-200 flex items-center justify-center gap-1.5 leading-none cursor-pointer shrink-0"
+                title="Sync resume details to LinkedIn and GitHub profiles"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span className="hidden 2xl:inline">Sync Profiles</span>
+                <span className="hidden sm:inline 2xl:hidden">Sync</span>
+              </button>
+            )}
+
+            {/* Clear Button (Bin logo only) */}
+            <div className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setShowClearConfirm((v) => !v)}
-                className="h-7 px-1.5 sm:px-2 rounded-lg bg-rose-50 text-[11px] sm:text-xs font-semibold text-rose-600 hover:bg-rose-100 transition-colors border border-rose-200 flex items-center justify-center gap-1 leading-none cursor-pointer shadow-2xs"
-                title="Remove template and clear resume data"
+                className="h-7 w-7 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors border border-rose-200 flex items-center justify-center cursor-pointer shrink-0"
+                title="Clear resume data"
               >
                 <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                <span className="leading-none hidden xs:inline">Remove Template</span>
               </button>
 
               {showClearConfirm && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowClearConfirm(false)} />
-                  <div className="absolute top-full left-0 mt-2 w-64 sm:w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl z-[100] p-3.5 space-y-3 text-xs whitespace-normal animate-in fade-in zoom-in-95">
+                  <div className="absolute top-full left-0 mt-2 w-64 sm:w-72 max-w-[calc(100vw-24px)] bg-white border border-slate-200 rounded-2xl shadow-2xl z-[100] p-3.5 space-y-3 text-xs whitespace-normal animate-in fade-in zoom-in-95">
                     <div className="flex items-start gap-2.5">
                       <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
                         <AlertTriangle className="w-4 h-4" />
@@ -1186,7 +1212,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 className="h-7 px-1.5 sm:px-2 rounded-lg bg-slate-100 text-[11px] sm:text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1 leading-none cursor-pointer"
               >
                 <FileText className="w-3.5 h-3.5 text-slate-800 shrink-0" />
-                <span className="leading-none">Resumes</span>
+                <span className="leading-none hidden sm:inline">Resumes</span>
                 <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
               </button>
 
@@ -1428,7 +1454,17 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                       : 'text-slate-500 hover:text-slate-800'
                     }`}
                 >
-                  {t}
+                  {t === 'professional' ? (
+                    <>
+                      <span className="hidden 2xl:inline">Professional</span>
+                      <span className="2xl:hidden">Pro</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="hidden sm:inline">Student</span>
+                      <span className="sm:hidden">Stu</span>
+                    </>
+                  )}
                 </button>
               ))}
             </div>
@@ -1499,7 +1535,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         </div>
 
         {/* Live Resume Canvas Area */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex justify-center items-start relative">
+        <div className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 lg:p-8 flex justify-center items-start relative">
           <PaginatedCvPreview
             data={cv}
             exportRef={exportRef}

@@ -400,8 +400,8 @@ You can share these details all at once or tell me step-by-step (e.g. *"I am an 
       });
     }
 
-    const coverTemplateId = fullProfile.coverTemplateId || 'template-1';
-    const art = COVER_ART[coverTemplateId];
+    const coverTemplateId = fullProfile.coverTemplateId || '';
+    const art = coverTemplateId ? COVER_ART[coverTemplateId] : undefined;
     const editableCoverFields = (art?.fields ?? [])
       .filter((f) => !f.defaultFrom)
       .map((f) => ({

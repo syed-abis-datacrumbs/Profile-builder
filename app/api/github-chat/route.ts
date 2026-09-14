@@ -508,6 +508,15 @@ You can share your details all at once or tell me step-by-step (e.g. *"My GitHub
     if (updatedGithub && !updatedGithub.avatarUrl) {
       updatedGithub.avatarUrl = github?.avatarUrl || '/images/github-profile/git-profile-1.png';
     }
+    if (updatedGithub && Array.isArray(updatedGithub.techStack)) {
+      const seen = new Set<string>();
+      updatedGithub.techStack = updatedGithub.techStack.filter((t) => {
+        const norm = String(t || '').trim().toLowerCase();
+        if (!norm || seen.has(norm)) return false;
+        seen.add(norm);
+        return true;
+      });
+    }
 
     if (sessionId !== 'unknown') {
       try {

@@ -625,18 +625,33 @@ export const GithubReadmePreview: React.FC<{
         </div>
 
         {/* Tech badges */}
-        {github.techStack.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">🛠️ Tech Stack</h3>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {github.techStack.map((tech) => (
-                <span key={tech} className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider text-white shadow-sm" style={{ backgroundColor: `#${badgeColor(tech)}` }}>
-                  {tech}
-                </span>
-              ))}
+        {github.techStack && github.techStack.length > 0 && (() => {
+          const uniqueBadges = Array.from(
+            new Map(
+              github.techStack
+                .map((t) => (typeof t === 'string' ? t.trim() : ''))
+                .filter(Boolean)
+                .map((t) => [t.toLowerCase(), t])
+            ).values()
+          );
+          if (uniqueBadges.length === 0) return null;
+          return (
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">🛠️ Tech Stack</h3>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {uniqueBadges.map((tech, idx) => (
+                  <span
+                    key={`${tech}-${idx}`}
+                    className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider text-white shadow-sm"
+                    style={{ backgroundColor: `#${badgeColor(tech)}` }}
+                  >
+                    {tech}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Analytics cards */}
         {(github.showStatsCard || github.showStreakCard || github.showTopLangsCard) && (
@@ -898,13 +913,13 @@ function LiveTopLangsCard({ username }: { username: string }) {
     <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 space-y-2.5">
       <div className="text-xs font-bold text-slate-300">Most Used Languages</div>
       <div className="flex h-2.5 rounded-full overflow-hidden">
-        {langs.map((l) => (
-          <div key={l.name} style={{ width: `${l.pct}%`, backgroundColor: l.color }} />
+        {langs.map((l, idx) => (
+          <div key={`${l.name}-${idx}`} style={{ width: `${l.pct}%`, backgroundColor: l.color }} />
         ))}
       </div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-        {langs.map((l) => (
-          <div key={l.name} className="flex items-center gap-1.5">
+        {langs.map((l, idx) => (
+          <div key={`${l.name}-${idx}`} className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
             <span className="text-[11px] text-slate-400">{l.name}</span>
             <span className="text-[10px] text-slate-600 ml-auto tabular-nums">{l.pct}%</span>
@@ -1016,13 +1031,13 @@ function DummyTopLangsCard() {
     <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 space-y-2.5">
       <div className="text-xs font-bold text-slate-300">Most Used Languages</div>
       <div className="flex h-2.5 rounded-full overflow-hidden">
-        {langs.map((l) => (
-          <div key={l.name} style={{ width: `${l.pct}%`, backgroundColor: l.color }} />
+        {langs.map((l, idx) => (
+          <div key={`${l.name}-${idx}`} style={{ width: `${l.pct}%`, backgroundColor: l.color }} />
         ))}
       </div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-        {langs.map((l) => (
-          <div key={l.name} className="flex items-center gap-1.5">
+        {langs.map((l, idx) => (
+          <div key={`${l.name}-${idx}`} className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
             <span className="text-[11px] text-slate-400">{l.name}</span>
             <span className="text-[10px] text-slate-600 ml-auto tabular-nums">{l.pct}%</span>

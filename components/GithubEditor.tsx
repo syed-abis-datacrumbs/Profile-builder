@@ -53,10 +53,12 @@ export const GithubEditor: React.FC<GithubEditorProps> = ({
   ];
 
   const toggleBadge = (tech: string) => {
-    if (data.techStack.includes(tech)) {
-      onChange({ ...data, techStack: data.techStack.filter(t => t !== tech) });
+    const norm = tech.trim().toLowerCase();
+    const exists = data.techStack.some(t => t.trim().toLowerCase() === norm);
+    if (exists) {
+      onChange({ ...data, techStack: data.techStack.filter(t => t.trim().toLowerCase() !== norm) });
     } else {
-      onChange({ ...data, techStack: [...data.techStack, tech] });
+      onChange({ ...data, techStack: Array.from(new Set([...data.techStack, tech])) });
     }
   };
 
@@ -330,11 +332,18 @@ export const GithubEditor: React.FC<GithubEditorProps> = ({
                     <span>Tech Stack & Tools</span>
                   </h3>
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {data.techStack.map((tech) => {
+                    {Array.from(
+                      new Map(
+                        data.techStack
+                          .map((t) => (typeof t === 'string' ? t.trim() : ''))
+                          .filter(Boolean)
+                          .map((t) => [t.toLowerCase(), t])
+                      ).values()
+                    ).map((tech, idx) => {
                       const badge = availableBadges.find(b => b.name.toLowerCase() === tech.toLowerCase()) || { color: '6366f1' };
                       return (
                         <span
-                          key={tech}
+                          key={`${tech}-${idx}`}
                           className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider text-white shadow-sm"
                           style={{ backgroundColor: `#${badge.color}` }}
                         >
