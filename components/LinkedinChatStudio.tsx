@@ -794,11 +794,10 @@ export const LinkedinChatStudio: React.FC<{
             <button
               type="button"
               onClick={() => setShowTemplateModal(true)}
-              className="h-7 px-1.5 sm:px-2 rounded-lg bg-slate-100 text-[11px] sm:text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1 leading-none cursor-pointer"
+              className="h-7 w-7 rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center shrink-0 cursor-pointer"
               title="Change Template"
             >
               <LayoutTemplate className="w-3.5 h-3.5 text-slate-800 shrink-0" />
-              <span className="leading-none hidden sm:inline">Templates</span>
             </button>
 
             {/* Clear Button (Bin logo only) */}
@@ -857,12 +856,12 @@ export const LinkedinChatStudio: React.FC<{
               <button
                 type="button"
                 onClick={toggleProfileMenu}
-                className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs sm:text-sm font-bold text-slate-800 border border-slate-200/80 cursor-pointer"
+                className="h-7 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-slate-800 border border-slate-200/80 flex items-center justify-center gap-1 cursor-pointer shrink-0"
+                title="Saved Profiles"
               >
                 <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm bg-[#0A66C2] flex items-center justify-center shrink-0">
                   <span className="text-white text-[9px] sm:text-[10px] font-bold leading-none">in</span>
                 </div>
-                <span className="hidden sm:inline">Profiles</span>
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -1032,17 +1031,18 @@ export const LinkedinChatStudio: React.FC<{
             </div>
           </div>
 
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
             {/* 1-Click Copy Package Drawer Button */}
             {onOpenCopyDrawer && (
               <button
                 type="button"
                 onClick={onOpenCopyDrawer}
-                className="h-7 px-2 sm:px-2.5 rounded-lg bg-[#0A66C2] hover:bg-[#004182] text-white text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                className="h-7 px-2 sm:px-2.5 rounded-lg bg-[#0A66C2] hover:bg-[#004182] text-white text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
                 title="Open 1-Click Copy Package for LinkedIn"
               >
                 <Copy className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Copy to LinkedIn</span>
+                <span className="hidden xl:inline">Copy to LinkedIn</span>
+                <span className="hidden sm:inline xl:hidden">Copy</span>
                 <span className="sm:hidden">Copy</span>
               </button>
             )}

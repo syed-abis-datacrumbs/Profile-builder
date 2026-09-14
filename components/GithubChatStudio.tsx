@@ -645,11 +645,10 @@ export const GithubChatStudio: React.FC<{
             <button
               type="button"
               onClick={() => setShowTemplateModal(true)}
-              className="h-7 px-1.5 sm:px-2 rounded-lg bg-slate-100 text-[11px] sm:text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1 leading-none cursor-pointer"
+              className="h-7 w-7 rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center shrink-0 cursor-pointer"
               title="Change Role Template"
             >
               <LayoutTemplate className="w-3.5 h-3.5 text-slate-800 shrink-0" />
-              <span className="leading-none hidden sm:inline">Templates</span>
             </button>
 
             {/* Clear Button (Bin logo only) */}
@@ -721,10 +720,10 @@ export const GithubChatStudio: React.FC<{
               <button
                 type="button"
                 onClick={toggleProfileMenu}
-                className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-xs sm:text-sm font-bold text-slate-800 border border-slate-200/80 cursor-pointer"
+                className="h-7 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors text-slate-800 border border-slate-200/80 flex items-center justify-center gap-1 cursor-pointer shrink-0"
+                title="Saved Profiles"
               >
                 <GithubIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-800" />
-                <span className="hidden sm:inline">Profiles</span>
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -888,7 +887,7 @@ export const GithubChatStudio: React.FC<{
           </div>
 
           {/* Right Action Buttons */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
             {/* Undo / Redo */}
             <div className="flex items-center gap-0.5 border border-slate-200 rounded-lg p-0.5 bg-slate-50">
               <button
@@ -919,7 +918,7 @@ export const GithubChatStudio: React.FC<{
                 className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
               >
                 <Upload className="w-3.5 h-3.5 text-slate-600" />
-                <span className="hidden sm:inline">Import</span>
+                <span className="hidden xl:inline">Import</span>
               </button>
             )}
 
@@ -929,7 +928,7 @@ export const GithubChatStudio: React.FC<{
               className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
+              <span className="hidden xl:inline">{copied ? 'Copied' : 'Copy'}</span>
             </button>
             <button
               onClick={() => {
@@ -938,10 +937,10 @@ export const GithubChatStudio: React.FC<{
                 downloadReadme();
               }}
               title="Download README.md"
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-sm shrink-0"
             >
               {unlocked === false ? <Sparkles className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{unlocked === false ? 'Unlock Download' : 'README.md'}</span>
+              <span className="hidden sm:inline">{unlocked === false ? 'Unlock' : 'README.md'}</span>
             </button>
           </div>
         </div>

@@ -1093,16 +1093,15 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         <div className="shrink-0 bg-white border-b border-slate-200 px-2 sm:px-3 py-1.5 flex items-center justify-between gap-1.5 text-xs shadow-2xs z-30 min-w-0 overflow-visible">
 
           {/* Left Controls Group */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 overflow-visible">
             {/* Resume Templates Button */}
             <button
               type="button"
               onClick={() => setShowTemplateModal(true)}
-              className="h-7 px-2 rounded-lg bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors border border-slate-200/80 flex items-center justify-center gap-1.5 leading-none cursor-pointer shrink-0"
+              className="h-7 w-7 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors border border-slate-200/80 flex items-center justify-center shrink-0 cursor-pointer"
               title="Change Resume Template"
             >
               <LayoutTemplate className="w-3.5 h-3.5 text-slate-700 shrink-0" />
-              <span className="hidden md:inline">Templates</span>
             </button>
 
             {/* Import Button */}
@@ -1114,7 +1113,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 title="Import from PDF or GitHub"
               >
                 <Upload className="w-3.5 h-3.5 text-slate-700 shrink-0" />
-                <span className="hidden md:inline">Import</span>
+                <span className="hidden 2xl:inline">Import</span>
               </button>
             )}
 
@@ -1128,7 +1127,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               >
                 <RefreshCw className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                 <span className="hidden 2xl:inline">Sync Profiles</span>
-                <span className="hidden sm:inline 2xl:hidden">Sync</span>
+                <span className="hidden xl:inline 2xl:hidden">Sync</span>
               </button>
             )}
 
@@ -1209,10 +1208,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             <div className="relative">
               <button
                 onClick={toggleResumeMenu}
-                className="h-7 px-1.5 sm:px-2 rounded-lg bg-slate-100 text-[11px] sm:text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1 leading-none cursor-pointer"
+                className="h-7 px-2 rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1 cursor-pointer shrink-0"
+                title="Saved Resumes"
               >
                 <FileText className="w-3.5 h-3.5 text-slate-800 shrink-0" />
-                <span className="leading-none hidden sm:inline">Resumes</span>
                 <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
               </button>
 
@@ -1412,10 +1411,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               </button>
             </div>
 
-            <div className="hidden sm:block h-4 w-px bg-slate-200 mx-0.5" />
+            <div className="hidden xl:block h-4 w-px bg-slate-200 mx-0.5" />
 
             {/* Formatting Icons */}
-            <div className="hidden sm:flex items-center gap-0">
+            <div className="hidden xl:flex items-center gap-0">
               {([
                 { cmd: 'bold', Icon: Bold, label: 'Bold' },
                 { cmd: 'italic', Icon: Italic, label: 'Italic' },
@@ -1470,15 +1469,15 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             </div>
 
             {/* Download Action */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setDlMenu((o) => !o)}
                 disabled={!!downloading}
-                className="h-7 px-2 sm:px-2.5 rounded-lg bg-slate-900 text-white text-xs font-bold shadow-xs hover:bg-slate-800 transition-all flex items-center justify-center gap-1 leading-none text-center cursor-pointer disabled:opacity-70 shrink-0"
+                className="h-7 px-2.5 sm:px-3 rounded-lg bg-slate-900 text-white text-xs font-bold shadow-xs hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 leading-none text-center cursor-pointer disabled:opacity-70 shrink-0"
               >
                 {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                <span className="leading-none hidden sm:inline">
+                <span className="leading-none">
                   {downloading ? (downloading === 'pdf' ? 'PDF…' : 'PNG…') : 'Download'}
                 </span>
               </button>
