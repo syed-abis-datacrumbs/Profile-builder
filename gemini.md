@@ -89,12 +89,16 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
    - Named profile versions (`/api/github-saves`).
 3. **LinkedIn Studio (`/components/LinkedinChatStudio.tsx`)**:
    - Interactive profile card and rich feed simulator.
-   - SVG banner generator with typography overlay.
+   - 1-Click "Copy to LinkedIn" package drawer (`components/LinkedinCopyDrawer.tsx`) with headline, about, bullets, and high-res banner download.
    - Streamlined saved profile version drawer (`/api/linkedin-saves`).
-4. **Admin Suite (`/app/admin/...`)**:
-   - Manages user accounts, payment receipts, coupon codes, and reported issue logs.
-   - Wrapped by `AdminShell` with responsive sidebar navigation.
-5. **Proxy / Middleware (`/proxy.ts`)**:
+4. **Universal Importer (`/api/import/pdf` & `/api/import/github`)**:
+   - Unified import modal (`components/ImportModal.tsx`) accessible across Resume, LinkedIn, and GitHub studios.
+   - Workerless server-side PDF extraction via `unpdf` paired with OpenAI JSON schema extraction.
+   - Direct GitHub API ingest from username, `@handle`, or full profile URL.
+5. **Admin Suite (`/app/admin/...`)**:
+   - Manages user accounts, payment receipts, coupon codes, reported issue logs, and real-time live traffic stats (`/app/admin/traffic`).
+   - Protected by `isUserAdmin(user)` and `requireAdmin()` verifying against both `BUILDER_ACCESS_EMAILS` and `ADMIN_EMAILS`.
+6. **Proxy / Middleware (`/proxy.ts`)**:
    - Note: Next.js 16 uses `proxy.ts` rather than `middleware.ts` convention for Clerk authentication.
 
 ---
@@ -109,6 +113,25 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
 - **DO NOT** auto-load the first template (e.g., `buildDefaultRichProfile()` or AI/ML template) when a user opens a studio directly or types a prompt from the landing page.
 - **DO** initialize with **`buildEmptyRichProfile()`** (blank placeholders for Name, Headline, About, Experience, Education) unless the user explicitly selected a template card from the gallery.
 
+### 🗑️ Studio Delete Action & Confirmation Popover
+- **DO** display **ONLY the bin logo (`[ 🗑 ]`)** on the delete button across all 3 studios with no trailing words like "Clear" or "Delete".
+- **DO** keep the confirmation popover compact and anchored directly beneath the bin button (`absolute top-full left-0 mt-2 w-64 sm:w-72 z-[100]`).
+- **DO NOT** convert this into a centered full-screen modal overlay or alter the button's layout.
+- **DO** keep the parent toolbar wrapper set to `overflow-visible` so the dropdown popover renders over the canvas without being clipped.
+
+### 🖼️ LinkedIn Cover Banner State
+- **DO NOT** default to a fallback sample banner (e.g., `banner-1.png`) if both `profile.customCoverUrl` and `profile.coverTemplateId` are empty.
+- **DO** render the clean empty state ("No cover banner selected") in `LinkedinCopyDrawer` and disable the "Download PNG" button when no banner has been selected.
+
+### 🛡️ Admin Security & Authorization
+- **DO** verify admin privileges against **both** `BUILDER_ACCESS_EMAILS` (in `lib/accessConfig.ts`) and `ADMIN_EMAILS` (in `.env`).
+- **DO** use `isUserAdmin(user)` in `lib/adminAuth.ts` which iterates over all email addresses in `user.emailAddresses` (supporting multi-email Clerk accounts and OAuth sign-ins).
+- **DO NOT** pass `userId` to `isAdmin()` (it expects an email address string) and always `await` `isAdmin(email)` since it is asynchronous.
+
+### ⚡ Client-Side Polling & Error Handling
+- **DO NOT** `throw new Error('Failed to fetch')` or log `console.error` inside recurring auto-polling loops (such as `AdminTrafficPage`'s 12-second interval). In Next.js Turbopack dev mode, unhandled errors and `console.error` in components trigger the fullscreen red dev error modal.
+- **DO** handle `!res.ok` gracefully: extract response error JSON, store the message in a component `loadError` state, surface an inline banner with a "Retry" button, and only show toast errors when triggered manually by the user.
+
 ### 🔔 Toast Notifications
 - **DO** use the unified global toast system (`import toast from '@/lib/toast';`).
 - **DO** maintain the standard duration of **1.75s (`1750ms`)** across all studios.
@@ -120,7 +143,7 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
 
 ### 🛠️ UI Layouts & Dropdown Overflows
 - **DO NOT** place `overflow-x-auto` or `overflow-hidden` on parent toolbars or header wrappers that contain absolute dropdown popovers. In CSS/Tailwind, this clips dropdowns to the parent's height (e.g. 36px), making menus appear frozen or broken.
-- **DO** position dropdowns with `absolute top-full mt-2` anchored directly beneath their trigger buttons, and hide non-essential formatting buttons on mobile screens with responsive utilities (`hidden sm:flex`).
+- **DO** position dropdowns with `absolute top-full mt-2` anchored directly beneath their trigger buttons, and hide non-essential formatting buttons on mobile screens with responsive utilities (`hidden sm:flex`, `hidden sm:inline`).
 
 ### 📱 Navigation & Account Controls
 - **DO** ensure the mobile brand logo in `MobileNavBar` redirects to the home landing view (`onGoHome` resets active studio modes to `'landing'`).
@@ -136,6 +159,34 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
 ---
 
 ## 4. Solved Gotchas & Engineering Knowledge Base
+
+### 🛡️ Turbopack Dev Overlay & Live Auto-Polling (`Failed to fetch`)
+- **Gotcha:** In `app/admin/traffic/page.tsx`, `fetchTrafficData` runs every 12 seconds via `setInterval`. Writing `if (!res.ok) throw new Error('Failed to fetch')` and calling `console.error` caused the Next.js Turbopack dev overlay to repeatedly hijack the user's screen whenever an unauthorized (403/401) or transient network response occurred.
+- **Fix:** Remove `throw` statements and `console.error` from polling callbacks. Store failure state in `loadError`, display a non-disruptive banner with a "Retry Connection" action, and only trigger toast alerts if `isManual === true`.
+
+### 🔐 Multi-Email Clerk Accounts & Admin Route Protection
+- **Gotcha:** `user.emailAddresses[0]` in Clerk may not be the user's work/admin email if the user also linked a personal Google account or secondary address. Furthermore, passing `userId` to `isAdmin()` resulted in false 403s.
+- **Fix:** In `lib/adminAuth.ts`, use `isUserAdmin(user)` to iterate through all addresses in `user.emailAddresses`. Verify each address against both `BUILDER_ACCESS_EMAILS` and `process.env.ADMIN_EMAILS`. Always `await` `isAdmin(email)`.
+
+### 🔄 SSR Hydration Mismatch with LocalStorage (`dynamic(..., { ssr: false })`)
+- **Gotcha:** When reading studio state directly from `localStorage` on initial component mount, the server renders the landing view while the client renders the studio view, causing React hydration mismatch errors (`Hydration failed because the server rendered HTML didn't match the client`).
+- **Fix:** Wrap client-hydrated routes (`ResumeRoute`, `LinkedinRoute`, `GithubRoute`) in client boundary components using `dynamic(() => import(...), { ssr: false })` (`ResumeClient`, `LinkedinClient`, `GithubClient`) while preserving server-side SEO `metadata` on the parent page route.
+
+### 💾 LocalStorage Null-Wipe Race Condition (Lazy State Initializers)
+- **Gotcha:** Initializing state as `useState(null)` alongside a `useEffect` that calls `localStorage.removeItem(...)` when the state is `null` will immediately delete saved user data on page remount before hydration completes.
+- **Fix:** Always initialize state with lazy evaluation functions:
+  ```typescript
+  const [data, setData] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    const saved = localStorage.getItem('key');
+    return saved ? JSON.parse(saved) : null;
+  });
+  ```
+  And never remove keys from `localStorage` in standard render effects unless the user explicitly clicks a delete/reset button.
+
+### 📦 Universal Workerless PDF Parsing (`unpdf`)
+- **Gotcha:** Standard `pdfjs-dist` libraries attempt to load web worker chunks from dynamic file paths or CDN URLs, crashing in Next.js Turbopack and Vercel serverless environments.
+- **Fix:** Use `unpdf` (`extractText` from `'unpdf'`). It runs in standard Node/V8 environments without worker dependencies, reliably extracting raw text from PDFs before passing structured schemas to OpenAI.
 
 ### 🔤 Font Optimization & Next.js Preloading (`next/font/google`)
 - **Root Layout Rule:** In `app/layout.tsx`, only the primary global body font (`Geist`) should keep `preload: true` (default). All secondary fonts (`Geist_Mono`, `Poppins`, `Bricolage_Grotesque`, `Dancing_Script`, `Playfair_Display`) **MUST** specify `preload: false`. This prevents the browser from preloading 10+ unused `.woff2` font files on the initial page load.
