@@ -1,10 +1,24 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { currentUser } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/lib/adminAuth';
 
 export const maxDuration = 60; // allow up to 60 s for Puppeteer
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const authorized = await isUserAdmin(user);
+    if (!authorized) {
+      return NextResponse.json(
+        { error: 'Momentum is currently in private testing phase. Access is restricted to administrators.' },
+        { status: 403 }
+      );
+    }
+
     const { html, css = '', name = 'Resume', pages, contentWidth = 794 } = await req.json() as {
       html: string;
       css?: string;

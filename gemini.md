@@ -207,6 +207,18 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
   });
   ```
 
+### 🧪 App Testing Phase & Non-Admin Blocking Gate (`TestingPhaseModal`)
+- **Testing Phase Objective:** Restrict access so only administrators can access and test the app peacefully without outside traffic, while blocking non-admin logged-in users with an impassable modal informing them the app is in a testing phase.
+- **Admin Verification:**
+  - Evaluated against both `BUILDER_ACCESS_EMAILS` (in `lib/accessConfig.ts`) and `ADMIN_EMAILS` (in `.env`) via `isUserAdmin(user)` and `isAdmin(email)` in `lib/adminAuth.ts`.
+  - In `app/(workspace)/layout.tsx`, `isUserAdmin(user)` is executed server-side and passed via `initialUser.isAdmin` to prevent layout shift or delay.
+  - In `context/WorkspaceContext.tsx`, `isAdmin` and `isCheckingAdmin` are maintained and synced with Clerk's client user and verified against `/api/admin/check`.
+- **Client Blocking (`components/TestingPhaseModal.tsx` & `WorkspaceShell.tsx`):**
+  - When `isLoggedIn && !isAdmin && !isCheckingAdmin`, `TestingPhaseModal` renders at `z-[100]` with dark blur backdrop, blocking all pointer and keyboard events to the underlying workspace.
+  - The modal displays user's email, "Not Admin" badge, an explanation of the private testing phase, and provides "Sign Out" and "Log in with Admin Account" actions.
+- **Backend API Protection:**
+  - `/api/resume-chat`, `/api/github-chat`, `/api/linkedin-rich-chat`, `/api/pdf`, `/api/resumes`, and `/api/resumes/download-check` check `await isUserAdmin(user)`. Non-admins receive HTTP 403 Forbidden with `{ error: 'Momentum is currently in private testing phase. Access is restricted to administrators.' }`, guaranteeing zero outside traffic to OpenAI Puppeteer or DB during testing.
+
 ---
 
 ## 5. Verification Workflow

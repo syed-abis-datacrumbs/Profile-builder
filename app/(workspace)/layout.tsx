@@ -1,4 +1,5 @@
 import { currentUser } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/lib/adminAuth';
 import { WorkspaceProvider, InitialUser } from '../../context/WorkspaceContext';
 import { WorkspaceShell } from '../../components/WorkspaceShell';
 
@@ -8,6 +9,7 @@ export default async function WorkspaceLayout({
   children: React.ReactNode;
 }) {
   const user = await currentUser();
+  const isAdmin = await isUserAdmin(user);
   const initialUser: InitialUser | null = user
     ? {
         id: user.id,
@@ -22,6 +24,7 @@ export default async function WorkspaceLayout({
           ''
         ).trim(),
         email: user.primaryEmailAddress?.emailAddress,
+        isAdmin,
       }
     : null;
 

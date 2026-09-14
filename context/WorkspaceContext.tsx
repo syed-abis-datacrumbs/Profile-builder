@@ -13,6 +13,7 @@ export interface InitialUser {
   firstName: string;
   fullName: string;
   email?: string;
+  isAdmin?: boolean;
 }
 
 export interface WorkspaceContextType {
@@ -26,6 +27,8 @@ export interface WorkspaceContextType {
   // User identity
   isLoggedIn: boolean;
   isAuthorized: boolean;
+  isAdmin: boolean;
+  isCheckingAdmin: boolean;
   firstName: string;
   displayFullName: string;
   clerkFullName: string;
@@ -136,6 +139,48 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
 
   const isLoggedIn = isLoaded ? !!clientUser : !!initialUser;
   const isAuthorized = isLoggedIn && BUILDER_ACCESS_EMAILS.has(userEmail || '');
+
+  // Admin status for testing phase
+  const initialIsAdmin = initialUser?.isAdmin ?? (initialUser?.email ? BUILDER_ACCESS_EMAILS.has(initialUser.email.toLowerCase().trim()) : false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(initialIsAdmin);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!clientUser) {
+      setIsAdmin(false);
+      setIsCheckingAdmin(false);
+      return;
+    }
+
+    const clientEmails = clientUser.emailAddresses?.map((e) => e.emailAddress.toLowerCase().trim()) || [];
+    const hasBuilderAccess = clientEmails.some((email) => BUILDER_ACCESS_EMAILS.has(email));
+    if (hasBuilderAccess) {
+      setIsAdmin(true);
+      setIsCheckingAdmin(false);
+      return;
+    }
+
+    if (initialUser?.id === clientUser.id && initialUser?.isAdmin) {
+      setIsAdmin(true);
+      setIsCheckingAdmin(false);
+      return;
+    }
+
+    setIsCheckingAdmin(true);
+    fetch('/api/admin/check')
+      .then((r) => r.json())
+      .then((d: { isAdmin?: boolean }) => {
+        setIsAdmin(!!d?.isAdmin);
+      })
+      .catch((err) => {
+        console.error('[Admin verification error]:', err);
+        setIsAdmin(false);
+      })
+      .finally(() => {
+        setIsCheckingAdmin(false);
+      });
+  }, [clientUser, isLoaded, initialUser?.id, initialUser?.isAdmin]);
 
   // Pro & name state
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
@@ -266,6 +311,8 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
         setIsFullBleed,
         isLoggedIn,
         isAuthorized,
+        isAdmin,
+        isCheckingAdmin,
         firstName,
         displayFullName,
         clerkFullName,

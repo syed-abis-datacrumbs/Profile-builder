@@ -3,6 +3,7 @@ import type { LinkedinRichProfile } from '../../../lib/linkedinRichProfile';
 import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/lib/adminAuth';
 import { COVER_ART } from '../../../lib/linkedinRichProfile';
 import { overageCeiling } from '../../../lib/linkedinCoverArt';
 import { applyJsonPatches } from '@/lib/jsonPatch';
@@ -301,9 +302,12 @@ export async function POST(request: Request) {
 
   try {
     const user = await currentUser();
-    const primaryEmail = user?.primaryEmailAddress?.emailAddress;
-    if (!primaryEmail || !BUILDER_ACCESS_EMAILS.has(primaryEmail)) {
-      return Response.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
+    const authorized = await isUserAdmin(user);
+    if (!authorized) {
+      return Response.json(
+        { error: 'Momentum is currently in private testing phase. Access is restricted to administrators.' },
+        { status: 403 }
+      );
     }
     const userId = user?.id;
     if (userId) {

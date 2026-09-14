@@ -3,6 +3,7 @@ import type { CvData, CvProject } from '../../../lib/cvTypes';
 import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/lib/adminAuth';
 import { applyJsonPatches } from '@/lib/jsonPatch';
 
 export const runtime = 'nodejs';
@@ -314,6 +315,13 @@ export async function POST(request: Request) {
 
   try {
     const user = await currentUser();
+    const authorized = await isUserAdmin(user);
+    if (!authorized) {
+      return Response.json(
+        { error: 'Momentum is currently in private testing phase. Access is restricted to administrators.' },
+        { status: 403 }
+      );
+    }
     const userId = user?.id;
     if (userId) {
       const unlock = await db.paymentUnlock.findUnique({ where: { userId } });

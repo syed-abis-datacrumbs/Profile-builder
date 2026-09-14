@@ -34,3 +34,20 @@ export async function requireAdmin(): Promise<{ userId: string } | NextResponse>
   }
   return { userId: user.id };
 }
+
+export async function requireTestingAccess(): Promise<{ userId: string; user: any } | NextResponse> {
+  const user = await currentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const authorized = await isUserAdmin(user);
+  if (!authorized) {
+    return NextResponse.json(
+      { error: 'Momentum is currently in private testing phase. Access is restricted to administrators.' },
+      { status: 403 }
+    );
+  }
+  return { userId: user.id, user };
+}
+

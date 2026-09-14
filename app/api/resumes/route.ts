@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { currentUser } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/lib/adminAuth';
 import { getCurrentUserId } from '../../../lib/serverAuth';
 import { db } from '../../../lib/db';
 import type { CvData } from '../../../lib/cvTypes';
@@ -25,8 +27,16 @@ export async function GET() {
 /** Saves the current CV as a named version. One save per name per account
  *  (case-insensitive) — refuses instead of piling up duplicates. */
 export async function POST(request: Request) {
-  const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const authorized = await isUserAdmin(user);
+  if (!authorized) {
+    return NextResponse.json(
+      { error: 'Momentum is currently in private testing phase. Access is restricted to administrators.' },
+      { status: 403 }
+    );
+  }
+  const userId = user.id;
 
   const body = await request.json().catch(() => null);
   const data = body?.data as CvData | undefined;
