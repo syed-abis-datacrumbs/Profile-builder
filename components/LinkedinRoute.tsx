@@ -7,11 +7,8 @@ import { LinkedinLandingView } from './LinkedinLandingView';
 import { LinkedinEditor } from './LinkedinEditor';
 import { LinkedinChatStudio } from './LinkedinChatStudio';
 import { LinkedinTemplatePreview } from './LinkedinTemplatePreview';
-import { TemplatePickerModal } from './TemplatePickerModal';
-import { LinkedinTemplateThumbnail } from './LinkedinTemplateThumbnail';
 import { LinkedinCopyDrawer } from './LinkedinCopyDrawer';
 import { ImportModal } from './ImportModal';
-import { linkedinCovers } from '../lib/linkedinCovers';
 import {
   LinkedinRichProfile,
   buildInitialRichProfile,
@@ -62,8 +59,6 @@ export function LinkedinRoute() {
     return null;
   });
   const [linkedinInitialPrompt, setLinkedinInitialPrompt] = useState('');
-  const [pendingPrompt] = useState('');
-  const [showLinkedinTemplatePicker, setShowLinkedinTemplatePicker] = useState(false);
   const [isCopyDrawerOpen, setIsCopyDrawerOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
@@ -230,34 +225,6 @@ export function LinkedinRoute() {
         )}
       </AnimatePresence>
 
-      {showLinkedinTemplatePicker && (
-        <TemplatePickerModal
-          title="Choose a LinkedIn Cover Template"
-          subtitle="Pick a design and I'll apply it, then get started on your request."
-          onClose={() => setShowLinkedinTemplatePicker(false)}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {linkedinCovers.map((cover, index) => (
-              <button
-                key={cover.id}
-                onClick={() => {
-                  setShowLinkedinTemplatePicker(false);
-                  setLinkedinRichProfile(buildInitialRichProfile(cover.id));
-                  setLinkedinInitialPrompt(pendingPrompt);
-                  setLinkedinMode('studio');
-                }}
-                className="text-left p-4 rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all space-y-2"
-              >
-                <div className="w-full bg-white rounded-xl overflow-hidden border border-slate-200">
-                  <LinkedinTemplateThumbnail templateId={cover.id} index={index} />
-                </div>
-                <div className="font-bold text-xs text-slate-900">{cover.name}</div>
-                <div className="text-[11px] text-slate-500">{cover.desc}</div>
-              </button>
-            ))}
-          </div>
-        </TemplatePickerModal>
-      )}
 
       {/* 1-Click LinkedIn Copy Package Drawer */}
       <LinkedinCopyDrawer
