@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { isUserAdmin } from '@/lib/adminAuth';
 import { db } from '../../../../lib/db';
+import { BUILDER_ACCESS_EMAILS } from '@/lib/accessConfig';
 
 export const runtime = 'nodejs';
 
 async function getAuthorizedUser() {
   const user = await currentUser();
-  if (!user) return null;
-  const authorized = await isUserAdmin(user);
-  if (!authorized) {
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress;
+  if (!primaryEmail || !BUILDER_ACCESS_EMAILS.has(primaryEmail)) {
     return null;
   }
   return user;

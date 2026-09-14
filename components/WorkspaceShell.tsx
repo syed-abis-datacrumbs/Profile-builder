@@ -9,7 +9,7 @@ import { AuthModal } from './AuthModal';
 import { UpgradeModal } from './UpgradeModal';
 import { PaymentModal } from './PaymentModal';
 import BlockScreen from './BlockScreen';
-import { TestingPhaseModal } from './TestingPhaseModal';
+import { ImportComingSoonModal } from './ImportComingSoonModal';
 import { useWorkspace } from '../context/WorkspaceContext';
 
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
@@ -37,6 +37,8 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
     setShowBlockModal,
     showProCelebrationModal,
     setShowProCelebrationModal,
+    isImportComingSoonOpen,
+    setIsImportComingSoonOpen,
   } = useWorkspace();
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -110,13 +112,6 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             isFullBleed ? 'p-0 max-w-none' : 'p-4 sm:p-6 gap-4 max-w-7xl'
           }`}
         >
-          {/* Testing Phase Gate: Only admins can access the app; regular users are blocked */}
-          {isLoggedIn && !isAdmin && !isCheckingAdmin && (
-            <TestingPhaseModal
-              userEmail={userEmail}
-            />
-          )}
-
           {(showBlockModal || (!isAuthorized && activeTab === 'assistant')) && (
             <BlockScreen
               onOpenAuth={() => {
@@ -134,11 +129,6 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
           <div
             className="flex-1 min-h-0 flex flex-col"
             onClickCapture={(e) => {
-              if (isLoggedIn && !isAdmin && !isCheckingAdmin) {
-                e.preventDefault();
-                e.stopPropagation();
-                return;
-              }
               if (!isAuthorized && activeTab !== 'resume' && activeTab !== 'github') {
                 e.preventDefault();
                 e.stopPropagation();
@@ -152,6 +142,11 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Global Modals */}
+      <ImportComingSoonModal
+        isOpen={isImportComingSoonOpen}
+        onClose={() => setIsImportComingSoonOpen(false)}
+      />
+
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}

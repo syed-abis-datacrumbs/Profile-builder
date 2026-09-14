@@ -25,6 +25,8 @@ export function GithubRoute() {
     mainContentRef,
     setIsFullBleed,
     navigateToAssistant,
+    isAdmin,
+    setIsImportComingSoonOpen,
   } = useWorkspace();
 
   const [githubMode, setGithubMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
@@ -79,11 +81,15 @@ export function GithubRoute() {
     return () => window.removeEventListener('workspace_reset_landing', handleReset);
   }, [mainContentRef]);
 
-  const openGithubStudio = (preset: GithubRolePreset, theme?: GithubProfileData['theme'], avatarUrl?: string, bannerUrl?: string) => {
-    if (!isLoggedIn) {
-      setIsAuthOpen(true);
-      return;
+  const handleOpenImport = () => {
+    if (isAdmin) {
+      setIsImportOpen(true);
+    } else {
+      setIsImportComingSoonOpen(true);
     }
+  };
+
+  const openGithubStudio = (preset: GithubRolePreset, theme?: GithubProfileData['theme'], avatarUrl?: string, bannerUrl?: string) => {
     const g = applyRolePresetToGithub(defaultGithubData, preset);
     setGithubData({
       ...g,
@@ -116,7 +122,7 @@ export function GithubRoute() {
               onRequireAuth={() => setIsAuthOpen(true)}
               initialPrompt={githubInitialPrompt}
               isPro={unlocked ?? false}
-              onOpenImport={() => setIsImportOpen(true)}
+              onOpenImport={handleOpenImport}
             />
           ) : githubMode === 'editor' ? (
             <div className="space-y-4">
@@ -142,19 +148,11 @@ export function GithubRoute() {
           ) : (
             <GithubLandingView
               userName={firstName || undefined}
-              onOpenImport={() => setIsImportOpen(true)}
+              onOpenImport={handleOpenImport}
               onOpenRolePicker={() => {
-                if (!isLoggedIn) {
-                  setIsAuthOpen(true);
-                  return;
-                }
                 setShowGithubTemplatePicker(true);
               }}
               onSelectPreset={(preset, theme, avatarUrl, bannerUrl) => {
-                if (!isLoggedIn) {
-                  setIsAuthOpen(true);
-                  return;
-                }
                 if (typeof window !== 'undefined') {
                   localStorage.removeItem('profile_builder_github_chat');
                 }

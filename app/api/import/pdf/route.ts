@@ -1,11 +1,25 @@
 import { NextRequest } from 'next/server';
 import OpenAI from 'openai';
 import { extractText } from 'unpdf';
+import { currentUser } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/lib/adminAuth';
 import { CvData } from '../../../../lib/cvTypes';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  const user = await currentUser();
+  if (!user) {
+    return Response.json({ error: 'Unauthorized: Please sign in to import.' }, { status: 401 });
+  }
+  const authorized = await isUserAdmin(user);
+  if (!authorized) {
+    return Response.json(
+      { error: 'The Import feature is currently in private testing for administrators. Coming soon for all users!' },
+      { status: 403 }
+    );
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return Response.json(

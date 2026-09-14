@@ -31,6 +31,8 @@ export function LinkedinRoute() {
     mainContentRef,
     setIsFullBleed,
     navigateToAssistant,
+    isAdmin,
+    setIsImportComingSoonOpen,
   } = useWorkspace();
 
   const [linkedinMode, setLinkedinMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
@@ -93,6 +95,14 @@ export function LinkedinRoute() {
     return () => window.removeEventListener('workspace_reset_landing', handleReset);
   }, [mainContentRef]);
 
+  const handleOpenImport = () => {
+    if (isAdmin) {
+      setIsImportOpen(true);
+    } else {
+      setIsImportComingSoonOpen(true);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       <AnimatePresence mode="wait">
@@ -137,7 +147,7 @@ export function LinkedinRoute() {
           ) : (
             <LinkedinLandingView
               userName={firstName || undefined}
-              onOpenImport={() => setIsImportOpen(true)}
+              onOpenImport={handleOpenImport}
               attachedTemplate={attachedLinkedinTemplate}
               onClearAttachedTemplate={() => {
                 setAttachedLinkedinTemplate(null);

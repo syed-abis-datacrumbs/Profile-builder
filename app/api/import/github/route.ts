@@ -1,8 +1,22 @@
 import { NextRequest } from 'next/server';
+import { currentUser } from '@clerk/nextjs/server';
+import { isUserAdmin } from '@/lib/adminAuth';
 import { GithubProfileData } from '../../../../types';
 import { CvProject } from '../../../../lib/cvTypes';
 
 export async function GET(req: NextRequest) {
+  const user = await currentUser();
+  if (!user) {
+    return Response.json({ error: 'Unauthorized: Please sign in to import.' }, { status: 401 });
+  }
+  const authorized = await isUserAdmin(user);
+  if (!authorized) {
+    return Response.json(
+      { error: 'The Import feature is currently in private testing for administrators. Coming soon for all users!' },
+      { status: 403 }
+    );
+  }
+
   const { searchParams } = new URL(req.url);
   const rawUsername = searchParams.get('username')?.trim() || '';
 

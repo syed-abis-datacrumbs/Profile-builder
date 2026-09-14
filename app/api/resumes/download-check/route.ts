@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { isUserAdmin } from '@/lib/adminAuth';
 import { db } from '../../../../lib/db';
 
 const MAX_FREE_RESUME_NAME_EDITS = 4;
@@ -12,13 +11,6 @@ export async function POST(request: Request) {
     const user = await currentUser();
     if (!user) {
       return NextResponse.json({ allowed: false, error: 'Unauthorized' }, { status: 401 });
-    }
-    const authorized = await isUserAdmin(user);
-    if (!authorized) {
-      return NextResponse.json(
-        { allowed: false, error: 'Momentum is currently in private testing phase. Access is restricted to administrators.' },
-        { status: 403 }
-      );
     }
 
     const body = await request.json().catch(() => null);

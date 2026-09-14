@@ -68,6 +68,7 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
   title = 'AI Assistant',
   suggestions = [],
   onBack,
+  isLoggedIn = false,
   unlocked = true,
   aiMessagesUsed = 0,
   onRequireAuth,

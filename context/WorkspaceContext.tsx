@@ -53,6 +53,8 @@ export interface WorkspaceContextType {
   setShowBlockModal: (open: boolean) => void;
   showProCelebrationModal: boolean;
   setShowProCelebrationModal: (open: boolean) => void;
+  isImportComingSoonOpen: boolean;
+  setIsImportComingSoonOpen: (open: boolean) => void;
 
   // Shared profile data
   resumeData: ResumeData;
@@ -110,6 +112,7 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showProCelebrationModal, setShowProCelebrationModal] = useState(false);
+  const [isImportComingSoonOpen, setIsImportComingSoonOpen] = useState(false);
 
   // Shared profile data state
   const [resumeData, setResumeData] = useState<ResumeData>(defaultResumeData);
@@ -333,6 +336,8 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
         setShowBlockModal,
         showProCelebrationModal,
         setShowProCelebrationModal,
+        isImportComingSoonOpen,
+        setIsImportComingSoonOpen,
         resumeData,
         setResumeData,
         githubData,

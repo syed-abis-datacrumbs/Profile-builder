@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { isUserAdmin } from '@/lib/adminAuth';
 import { db } from '../../../lib/db';
 import type { LinkedinProfileData } from '../../../types';
+import { BUILDER_ACCESS_EMAILS } from '@/lib/accessConfig';
 
 export const runtime = 'nodejs';
 
 /** Newest-first list of the current user's saved LinkedIn profiles (metadata only). */
 export async function GET() {
   const user = await currentUser();
-  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  const authorized = await isUserAdmin(user);
-  if (!authorized) {
-    return NextResponse.json({ error: 'Momentum is currently in private testing phase. Access is restricted to administrators.' }, { status: 403 });
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress;
+  if (!primaryEmail || !BUILDER_ACCESS_EMAILS.has(primaryEmail)) {
+    return NextResponse.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
   }
   const userId = user.id;
 
@@ -27,10 +26,9 @@ export async function GET() {
 /** Saves the current LinkedIn profile as a named version. */
 export async function POST(request: Request) {
   const user = await currentUser();
-  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  const authorized = await isUserAdmin(user);
-  if (!authorized) {
-    return NextResponse.json({ error: 'Momentum is currently in private testing phase. Access is restricted to administrators.' }, { status: 403 });
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress;
+  if (!primaryEmail || !BUILDER_ACCESS_EMAILS.has(primaryEmail)) {
+    return NextResponse.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
   }
   const userId = user.id;
 

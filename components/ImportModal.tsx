@@ -17,6 +17,8 @@ import {
 import { GithubIcon } from './icons';
 import { CvData } from '../lib/cvTypes';
 import { toast } from '../lib/toast';
+import { useUser } from '@clerk/nextjs';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -35,6 +37,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   onClose,
   onImportSuccess,
 }) => {
+  const { isSignedIn } = useUser();
+  const { isAdmin } = useWorkspace();
   const [activeTab, setActiveTab] = useState<ImportTab>('pdf');
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -46,7 +50,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isAdmin) return null;
 
   // Handle PDF file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,6 +81,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   // 1. Submit PDF
   const handleParsePdf = async () => {
+    if (!isAdmin) {
+      setErrorMessage('The Import feature is currently restricted to administrators.');
+      return;
+    }
     if (!selectedFile) return;
 
     setIsLoading(true);
@@ -127,6 +135,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   // 2. Submit GitHub
   const handleFetchGithub = async () => {
+    if (!isAdmin) {
+      setErrorMessage('The Import feature is currently restricted to administrators.');
+      return;
+    }
     const cleanUser = cleanGithubUsername(githubUsername);
     if (!cleanUser) {
       setErrorMessage('Please enter a GitHub username or profile URL.');
@@ -191,6 +203,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   // 3. Submit Raw Text
   const handleParseText = () => {
+    if (!isAdmin) {
+      setErrorMessage('The Import feature is currently restricted to administrators.');
+      return;
+    }
     if (!rawText.trim()) return;
 
     setIsLoading(true);

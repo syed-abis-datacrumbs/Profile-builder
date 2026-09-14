@@ -32,6 +32,8 @@ export function ResumeRoute() {
     setGithubData,
     setIsAuthOpen,
     navigateToAssistant,
+    isAdmin,
+    setIsImportComingSoonOpen,
   } = useWorkspace();
 
   const [resumeMode, setResumeMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
@@ -103,11 +105,15 @@ export function ResumeRoute() {
     return () => window.removeEventListener('workspace_reset_landing', handleReset);
   }, [mainContentRef]);
 
-  const loadResumeField = (sample: LmsResumeSample, initialPromptText?: string) => {
-    if (!isLoggedIn) {
-      setIsAuthOpen(true);
-      return;
+  const handleOpenImport = () => {
+    if (isAdmin) {
+      setIsImportOpen(true);
+    } else {
+      setIsImportComingSoonOpen(true);
     }
+  };
+
+  const loadResumeField = (sample: LmsResumeSample, initialPromptText?: string) => {
     setStudioCv(cvMarkdownToHtml(sample.data as CvData));
     setStudioLabel(sample.label);
     setResumeInitialPrompt(initialPromptText ?? '');
@@ -148,7 +154,7 @@ export function ResumeRoute() {
               clerkName={clerkFullName || undefined}
               isPro={unlocked ?? false}
               onOpenSync={() => setIsSyncOpen(true)}
-              onOpenImport={() => setIsImportOpen(true)}
+              onOpenImport={handleOpenImport}
             />
           ) : resumeMode === 'editor' ? (
             <div className="space-y-4">
@@ -173,12 +179,8 @@ export function ResumeRoute() {
             <ResumeLandingView
               userName={firstName}
               clerkFullName={displayFullName}
-              onOpenImport={() => setIsImportOpen(true)}
+              onOpenImport={handleOpenImport}
               onSelectField={(sample) => {
-                if (!isLoggedIn) {
-                  setIsAuthOpen(true);
-                  return;
-                }
                 loadResumeField(sample);
               }}
               onSelectTemplate={(sample) => {
@@ -188,10 +190,6 @@ export function ResumeRoute() {
               attachedTemplate={attachedResumeTemplate}
               onClearAttachedTemplate={() => setAttachedResumeTemplate(null)}
               onUsePrompt={(promptText) => {
-                if (!isLoggedIn) {
-                  setIsAuthOpen(true);
-                  return;
-                }
                 const cleanPrompt = promptText.trim();
                 setResumeInitialPrompt(cleanPrompt);
                 if (attachedResumeTemplate) {
@@ -217,10 +215,6 @@ export function ResumeRoute() {
                 setAttachedResumeTemplate(null);
               }}
               onOpenEditorDirectly={() => {
-                if (!isLoggedIn) {
-                  setIsAuthOpen(true);
-                  return;
-                }
                 setResumeMode(studioCv ? 'studio' : 'editor');
               }}
             />

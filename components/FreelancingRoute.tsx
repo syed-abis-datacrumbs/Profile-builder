@@ -8,7 +8,7 @@ import { ActiveTab } from '../types';
 
 export function FreelancingRoute() {
   const router = useRouter();
-  const { firstName, isAuthorized, setShowBlockModal, navigateToAssistant } = useWorkspace();
+  const { firstName, isLoggedIn, setIsAuthOpen, isAuthorized, setShowBlockModal, navigateToAssistant } = useWorkspace();
 
   return (
     <FreelancingLandingView
