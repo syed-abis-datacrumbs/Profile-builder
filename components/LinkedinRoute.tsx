@@ -9,6 +9,8 @@ import { LinkedinChatStudio } from './LinkedinChatStudio';
 import { LinkedinTemplatePreview } from './LinkedinTemplatePreview';
 import { TemplatePickerModal } from './TemplatePickerModal';
 import { LinkedinTemplateThumbnail } from './LinkedinTemplateThumbnail';
+import { LinkedinCopyDrawer } from './LinkedinCopyDrawer';
+import { ImportModal } from './ImportModal';
 import { linkedinCovers } from '../lib/linkedinCovers';
 import {
   LinkedinRichProfile,
@@ -34,13 +36,36 @@ export function LinkedinRoute() {
     navigateToAssistant,
   } = useWorkspace();
 
-  const [linkedinMode, setLinkedinMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
+  const [linkedinMode, setLinkedinMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
+    if (typeof window === 'undefined') return 'landing';
+    try {
+      const savedMode = localStorage.getItem('profile_builder_linkedin_mode');
+      if (savedMode && ['landing', 'preview', 'editor', 'studio'].includes(savedMode)) {
+        return savedMode as any;
+      }
+    } catch {}
+    return 'landing';
+  });
   const [linkedinPreviewTemplateId, setLinkedinPreviewTemplateId] = useState<string | null>(null);
   const [attachedLinkedinTemplate, setAttachedLinkedinTemplate] = useState<string | null>(null);
-  const [linkedinRichProfile, setLinkedinRichProfile] = useState<LinkedinRichProfile | null>(null);
+  const [linkedinRichProfile, setLinkedinRichProfile] = useState<LinkedinRichProfile | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const savedProfile = localStorage.getItem('profile_builder_linkedin_profile');
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed && ((parsed.experience?.length ?? 0) > 0 || parsed.headline || parsed.about)) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return null;
+  });
   const [linkedinInitialPrompt, setLinkedinInitialPrompt] = useState('');
   const [pendingPrompt] = useState('');
   const [showLinkedinTemplatePicker, setShowLinkedinTemplatePicker] = useState(false);
+  const [isCopyDrawerOpen, setIsCopyDrawerOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   // Sync isFullBleed with workspace shell
   useEffect(() => {
@@ -48,26 +73,7 @@ export function LinkedinRoute() {
     return () => setIsFullBleed(false);
   }, [linkedinMode, setIsFullBleed]);
 
-  // Safe client-side hydration from localStorage
-  useEffect(() => {
-    try {
-      const savedMode = localStorage.getItem('profile_builder_linkedin_mode');
-      if (savedMode && ['landing', 'preview', 'editor', 'studio'].includes(savedMode)) {
-        setLinkedinMode(savedMode as any);
-      }
-      const savedProfile = localStorage.getItem('profile_builder_linkedin_profile');
-      if (savedProfile) {
-        const parsed = JSON.parse(savedProfile);
-        if (parsed && ((parsed.experience?.length ?? 0) > 0 || parsed.headline || parsed.about)) {
-          setLinkedinRichProfile(parsed);
-        }
-      }
-    } catch (e) {
-      console.error('[LinkedIn hydration error]:', e);
-    }
-  }, []);
-
-  // Persist mode & profile
+  // Persist mode & profile safely
   useEffect(() => {
     try {
       localStorage.setItem('profile_builder_linkedin_mode', linkedinMode);
@@ -78,8 +84,6 @@ export function LinkedinRoute() {
     try {
       if (linkedinRichProfile) {
         localStorage.setItem('profile_builder_linkedin_profile', JSON.stringify(linkedinRichProfile));
-      } else {
-        localStorage.removeItem('profile_builder_linkedin_profile');
       }
     } catch {}
   }, [linkedinRichProfile]);
@@ -133,10 +137,12 @@ export function LinkedinRoute() {
               onRequireAuth={() => setIsAuthOpen(true)}
               initialPrompt={linkedinInitialPrompt}
               isPro={unlocked ?? false}
+              onOpenCopyDrawer={() => setIsCopyDrawerOpen(true)}
             />
           ) : (
             <LinkedinLandingView
               userName={firstName || undefined}
+              onOpenImport={() => setIsImportOpen(true)}
               attachedTemplate={attachedLinkedinTemplate}
               onClearAttachedTemplate={() => {
                 setAttachedLinkedinTemplate(null);
@@ -252,6 +258,68 @@ export function LinkedinRoute() {
           </div>
         </TemplatePickerModal>
       )}
+
+      {/* 1-Click LinkedIn Copy Package Drawer */}
+      <LinkedinCopyDrawer
+        isOpen={isCopyDrawerOpen}
+        onClose={() => setIsCopyDrawerOpen(false)}
+        profile={linkedinRichProfile}
+      />
+
+      <ImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onImportSuccess={(imported) => {
+          if (imported.cvData) {
+            const cv = imported.cvData;
+            const rich = buildEmptyRichProfile();
+            if (cv.personalInfo?.fullName) rich.fullName = cv.personalInfo.fullName;
+            if (imported.linkedinData?.headline) rich.headline = imported.linkedinData.headline;
+            if (cv.workExperience?.[0]?.title) rich.title = cv.workExperience[0].title;
+            if (cv.workExperience?.[0]?.company) rich.currentCompany = cv.workExperience[0].company;
+            if (cv.workExperience?.[0]?.location) rich.location = cv.workExperience[0].location;
+            if (cv.education?.[0]?.institution) rich.school = cv.education[0].institution;
+            if (cv.summary) rich.about = cv.summary;
+            if (cv.additional?.skills) {
+              rich.skills = cv.additional.skills.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 15);
+            }
+            if (cv.workExperience?.length) {
+              rich.experience = cv.workExperience.map((we) => ({
+                title: we.title,
+                company: we.company,
+                start: we.start,
+                end: we.end,
+                description: we.bullets
+                  ? we.bullets.replace(/^[•\-\*]\s*/gm, '').replace(/\*\*(.*?)\*\*/g, '$1').trim()
+                  : '',
+              }));
+            }
+            if (cv.education?.length) {
+              rich.education = cv.education.map((ed) => ({
+                school: ed.institution,
+                degree: ed.degree,
+                fieldOfStudy: '',
+                start: ed.start,
+                end: ed.end,
+              }));
+            }
+            setLinkedinRichProfile(rich);
+            try {
+              localStorage.setItem('profile_builder_linkedin_profile', JSON.stringify(rich));
+              localStorage.setItem('profile_builder_linkedin_mode', 'studio');
+            } catch {}
+            setLinkedinMode('studio');
+          } else if (imported.linkedinData) {
+            setLinkedinData((prev) => ({
+              ...prev,
+              headline: imported.linkedinData.headline || prev.headline,
+              about: imported.linkedinData.about || prev.about,
+              keySkills: imported.linkedinData.keySkills || prev.keySkills,
+            }));
+            setLinkedinMode('studio');
+          }
+        }}
+      />
     </div>
   );
 }

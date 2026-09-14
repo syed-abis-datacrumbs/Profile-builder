@@ -1,4 +1,4 @@
-import { ResumeRoute } from '../../../components/ResumeRoute';
+import { ResumeClient } from '../../../components/ResumeClient';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function ResumePage() {
-  return <ResumeRoute />;
+  return <ResumeClient />;
 }

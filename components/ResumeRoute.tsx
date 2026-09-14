@@ -9,6 +9,7 @@ import { ResumeChatStudio } from './ResumeChatStudio';
 import { ResumeTemplatePreview } from './ResumeTemplatePreview';
 import { ATSScoreModal } from './ATSScoreModal';
 import { ImportModal } from './ImportModal';
+import { CrossStudioSyncModal } from './CrossStudioSyncModal';
 import { LmsResumeSample } from '../lib/resumeSamples';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { DEFAULT_PLACEHOLDER_CV } from '../lib/defaultData';
@@ -27,20 +28,46 @@ export function ResumeRoute() {
     unlocked,
     resumeData,
     setResumeData,
+    setLinkedinData,
+    setGithubData,
     setIsAuthOpen,
     navigateToAssistant,
   } = useWorkspace();
 
-  const [resumeMode, setResumeMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
+  const [resumeMode, setResumeMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
+    if (typeof window === 'undefined') return 'landing';
+    try {
+      const savedMode = localStorage.getItem('profile_builder_resume_mode');
+      if (savedMode && ['landing', 'preview', 'editor', 'studio'].includes(savedMode)) {
+        return savedMode as any;
+      }
+    } catch {}
+    return 'landing';
+  });
   const [resumePreviewSample, setResumePreviewSample] = useState<LmsResumeSample | null>(null);
   const [attachedResumeTemplate, setAttachedResumeTemplate] = useState<LmsResumeSample | null>(null);
   const [resumeInitialPrompt, setResumeInitialPrompt] = useState('');
 
-  const [studioCv, setStudioCv] = useState<CvData | null>(null);
-  const [studioLabel, setStudioLabel] = useState<string>('');
+  const [studioCv, setStudioCv] = useState<CvData | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const savedCv = localStorage.getItem('profile_builder_studio_cv');
+      if (savedCv) return JSON.parse(savedCv);
+    } catch {}
+    return null;
+  });
+  const [studioLabel, setStudioLabel] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'Professional Resume';
+    try {
+      const savedLabel = localStorage.getItem('profile_builder_studio_label');
+      if (savedLabel) return savedLabel;
+    } catch {}
+    return 'Professional Resume';
+  });
 
   const [isATSOpen, setIsATSOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isSyncOpen, setIsSyncOpen] = useState(false);
 
   // Sync isFullBleed with workspace shell
   useEffect(() => {
@@ -48,24 +75,7 @@ export function ResumeRoute() {
     return () => setIsFullBleed(false);
   }, [resumeMode, setIsFullBleed]);
 
-  // Safe client-side hydration from localStorage
-  useEffect(() => {
-    try {
-      const savedMode = localStorage.getItem('profile_builder_resume_mode');
-      if (savedMode && ['landing', 'preview', 'editor', 'studio'].includes(savedMode)) {
-        setResumeMode(savedMode as any);
-      }
-      const savedStudioCv = localStorage.getItem('profile_builder_studio_cv');
-      if (savedStudioCv) setStudioCv(JSON.parse(savedStudioCv));
-
-      const savedStudioLabel = localStorage.getItem('profile_builder_studio_label');
-      if (savedStudioLabel) setStudioLabel(savedStudioLabel);
-    } catch (e) {
-      console.error('[Resume hydration error]:', e);
-    }
-  }, []);
-
-  // Persist mode & studio data
+  // Persist mode & studio data safely
   useEffect(() => {
     try {
       localStorage.setItem('profile_builder_resume_mode', resumeMode);
@@ -74,9 +84,12 @@ export function ResumeRoute() {
 
   useEffect(() => {
     try {
-      if (studioCv) localStorage.setItem('profile_builder_studio_cv', JSON.stringify(studioCv));
-      else localStorage.removeItem('profile_builder_studio_cv');
-      localStorage.setItem('profile_builder_studio_label', studioLabel);
+      if (studioCv) {
+        localStorage.setItem('profile_builder_studio_cv', JSON.stringify(studioCv));
+      }
+      if (studioLabel) {
+        localStorage.setItem('profile_builder_studio_label', studioLabel);
+      }
     } catch {}
   }, [studioCv, studioLabel]);
 
@@ -134,6 +147,8 @@ export function ResumeRoute() {
               setMobileHeaderRight={setMobileHeaderRight}
               clerkName={clerkFullName || undefined}
               isPro={unlocked ?? false}
+              onOpenSync={() => setIsSyncOpen(true)}
+              onOpenImport={() => setIsImportOpen(true)}
             />
           ) : resumeMode === 'editor' ? (
             <div className="space-y-4">
@@ -158,6 +173,7 @@ export function ResumeRoute() {
             <ResumeLandingView
               userName={firstName}
               clerkFullName={displayFullName}
+              onOpenImport={() => setIsImportOpen(true)}
               onSelectField={(sample) => {
                 if (!isLoggedIn) {
                   setIsAuthOpen(true);
@@ -239,13 +255,52 @@ export function ResumeRoute() {
       <ImportModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
-        onImportSuccess={(partial) => {
-          setResumeData((prev) => ({
-            ...prev,
-            personalInfo: { ...prev.personalInfo, ...partial.personalInfo },
-            skills: partial.skills || prev.skills,
-          }));
+        onImportSuccess={(imported) => {
+          if (imported.cvData) {
+            setStudioCv(imported.cvData);
+            setStudioLabel('Imported Resume');
+            setResumeMode('studio');
+
+            // Also synchronize generic resumeData
+            setResumeData((prev) => ({
+              ...prev,
+              personalInfo: {
+                ...prev.personalInfo,
+                fullName: imported.cvData.personalInfo?.fullName || prev.personalInfo.fullName,
+                email: imported.cvData.personalInfo?.email || prev.personalInfo.email,
+                phone: imported.cvData.personalInfo?.phone || prev.personalInfo.phone,
+                linkedin: imported.cvData.personalInfo?.linkedin || prev.personalInfo.linkedin,
+                github: imported.cvData.personalInfo?.github || prev.personalInfo.github,
+                bio: imported.cvData.summary || prev.personalInfo.bio,
+              },
+              skills: imported.cvData.additional?.skills
+                ? imported.cvData.additional.skills.split(',').map((s) => s.trim()).filter(Boolean)
+                : prev.skills,
+            }));
+          }
+
+          if (imported.linkedinData) {
+            setLinkedinData((prev) => ({
+              ...prev,
+              headline: imported.linkedinData.headline || prev.headline,
+              about: imported.linkedinData.about || prev.about,
+              keySkills: imported.linkedinData.keySkills || prev.keySkills,
+            }));
+          }
+
+          if (imported.githubData) {
+            setGithubData((prev) => ({
+              ...prev,
+              ...imported.githubData,
+            }));
+          }
         }}
+      />
+
+      <CrossStudioSyncModal
+        isOpen={isSyncOpen}
+        onClose={() => setIsSyncOpen(false)}
+        cv={studioCv}
       />
     </div>
   );

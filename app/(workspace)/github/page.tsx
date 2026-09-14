@@ -1,4 +1,4 @@
-import { GithubRoute } from '../../../components/GithubRoute';
+import { GithubClient } from '../../../components/GithubClient';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function GithubPage() {
-  return <GithubRoute />;
+  return <GithubClient />;
 }

@@ -8,6 +8,7 @@ import { GithubEditor } from './GithubEditor';
 import { GithubChatStudio } from './GithubChatStudio';
 import { GithubTemplatePreview } from './GithubTemplatePreview';
 import { TemplatePickerModal } from './TemplatePickerModal';
+import { ImportModal } from './ImportModal';
 import { applyRolePresetToGithub, GithubRolePreset, GITHUB_ROLE_PRESETS } from '../lib/githubRolePresets';
 import { defaultGithubData } from '../lib/defaultData';
 import { GithubProfileData } from '../types';
@@ -26,12 +27,22 @@ export function GithubRoute() {
     navigateToAssistant,
   } = useWorkspace();
 
-  const [githubMode, setGithubMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>('landing');
+  const [githubMode, setGithubMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
+    if (typeof window === 'undefined') return 'landing';
+    try {
+      const savedMode = localStorage.getItem('profile_builder_github_mode');
+      if (savedMode && ['landing', 'preview', 'editor', 'studio'].includes(savedMode)) {
+        return savedMode as any;
+      }
+    } catch {}
+    return 'landing';
+  });
   const [githubPreviewTemplate, setGithubPreviewTemplate] = useState<GithubTemplateCard | null>(null);
   const [attachedGithubTemplate, setAttachedGithubTemplate] = useState<GithubTemplateCard | null>(null);
   const [githubInitialPrompt, setGithubInitialPrompt] = useState('');
   const [pendingPrompt, setPendingPrompt] = useState('');
   const [showGithubTemplatePicker, setShowGithubTemplatePicker] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   // Sync isFullBleed with workspace shell
   useEffect(() => {
@@ -105,6 +116,7 @@ export function GithubRoute() {
               onRequireAuth={() => setIsAuthOpen(true)}
               initialPrompt={githubInitialPrompt}
               isPro={unlocked ?? false}
+              onOpenImport={() => setIsImportOpen(true)}
             />
           ) : githubMode === 'editor' ? (
             <div className="space-y-4">
@@ -130,6 +142,7 @@ export function GithubRoute() {
           ) : (
             <GithubLandingView
               userName={firstName || undefined}
+              onOpenImport={() => setIsImportOpen(true)}
               onOpenRolePicker={() => {
                 if (!isLoggedIn) {
                   setIsAuthOpen(true);
@@ -279,6 +292,51 @@ export function GithubRoute() {
           </div>
         </TemplatePickerModal>
       )}
+
+      <ImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onImportSuccess={(imported) => {
+          if (imported.githubData) {
+            setGithubData((prev) => ({
+              ...prev,
+              ...imported.githubData,
+            }));
+            setGithubMode('studio');
+            localStorage.setItem('profile_builder_github_mode', 'studio');
+          } else if (imported.cvData) {
+            const cv = imported.cvData;
+            const skillsList = cv.additional?.skills
+              ? cv.additional.skills.split(',').map((s) => s.trim()).filter(Boolean)
+              : [];
+            const projectsMd = (cv.projects || [])
+              .map((p) => {
+                const cleanContent = p.content.replace(/<[^>]*>/g, '').trim();
+                const linkMd = p.link ? ` | [Live Link](${p.link})` : '';
+                return `### ${cleanContent}${linkMd}\n`;
+              })
+              .join('\n');
+
+            setGithubData((prev) => ({
+              ...prev,
+              name: cv.personalInfo?.fullName || prev.name,
+              title: cv.workExperience?.[0]?.title
+                ? `🚀 ${cv.workExperience[0].title} | Open Source & Full Stack Builder`
+                : prev.title,
+              about: cv.summary || prev.about,
+              techStack: Array.from(new Set([...(prev.techStack || []), ...skillsList])).slice(0, 15),
+              customSections: projectsMd
+                ? [
+                    { title: '🚀 Featured Projects', content: projectsMd },
+                    ...(prev.customSections || []).filter((s) => !/projects/i.test(s.title)),
+                  ]
+                : prev.customSections,
+            }));
+            setGithubMode('studio');
+            localStorage.setItem('profile_builder_github_mode', 'studio');
+          }
+        }}
+      />
     </div>
   );
 }

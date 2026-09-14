@@ -145,7 +145,19 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
   useEffect(() => {
     try {
       const savedGithub = localStorage.getItem('profile_builder_github_data');
-      if (savedGithub) setGithubData(JSON.parse(savedGithub));
+      if (savedGithub) {
+        const parsed = JSON.parse(savedGithub);
+        if (Array.isArray(parsed?.techStack)) {
+          const seen = new Set<string>();
+          parsed.techStack = parsed.techStack.filter((t: any) => {
+            const norm = String(t || '').trim().toLowerCase();
+            if (!norm || seen.has(norm)) return false;
+            seen.add(norm);
+            return true;
+          });
+        }
+        setGithubData(parsed);
+      }
 
       const cachedPro = localStorage.getItem('cached_pro_user');
       if (cachedPro === 'true') setUnlocked(true);
