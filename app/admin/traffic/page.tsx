@@ -107,6 +107,7 @@ export default function AdminTrafficPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [signupRange, setSignupRange] = useState<'7d' | '14d' | '30d'>('14d');
   const [hoveredPoint, setHoveredPoint] = useState<{ label: string; count: number; x: number; y: number } | null>(null);
@@ -115,13 +116,26 @@ export default function AdminTrafficPage() {
     if (isManual) setRefreshing(true);
     try {
       const res = await fetch('/api/admin/traffic');
-      if (!res.ok) throw new Error('Failed to fetch');
+      if (!res.ok) {
+        let errorMsg = `Unable to fetch traffic stats (${res.status})`;
+        try {
+          const errData = await res.json();
+          if (errData?.error) errorMsg = errData.error;
+        } catch {
+          // ignore json parse error
+        }
+        setLoadError(errorMsg);
+        if (isManual) toast.error(errorMsg);
+        return;
+      }
       const json: TrafficApiResponse = await res.json();
       setData(json);
+      setLoadError(null);
       setLastUpdated(new Date());
       if (isManual) toast.success('Traffic data updated');
     } catch (err) {
-      console.error('Failed to load traffic stats:', err);
+      console.warn('Unable to load traffic stats:', err);
+      setLoadError('Network error while fetching traffic data');
       if (isManual) toast.error('Failed to refresh data');
     } finally {
       setLoading(false);
@@ -279,6 +293,23 @@ export default function AdminTrafficPage() {
           </a>
         </div>
       </div>
+
+      {/* Load Error Alert if any */}
+      {loadError && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4 flex items-center justify-between text-sm text-amber-900 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span>{loadError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => fetchTrafficData(true)}
+            className="text-xs font-semibold px-3 py-1 rounded-lg bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 transition-colors shadow-2xs cursor-pointer"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
 
       {/* ── Real-Time Hero Metrics (30m & Live Now) ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
