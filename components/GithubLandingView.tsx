@@ -13,7 +13,8 @@ import {
   Layers,
   Terminal,
   Code,
-  X
+  X,
+  Upload
 } from 'lucide-react';
 import { GithubIcon } from './icons';
 import { GITHUB_ROLE_PRESETS, GithubRolePreset } from '../lib/githubRolePresets';
@@ -30,6 +31,7 @@ interface GithubLandingViewProps {
   onSelectTemplate?: (template: GithubTemplateCard) => void;
   onUsePrompt: (promptText: string) => void;
   onOpenEditorDirectly: () => void;
+  onOpenImport?: () => void;
 }
 
 export interface GithubTemplateCard {
@@ -206,7 +208,8 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
   onClearAttachedTemplate,
   onSelectTemplate,
   onUsePrompt,
-  onOpenEditorDirectly
+  onOpenEditorDirectly,
+  onOpenImport,
 }) => {
   const [promptInput, setPromptInput] = useState('');
   const [selectedModel, setSelectedModel] = useState('Flash');
@@ -347,6 +350,19 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
                   <GithubIcon className="w-3.5 h-3.5 text-white shrink-0" />
                   <span>GitHub README</span>
                 </span>
+              )}
+
+              {onOpenImport && (
+                <button
+                  type="button"
+                  onClick={onOpenImport}
+                  className="px-2.5 sm:px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                  title="Import from existing PDF or GitHub"
+                >
+                  <Upload className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="hidden sm:inline">Import</span>
+                  <span>PDF / GitHub</span>
+                </button>
               )}
             </div>
 

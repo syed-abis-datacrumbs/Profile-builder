@@ -9,11 +9,17 @@ import {
   Check, 
   ArrowUpRight, 
   Send,
-  X
+  X,
+  Upload
 } from 'lucide-react';
 import { LinkedinIcon } from './icons';
 import { linkedinCovers } from '../lib/linkedinCovers';
 import { LinkedinTemplateThumbnail } from './LinkedinTemplateThumbnail';
+import { 
+  TemplateCategory, 
+  TEMPLATE_CATEGORIES, 
+  getLinkedinCoverCategory 
+} from '../lib/templateCategories';
 
 interface LinkedinLandingViewProps {
   userName?: string;
@@ -22,6 +28,7 @@ interface LinkedinLandingViewProps {
   onSelectTemplate: (templateId: string) => void;
   onUsePrompt: (promptText: string) => void;
   onOpenEditorDirectly: () => void;
+  onOpenImport?: () => void;
 }
 
 export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
@@ -30,10 +37,12 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
   onClearAttachedTemplate,
   onSelectTemplate,
   onUsePrompt,
-  onOpenEditorDirectly
+  onOpenEditorDirectly,
+  onOpenImport,
 }) => {
   const [promptInput, setPromptInput] = useState('');
   const [selectedModel, setSelectedModel] = useState('Flash');
+  const [activeCategory, setActiveCategory] = useState<TemplateCategory>('all');
 
   // Typewriter Animation
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -88,6 +97,10 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
       prompt: "Create an engaging LinkedIn post outline discussing modern AI career trends and developer productivity."
     }
   ];
+
+  const filteredCovers = linkedinCovers.filter(
+    (cover) => activeCategory === 'all' || getLinkedinCoverCategory(cover.id) === activeCategory
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,6 +171,19 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
                   <span className="hidden sm:inline">LinkedIn Optimizer</span>
                 </span>
               )}
+
+              {onOpenImport && (
+                <button
+                  type="button"
+                  onClick={onOpenImport}
+                  className="px-2.5 sm:px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                  title="Import from existing PDF or GitHub"
+                >
+                  <Upload className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="hidden sm:inline">Import</span>
+                  <span>PDF / GitHub</span>
+                </button>
+              )}
             </div>
 
             {/* Right Controls */}
@@ -208,16 +234,48 @@ export const LinkedinLandingView: React.FC<LinkedinLandingViewProps> = ({
         </div>
       </div>
 
-      {/* Section 2: Try a Profile Preset */}
-      <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h3 className="text-sm font-semibold text-slate-700">
-            Try a LinkedIn Cover Template
-          </h3>
+      {/* Section 2: Try a LinkedIn Cover Template */}
+      <div className="space-y-4 pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+              <span>Try a LinkedIn Cover Template</span>
+              <span className="sm:hidden text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                {filteredCovers.length} Designs
+              </span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Select a professional cover & profile preset tailored to your career track.
+            </p>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-3">
+            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+              {filteredCovers.length} Designs
+            </span>
+          </div>
         </div>
 
+        {/* Category Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {TEMPLATE_CATEGORIES.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveCategory(tab.id)}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all whitespace-nowrap ${
+                activeCategory === tab.id
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Templates Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
-          {linkedinCovers.map((cover, index) => (
+          {filteredCovers.map((cover, index) => (
             <motion.div
               key={cover.id}
               initial={{ opacity: 0, y: 15 }}
