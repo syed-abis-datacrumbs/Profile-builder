@@ -23,11 +23,9 @@ export function LinkedinRoute() {
     linkedinData,
     setLinkedinData,
     isLoggedIn,
-    isAuthorized,
     firstName,
     unlocked,
     setIsAuthOpen,
-    setShowBlockModal,
     mainContentRef,
     setIsFullBleed,
     navigateToAssistant,
@@ -36,7 +34,7 @@ export function LinkedinRoute() {
   } = useWorkspace();
 
   const [linkedinMode, setLinkedinMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
-    if (typeof window === 'undefined') return 'landing';
+    if (typeof window === 'undefined' || !isLoggedIn) return 'landing';
     try {
       const savedMode = localStorage.getItem('profile_builder_linkedin_mode');
       if (savedMode && ['landing', 'preview', 'editor', 'studio'].includes(savedMode)) {
@@ -70,20 +68,45 @@ export function LinkedinRoute() {
     return () => setIsFullBleed(false);
   }, [linkedinMode, setIsFullBleed]);
 
-  // Persist mode & profile safely
+  // Safe client-side hydration from localStorage
   useEffect(() => {
+    if (!isLoggedIn) {
+      setLinkedinMode('landing');
+      return;
+    }
+    try {
+      const savedMode = localStorage.getItem('profile_builder_linkedin_mode');
+      if (savedMode && ['landing', 'preview', 'editor', 'studio'].includes(savedMode)) {
+        setLinkedinMode(savedMode as any);
+      }
+    } catch (e) {
+      console.error('[LinkedIn hydration error]:', e);
+    }
+  }, [isLoggedIn]);
+
+  // Persist mode & profile safely only when authenticated
+  useEffect(() => {
+    if (!isLoggedIn) return;
     try {
       localStorage.setItem('profile_builder_linkedin_mode', linkedinMode);
     } catch {}
-  }, [linkedinMode]);
+  }, [linkedinMode, isLoggedIn]);
 
   useEffect(() => {
+    if (!isLoggedIn) return;
     try {
       if (linkedinRichProfile) {
         localStorage.setItem('profile_builder_linkedin_profile', JSON.stringify(linkedinRichProfile));
       }
     } catch {}
-  }, [linkedinRichProfile]);
+  }, [linkedinRichProfile, isLoggedIn]);
+
+  // Force landing mode if user logs out
+  useEffect(() => {
+    if (!isLoggedIn && (linkedinMode === 'studio' || linkedinMode === 'editor')) {
+      setLinkedinMode('landing');
+    }
+  }, [isLoggedIn, linkedinMode]);
 
   // Reset to landing event listener
   useEffect(() => {
@@ -143,6 +166,7 @@ export function LinkedinRoute() {
               initialPrompt={linkedinInitialPrompt}
               isPro={unlocked ?? false}
               onOpenCopyDrawer={() => setIsCopyDrawerOpen(true)}
+              onOpenImport={handleOpenImport}
             />
           ) : (
             <LinkedinLandingView
@@ -158,20 +182,12 @@ export function LinkedinRoute() {
                   setIsAuthOpen(true);
                   return;
                 }
-                if (!isAuthorized) {
-                  setShowBlockModal(true);
-                  return;
-                }
                 setLinkedinPreviewTemplateId(tid);
                 setLinkedinMode('preview');
               }}
               onUsePrompt={(promptText) => {
                 if (!isLoggedIn) {
                   setIsAuthOpen(true);
-                  return;
-                }
-                if (!isAuthorized) {
-                  setShowBlockModal(true);
                   return;
                 }
                 const cleanPrompt = promptText.trim();
@@ -190,10 +206,6 @@ export function LinkedinRoute() {
               onOpenEditorDirectly={() => {
                 if (!isLoggedIn) {
                   setIsAuthOpen(true);
-                  return;
-                }
-                if (!isAuthorized) {
-                  setShowBlockModal(true);
                   return;
                 }
                 if (attachedLinkedinTemplate) {
@@ -247,6 +259,10 @@ export function LinkedinRoute() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onImportSuccess={(imported) => {
+          if (!isLoggedIn) {
+            setIsAuthOpen(true);
+            return;
+          }
           if (imported.cvData) {
             const cv = imported.cvData;
             const rich = buildEmptyRichProfile();

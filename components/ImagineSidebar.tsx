@@ -24,6 +24,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { GithubIcon, LinkedinIcon } from './icons';
 import { ActiveTab } from '../types';
+import { clearWorkspaceSession } from '../lib/sessionCleanup';
 
 interface ImagineSidebarProps {
   activeTab: ActiveTab;
@@ -306,6 +307,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                   <button
                     onClick={async () => {
                       setIsSettingsOpen(false);
+                      clearWorkspaceSession();
                       await signOut();
                       window.location.href = '/';
                     }}

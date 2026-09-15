@@ -8,21 +8,21 @@ import { ActiveTab } from '../types';
 
 export function FreelancingRoute() {
   const router = useRouter();
-  const { firstName, isLoggedIn, setIsAuthOpen, isAuthorized, setShowBlockModal, navigateToAssistant } = useWorkspace();
+  const { firstName, isLoggedIn, setIsAuthOpen, navigateToAssistant } = useWorkspace();
 
   return (
     <FreelancingLandingView
       userName={firstName}
       onUsePrompt={(promptText) => {
-        if (!isAuthorized) {
-          setShowBlockModal(true);
+        if (!isLoggedIn) {
+          setIsAuthOpen(true);
           return;
         }
         navigateToAssistant(promptText);
       }}
       onOpenEditorDirectly={() => {
-        if (!isAuthorized) {
-          setShowBlockModal(true);
+        if (!isLoggedIn) {
+          setIsAuthOpen(true);
           return;
         }
         navigateToAssistant('Generate winning Upwork proposals');

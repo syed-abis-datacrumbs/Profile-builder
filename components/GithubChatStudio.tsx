@@ -17,6 +17,7 @@ import { GithubReadmePreview } from './GithubReadmePreview';
 import { PaymentModal } from './PaymentModal';
 import { PfpCropModal } from './PfpCropModal';
 import { MobileChatWidget } from './MobileChatWidget';
+import { ImportButton } from './ImportButton';
 
 /** Curated banner options — a mix of a Cloudinary-hosted photo banner (same as
  *  the LMS) and capsule-render dynamic gradient headers. */
@@ -93,10 +94,11 @@ export const GithubChatStudio: React.FC<{
 
   useEffect(() => {
     if (!hasLoadedFromStorage.current) return;
+    if (!isLoggedIn) return;
     if (typeof window !== 'undefined') {
       localStorage.setItem('profile_builder_github_chat', JSON.stringify(messages));
     }
-  }, [messages]);
+  }, [messages, isLoggedIn]);
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -651,6 +653,9 @@ export const GithubChatStudio: React.FC<{
               <LayoutTemplate className="w-3.5 h-3.5 text-slate-800 shrink-0" />
             </button>
 
+            {/* Import Button (Icon only) */}
+            <ImportButton onClick={onOpenImport} />
+
             {/* Clear Button (Bin logo only) */}
             <div className="relative shrink-0">
               <button
@@ -909,18 +914,6 @@ export const GithubChatStudio: React.FC<{
                 <Redo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
             </div>
-
-            {onOpenImport && (
-              <button
-                type="button"
-                onClick={onOpenImport}
-                title="Import Profile or Resume Data"
-                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
-              >
-                <Upload className="w-3.5 h-3.5 text-slate-600" />
-                <span className="hidden xl:inline">Import</span>
-              </button>
-            )}
 
             <button
               onClick={copyReadme}

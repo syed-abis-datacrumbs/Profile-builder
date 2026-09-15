@@ -14,11 +14,11 @@ import {
   Sliders,
   Send,
   X,
-  Upload,
 } from 'lucide-react';
 import { LMS_RESUME_SAMPLES, LmsResumeSample } from '../lib/resumeSamples';
 import { getResumeAccentColor } from '../lib/resumeHelpers';
 import { ResumeTemplateThumbnail } from './ResumeTemplateThumbnail';
+import { ImportButton } from './ImportButton';
 import { 
   TemplateCategory, 
   TEMPLATE_CATEGORIES, 
@@ -200,18 +200,7 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
                 </span>
               )}
 
-              {onOpenImport && (
-                <button
-                  type="button"
-                  onClick={onOpenImport}
-                  className="px-2.5 sm:px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                  title="Import from existing PDF or GitHub"
-                >
-                  <Upload className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="hidden sm:inline">Import</span>
-                  <span>PDF / GitHub</span>
-                </button>
-              )}
+              <ImportButton variant="landing" onClick={onOpenImport} />
             </div>
 
             {/* Right Controls */}

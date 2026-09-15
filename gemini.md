@@ -119,6 +119,26 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
 - **DO NOT** convert this into a centered full-screen modal overlay or alter the button's layout.
 - **DO** keep the parent toolbar wrapper set to `overflow-visible` so the dropdown popover renders over the canvas without being clipped.
 
+### 📥 Studio Toolbar & Import Button Design
+- **DO** display **ONLY the upload icon (`<Upload className="w-3.5 h-3.5 text-slate-700 shrink-0" />`)** on the studio toolbar import button across all 3 studios with **NO text** (never include trailing words like "Import").
+- **DO** use the unified reusable `ImportButton` component (`components/ImportButton.tsx`) so button styling, title tooltip, and behavior are NEVER duplicated across the codebase.
+- **DO** maintain identical compact dimensions (`h-7 w-7 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-slate-200/80 flex items-center justify-center shrink-0 cursor-pointer`) matching the sibling `LayoutTemplate` and `Trash2` buttons.
+- **DO** position the import button consistently in the left controls group immediately next to the Templates button across all 3 studios (`ResumeChatStudio`, `LinkedinChatStudio`, and `GithubChatStudio`).
+- **DO NOT** add text labels to studio toolbar action buttons or duplicate button markup inline in studio components.
+- **DO NOT** place the import button in divergent locations (e.g. right-side controls in one studio and left-side in another).
+
+### 🔐 Studio Access & Login Modal vs Private Windows
+- **DO** trigger the standard **Login Window (`AuthModal` via `setIsAuthOpen(true)`)** whenever an unauthenticated or logged-out user attempts to select templates, submit prompts, or open editor studios on any tab (including LinkedIn, GitHub, Resume, JobHunting, Freelancing, and Interview Prep).
+- **DO NOT** display "This Page is Private" / "Contact administrator" blocking screens (`BlockScreen` has been permanently removed from the codebase as it has no actual usage).
+- **DO NOT** wrap studio content in artificial `onClickCapture` handlers that intercept pointer clicks or hijack the view for non-resume tabs.
+
+### 🚪 Session Cleanup, Logout Redirection & Studio Route Guards
+- **DO** wipe all active studio modes (`profile_builder_resume_mode`, `profile_builder_github_mode`, `profile_builder_linkedin_mode`), AI chat histories (`profile_builder_*_chat`), in-memory profile drafts, and active tab preferences from `localStorage` whenever a user logs out via `clearWorkspaceSession()` in `lib/sessionCleanup.ts`.
+- **DO** immediately redirect to the home page (`window.location.href = '/'`) upon logging out.
+- **DO** guard all studio routes (`ResumeRoute`, `GithubRoute`, `LinkedinRoute`) against unauthenticated studio access: if `!isLoggedIn`, initialize mode to `'landing'`, refuse to mount chat studios, and forcibly fall back to `'landing'` if a user logs out.
+- **DO NOT** allow unauthenticated or logged-out users to navigate between active chat studio states or persist in `studio` or `editor` modes across tabs.
+- **DO NOT** write active chat messages, cv drafts, or studio modes to `localStorage` when `!isLoggedIn`.
+
 ### 🖼️ LinkedIn Cover Banner State
 - **DO NOT** default to a fallback sample banner (e.g., `banner-1.png`) if both `profile.customCoverUrl` and `profile.coverTemplateId` are empty.
 - **DO** render the clean empty state ("No cover banner selected") in `LinkedinCopyDrawer` and disable the "Download PNG" button when no banner has been selected.
@@ -189,8 +209,9 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
 - **Fix:** Use `unpdf` (`extractText` from `'unpdf'`). It runs in standard Node/V8 environments without worker dependencies, reliably extracting raw text from PDFs before passing structured schemas to OpenAI.
 
 ### 🔤 Font Optimization & Next.js Preloading (`next/font/google`)
-- **Root Layout Rule:** In `app/layout.tsx`, only the primary global body font (`Geist`) should keep `preload: true` (default). All secondary fonts (`Geist_Mono`, `Poppins`, `Bricolage_Grotesque`, `Dancing_Script`, `Playfair_Display`) **MUST** specify `preload: false`. This prevents the browser from preloading 10+ unused `.woff2` font files on the initial page load.
+- **Root Layout Rule:** In `app/layout.tsx`, configure fonts with `preload: false` whenever possible (or keep `preload: true` only on primary Geist if early font loading is needed). All secondary fonts (`Geist_Mono`, `Poppins`, `Bricolage_Grotesque`, `Dancing_Script`, `Playfair_Display`) **MUST** specify `preload: false`. This prevents the browser from preloading 10+ unused `.woff2` font files on the initial page load.
 - **No `next/font` in Subcomponents:** Do NOT declare `next/font/google` instances inside subcomponents (e.g., `LinkedinChatStudio`, `LinkedinTemplatePreview`). Doing so forces Next.js to extract a standalone CSS chunk that gets preloaded across parent and prefetched pages, triggering `link preload but not used within a few seconds` warnings in Chrome. Use standard `font-sans` instead.
+- **Turbopack Dev CSS Chunk Preload Warning (`[root-of-the-server]__..._.css`):** In Next.js with Turbopack in development mode (`next dev --turbopack`), Next.js automatically injects an HTTP `Link: </_next/static/chunks/%5Broot-of-the-server%5D...css>; rel=preload; as="style"` response header for the development CSS bundle. Because Turbopack manages CSS updates dynamically via its client-side HMR WebSocket runtime rather than static stylesheet reloads, Chrome triggers a diagnostic warning: `The resource http://localhost:3000/_next/static/chunks/[root-of-the-server]... was preloaded using link preload but not used within a few seconds from the window's load event`. This is an internal Turbopack dev-server artifact: in production (`next build` / `next start`), this header and `[root-of-the-server]` chunks do not exist, and styles are served via standard `<link rel="stylesheet">` tags.
 
 ### ⚡ Router Prefetching in Navigation Shells
 - In persistent shells (e.g. `components/AdminShell.tsx`, `components/AdminSidebarNav.tsx`), always set **`prefetch={false}`** on sidebar / header navigation `<Link>` tags.
@@ -218,6 +239,23 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
   - The modal displays user's email, "Not Admin" badge, an explanation of the private testing phase, and provides "Sign Out" and "Log in with Admin Account" actions.
 - **Backend API Protection:**
   - `/api/resume-chat`, `/api/github-chat`, `/api/linkedin-rich-chat`, `/api/pdf`, `/api/resumes`, and `/api/resumes/download-check` check `await isUserAdmin(user)`. Non-admins receive HTTP 403 Forbidden with `{ error: 'Momentum is currently in private testing phase. Access is restricted to administrators.' }`, guaranteeing zero outside traffic to OpenAI Puppeteer or DB during testing.
+
+### 🔘 Studio Toolbar Button Standardization & DRY Component Architecture
+- **Gotcha:** Previously, the Import button was implemented with duplicate inline `<button>` markup across studios with inconsistent styles, positions, and text labels. In `ResumeChatStudio`, it had `<span className="hidden 2xl:inline">Import</span>` (appearing icon-only on smaller viewports but rendering text on wide screens). In `GithubChatStudio`, it was placed in the right-side controls group with `<span className="hidden xl:inline">Import</span>` and divergent padding. In `LinkedinChatStudio`, the import button was omitted from the toolbar entirely.
+- **Fix:** Created the unified `ImportButton` component (`components/ImportButton.tsx`). Standardized the import button across all 3 studios (`ResumeChatStudio`, `LinkedinChatStudio`, `GithubChatStudio`) to be strictly icon-only (`h-7 w-7` square button with `<Upload />` and no text labels), placed consistently in the left controls group directly next to `LayoutTemplate`. Also unified the landing view import pill via `variant="landing"` to eliminate code repetition across `ResumeLandingView`, `LinkedinLandingView`, and `GithubLandingView`.
+
+### 🚫 Deprecation & Removal of Private Page Modal (`BlockScreen`)
+- **Gotcha:** `WorkspaceShell.tsx` formerly contained an `onClickCapture` listener intercepting clicks whenever `!isAuthorized && activeTab !== 'resume' && activeTab !== 'github'`. On `/linkedin`, clicking anywhere on the page intercepted the event and rendered `BlockScreen` ("This Page is Private") with a "Close" button, preventing unauthenticated users from seeing the standard `AuthModal` login dialog.
+- **Fix:** Deleted `components/BlockScreen.tsx`, removed `onClickCapture` from `WorkspaceShell.tsx`, cleaned `showBlockModal` from `WorkspaceContext.tsx`, and unified all studio routes (`LinkedinRoute`, `JobHuntingRoute`, `FreelancingRoute`, `InterviewRoute`) to cleanly invoke `setIsAuthOpen(true)` when `!isLoggedIn`, matching `GithubRoute`.
+
+### 🔄 Cross-Studio State & Chat Persistence Across Logouts
+- **Gotcha:** When a user had active chats across Resume, GitHub, and LinkedIn studios while logged in and then logged out, their studio mode (`profile_builder_*_mode = 'studio'`) and chat transcripts (`profile_builder_*_chat`) remained in `localStorage`. Navigating to any studio tab while logged out allowed the user to freely view and continue chatting in the previous active studios instead of being redirected to the home page or prompted to sign in.
+- **Fix:**
+  1. Created `clearWorkspaceSession()` in `lib/sessionCleanup.ts` that purges all studio modes, AI chat transcripts, and in-memory profile drafts from `localStorage`.
+  2. Integrated `clearWorkspaceSession()` into all sign-out pathways (`ImagineSidebar.tsx`, `TestingPhaseModal.tsx`) paired with hard redirection to the root home page (`window.location.href = '/'`).
+  3. Added a reactive logout watcher (`wasLoggedInRef`) in `WorkspaceContext.tsx` to automatically invoke session cleanup and redirect if Clerk transitions to logged-out from another tab or expired session.
+  4. Added strict logged-out guards in `ResumeRoute.tsx`, `GithubRoute.tsx`, and `LinkedinRoute.tsx`: if `!isLoggedIn`, studio mode is forbidden and forces `'landing'`, mode persistence is blocked, and any action attempting to open studio or apply a template prompts `AuthModal` (`setIsAuthOpen(true)`).
+  5. Studio components (`ResumeChatStudio`, `GithubChatStudio`, `LinkedinChatStudio`) only persist chat messages to `localStorage` when `isLoggedIn === true`.
 
 ---
 

@@ -37,7 +37,7 @@ export function ResumeRoute() {
   } = useWorkspace();
 
   const [resumeMode, setResumeMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
-    if (typeof window === 'undefined') return 'landing';
+    if (typeof window === 'undefined' || !isLoggedIn) return 'landing';
     try {
       const savedMode = localStorage.getItem('profile_builder_resume_mode');
       if (savedMode && ['landing', 'preview', 'editor', 'studio'].includes(savedMode)) {
@@ -77,14 +77,24 @@ export function ResumeRoute() {
     return () => setIsFullBleed(false);
   }, [resumeMode, setIsFullBleed]);
 
+  // Ensure logged-out users are never in studio or editor mode
+  useEffect(() => {
+    if (!isLoggedIn && (resumeMode === 'studio' || resumeMode === 'editor')) {
+      setResumeMode('landing');
+    }
+  }, [isLoggedIn, resumeMode]);
+
   // Persist mode & studio data safely
   useEffect(() => {
     try {
-      localStorage.setItem('profile_builder_resume_mode', resumeMode);
+      if (isLoggedIn) {
+        localStorage.setItem('profile_builder_resume_mode', resumeMode);
+      }
     } catch {}
-  }, [resumeMode]);
+  }, [isLoggedIn, resumeMode]);
 
   useEffect(() => {
+    if (!isLoggedIn) return;
     try {
       if (studioCv) {
         localStorage.setItem('profile_builder_studio_cv', JSON.stringify(studioCv));
@@ -93,7 +103,7 @@ export function ResumeRoute() {
         localStorage.setItem('profile_builder_studio_label', studioLabel);
       }
     } catch {}
-  }, [studioCv, studioLabel]);
+  }, [studioCv, studioLabel, isLoggedIn]);
 
   // Reset to landing event listener
   useEffect(() => {
@@ -114,6 +124,10 @@ export function ResumeRoute() {
   };
 
   const loadResumeField = (sample: LmsResumeSample, initialPromptText?: string) => {
+    if (!isLoggedIn) {
+      setIsAuthOpen(true);
+      return;
+    }
     setStudioCv(cvMarkdownToHtml(sample.data as CvData));
     setStudioLabel(sample.label);
     setResumeInitialPrompt(initialPromptText ?? '');
@@ -190,6 +204,10 @@ export function ResumeRoute() {
               attachedTemplate={attachedResumeTemplate}
               onClearAttachedTemplate={() => setAttachedResumeTemplate(null)}
               onUsePrompt={(promptText) => {
+                if (!isLoggedIn) {
+                  setIsAuthOpen(true);
+                  return;
+                }
                 const cleanPrompt = promptText.trim();
                 setResumeInitialPrompt(cleanPrompt);
                 if (attachedResumeTemplate) {
@@ -215,6 +233,10 @@ export function ResumeRoute() {
                 setAttachedResumeTemplate(null);
               }}
               onOpenEditorDirectly={() => {
+                if (!isLoggedIn) {
+                  setIsAuthOpen(true);
+                  return;
+                }
                 setResumeMode(studioCv ? 'studio' : 'editor');
               }}
             />

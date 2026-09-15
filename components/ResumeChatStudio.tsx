@@ -23,7 +23,6 @@ import {
   Bug,
   LayoutTemplate,
   AlertTriangle,
-  Upload,
   RefreshCw,
 } from 'lucide-react';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
@@ -34,6 +33,7 @@ import { PaginatedCvPreview } from './PaginatedCvPreview';
 import { measureBlocks, paginateCvSmart, PAGE_WIDTH_PX } from '../lib/cvPagination';
 import { PaymentModal } from './PaymentModal';
 import { MobileChatWidget } from './MobileChatWidget';
+import { ImportButton } from './ImportButton';
 import toast from '@/lib/toast';
 
 // Blank breathing room reserved at the BOTTOM of every page and the TOP of
@@ -157,6 +157,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const flushPendingMessages = useCallback(() => {
+    if (!isLoggedIn) return;
     if (pendingMessagesRef.current && typeof window !== 'undefined') {
       try {
         localStorage.setItem(
@@ -170,7 +171,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
-  }, []);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (!hasLoadedFromStorage.current) return;
@@ -1104,18 +1105,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               <LayoutTemplate className="w-3.5 h-3.5 text-slate-700 shrink-0" />
             </button>
 
-            {/* Import Button */}
-            {onOpenImport && (
-              <button
-                type="button"
-                onClick={onOpenImport}
-                className="h-7 px-2 rounded-lg bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors border border-slate-200/80 flex items-center justify-center gap-1.5 leading-none cursor-pointer shrink-0"
-                title="Import from PDF or GitHub"
-              >
-                <Upload className="w-3.5 h-3.5 text-slate-700 shrink-0" />
-                <span className="hidden 2xl:inline">Import</span>
-              </button>
-            )}
+            {/* Import Button (Icon only) */}
+            <ImportButton onClick={onOpenImport} />
 
             {/* Sync to LinkedIn & GitHub Button */}
             {onOpenSync && (

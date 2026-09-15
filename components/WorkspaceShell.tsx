@@ -8,7 +8,6 @@ import { ImagineSidebar, MobileNavBar } from './ImagineSidebar';
 import { AuthModal } from './AuthModal';
 import { UpgradeModal } from './UpgradeModal';
 import { PaymentModal } from './PaymentModal';
-import BlockScreen from './BlockScreen';
 import { ImportComingSoonModal } from './ImportComingSoonModal';
 import { useWorkspace } from '../context/WorkspaceContext';
 
@@ -33,8 +32,6 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
     openPaymentModal,
     isUpgradeOpen,
     setIsUpgradeOpen,
-    showBlockModal,
-    setShowBlockModal,
     showProCelebrationModal,
     setShowProCelebrationModal,
     isImportComingSoonOpen,
@@ -112,30 +109,8 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             isFullBleed ? 'p-0 max-w-none' : 'p-4 sm:p-6 gap-4 max-w-7xl'
           }`}
         >
-          {(showBlockModal || (!isAuthorized && activeTab === 'assistant')) && (
-            <BlockScreen
-              onOpenAuth={() => {
-                setShowBlockModal(false);
-                setIsAuthOpen(true);
-              }}
-              onClose={() => {
-                setShowBlockModal(false);
-                if (activeTab === 'assistant') router.push('/resume');
-              }}
-            />
-          )}
-
           {/* Active Editor Component */}
-          <div
-            className="flex-1 min-h-0 flex flex-col"
-            onClickCapture={(e) => {
-              if (!isAuthorized && activeTab !== 'resume' && activeTab !== 'github') {
-                e.preventDefault();
-                e.stopPropagation();
-                setShowBlockModal(true);
-              }
-            }}
-          >
+          <div className="flex-1 min-h-0 flex flex-col">
             {children}
           </div>
         </div>

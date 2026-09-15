@@ -203,7 +203,7 @@ components/
 ├── LinkedinChatStudio.tsx              Interactive LinkedIn Studio & cover editor
 ├── GithubLandingView.tsx               GitHub templates grid, starter prompts & category filters
 ├── LinkedinLandingView.tsx             LinkedIn cover presets & prompt generator
-├── BlockScreen.tsx                     Private Page modal gate for unauthorized users
+├── ImportButton.tsx                    Standardized import button (icon-only toolbar & landing pill)
 ├── MobileChatWidget.tsx                Floating mobile chat drawer with quick action pills
 ├── PaymentModal.tsx                    Payment instructions, EasyPaisa/JazzCash upload & coupon tab
 ├── PfpCropModal.tsx                    Profile picture cropping and aspect-ratio adjustments

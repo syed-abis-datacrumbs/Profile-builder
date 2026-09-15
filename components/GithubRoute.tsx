@@ -30,7 +30,7 @@ export function GithubRoute() {
   } = useWorkspace();
 
   const [githubMode, setGithubMode] = useState<'landing' | 'preview' | 'editor' | 'studio'>(() => {
-    if (typeof window === 'undefined') return 'landing';
+    if (typeof window === 'undefined' || !isLoggedIn) return 'landing';
     try {
       const savedMode = localStorage.getItem('profile_builder_github_mode');
       if (savedMode && ['landing', 'preview', 'editor', 'studio'].includes(savedMode)) {
@@ -54,6 +54,10 @@ export function GithubRoute() {
 
   // Safe client-side hydration from localStorage
   useEffect(() => {
+    if (!isLoggedIn) {
+      setGithubMode('landing');
+      return;
+    }
     try {
       const savedMode = localStorage.getItem('profile_builder_github_mode');
       if (savedMode && ['landing', 'preview', 'editor', 'studio'].includes(savedMode)) {
@@ -62,14 +66,22 @@ export function GithubRoute() {
     } catch (e) {
       console.error('[GitHub hydration error]:', e);
     }
-  }, []);
+  }, [isLoggedIn]);
 
-  // Persist mode
+  // Persist mode only when authenticated
   useEffect(() => {
+    if (!isLoggedIn) return;
     try {
       localStorage.setItem('profile_builder_github_mode', githubMode);
     } catch {}
-  }, [githubMode]);
+  }, [githubMode, isLoggedIn]);
+
+  // Force landing mode if user logs out
+  useEffect(() => {
+    if (!isLoggedIn && (githubMode === 'studio' || githubMode === 'editor')) {
+      setGithubMode('landing');
+    }
+  }, [isLoggedIn, githubMode]);
 
   // Reset to landing event listener
   useEffect(() => {
@@ -90,6 +102,10 @@ export function GithubRoute() {
   };
 
   const openGithubStudio = (preset: GithubRolePreset, theme?: GithubProfileData['theme'], avatarUrl?: string, bannerUrl?: string) => {
+    if (!isLoggedIn) {
+      setIsAuthOpen(true);
+      return;
+    }
     const g = applyRolePresetToGithub(defaultGithubData, preset);
     setGithubData({
       ...g,
@@ -153,6 +169,10 @@ export function GithubRoute() {
                 setShowGithubTemplatePicker(true);
               }}
               onSelectPreset={(preset, theme, avatarUrl, bannerUrl) => {
+                if (!isLoggedIn) {
+                  setIsAuthOpen(true);
+                  return;
+                }
                 if (typeof window !== 'undefined') {
                   localStorage.removeItem('profile_builder_github_chat');
                 }
@@ -227,6 +247,10 @@ export function GithubRoute() {
                 key={t.id}
                 onClick={() => {
                   setShowGithubTemplatePicker(false);
+                  if (!isLoggedIn) {
+                    setIsAuthOpen(true);
+                    return;
+                  }
                   const basePreset = GITHUB_ROLE_PRESETS.find((p) => p.id === t.presetId) || GITHUB_ROLE_PRESETS[0];
                   const preset = { ...basePreset, label: t.name };
                   openGithubStudio(preset, t.theme, t.avatarUrl || '/images/github-profile/git-profile-1.png');

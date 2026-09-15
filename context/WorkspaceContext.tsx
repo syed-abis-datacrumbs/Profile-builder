@@ -7,6 +7,7 @@ import confetti from 'canvas-confetti';
 import { ActiveTab, ResumeData, GithubProfileData, LinkedinProfileData } from '../types';
 import { defaultResumeData, defaultGithubData, defaultLinkedinData } from '../lib/defaultData';
 import { BUILDER_ACCESS_EMAILS } from '../lib/accessConfig';
+import { clearWorkspaceSession } from '../lib/sessionCleanup';
 
 export interface InitialUser {
   id: string;
@@ -49,8 +50,6 @@ export interface WorkspaceContextType {
   openPaymentModal: (reason?: string) => void;
   isUpgradeOpen: boolean;
   setIsUpgradeOpen: (open: boolean) => void;
-  showBlockModal: boolean;
-  setShowBlockModal: (open: boolean) => void;
   showProCelebrationModal: boolean;
   setShowProCelebrationModal: (open: boolean) => void;
   isImportComingSoonOpen: boolean;
@@ -110,7 +109,6 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentModalReason, setPaymentModalReason] = useState('Remove the watermark from your Resume, LinkedIn, and GitHub downloads');
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
-  const [showBlockModal, setShowBlockModal] = useState(false);
   const [showProCelebrationModal, setShowProCelebrationModal] = useState(false);
   const [isImportComingSoonOpen, setIsImportComingSoonOpen] = useState(false);
 
@@ -148,13 +146,22 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
   const [isAdmin, setIsAdmin] = useState<boolean>(initialIsAdmin);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState<boolean>(false);
 
+  // Track previous login state to trigger cleanup & redirect on logout
+  const wasLoggedInRef = useRef<boolean>(isLoggedIn);
+
   useEffect(() => {
     if (!isLoaded) return;
     if (!clientUser) {
+      if (wasLoggedInRef.current) {
+        clearWorkspaceSession();
+        window.location.href = '/';
+      }
+      wasLoggedInRef.current = false;
       setIsAdmin(false);
       setIsCheckingAdmin(false);
       return;
     }
+    wasLoggedInRef.current = true;
 
     const clientEmails = clientUser.emailAddresses?.map((e) => e.emailAddress.toLowerCase().trim()) || [];
     const hasBuilderAccess = clientEmails.some((email) => BUILDER_ACCESS_EMAILS.has(email));
@@ -332,8 +339,6 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
         openPaymentModal,
         isUpgradeOpen,
         setIsUpgradeOpen,
-        showBlockModal,
-        setShowBlockModal,
         showProCelebrationModal,
         setShowProCelebrationModal,
         isImportComingSoonOpen,

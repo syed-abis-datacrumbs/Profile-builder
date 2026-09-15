@@ -5,21 +5,21 @@ import { InterviewPrepView } from './InterviewPrepView';
 import { useWorkspace } from '../context/WorkspaceContext';
 
 export function InterviewRoute() {
-  const { firstName, isAuthorized, setShowBlockModal, navigateToAssistant } = useWorkspace();
+  const { firstName, isLoggedIn, setIsAuthOpen, navigateToAssistant } = useWorkspace();
 
   return (
     <InterviewPrepView
       userName={firstName}
       onUsePrompt={(promptText) => {
-        if (!isAuthorized) {
-          setShowBlockModal(true);
+        if (!isLoggedIn) {
+          setIsAuthOpen(true);
           return;
         }
         navigateToAssistant(promptText);
       }}
       onLaunchMockInterview={(role, jdText) => {
-        if (!isAuthorized) {
-          setShowBlockModal(true);
+        if (!isLoggedIn) {
+          setIsAuthOpen(true);
           return;
         }
         navigateToAssistant(

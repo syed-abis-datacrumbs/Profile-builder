@@ -10,6 +10,8 @@ import {
   Mail
 } from 'lucide-react';
 
+import { clearWorkspaceSession } from '../lib/sessionCleanup';
+
 interface TestingPhaseModalProps {
   userEmail?: string;
 }
@@ -23,10 +25,12 @@ export function TestingPhaseModal({
   const handleSignOut = async () => {
     try {
       setIsSigningOut(true);
+      clearWorkspaceSession();
       await signOut();
       window.location.href = '/';
     } catch (err) {
       console.error('[SignOut Error]:', err);
+      clearWorkspaceSession();
       window.location.href = '/';
     }
   };

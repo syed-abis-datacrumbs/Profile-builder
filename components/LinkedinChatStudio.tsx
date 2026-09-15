@@ -62,6 +62,7 @@ import { PfpCropModal } from './PfpCropModal';
 import { ShrinkToFitCoverText } from './ShrinkToFitCoverText';
 import { LinkedinTemplateThumbnail } from './LinkedinTemplateThumbnail';
 import { MobileChatWidget } from './MobileChatWidget';
+import { ImportButton } from './ImportButton';
 import {
   LinkedinTemplateSampleExperience,
   LinkedinTemplateSampleEducation,
@@ -181,7 +182,8 @@ export const LinkedinChatStudio: React.FC<{
   initialPrompt?: string;
   isPro?: boolean;
   onOpenCopyDrawer?: () => void;
-}> = ({ profile, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt, isPro, onOpenCopyDrawer }) => {
+  onOpenImport?: () => void;
+}> = ({ profile, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt, isPro, onOpenCopyDrawer, onOpenImport }) => {
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: 'assistant',
@@ -206,10 +208,11 @@ export const LinkedinChatStudio: React.FC<{
 
   useEffect(() => {
     if (!hasLoadedFromStorage.current) return;
+    if (!isLoggedIn) return;
     if (typeof window !== 'undefined') {
       localStorage.setItem('profile_builder_linkedin_chat', JSON.stringify(messages));
     }
-  }, [messages]);
+  }, [messages, isLoggedIn]);
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -799,6 +802,9 @@ export const LinkedinChatStudio: React.FC<{
             >
               <LayoutTemplate className="w-3.5 h-3.5 text-slate-800 shrink-0" />
             </button>
+
+            {/* Import Button (Icon only) */}
+            <ImportButton onClick={onOpenImport} />
 
             {/* Clear Button (Bin logo only) */}
             <div className="relative shrink-0">
