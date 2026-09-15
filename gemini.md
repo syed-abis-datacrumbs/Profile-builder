@@ -264,6 +264,9 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
 - **Canonical Error Shape:** Error helpers (`apiError`, `apiBadRequest`, `apiUnauthorized`, `apiForbidden`, `apiNotFound`, `apiConflict`, `apiServerError`) strictly return `{ success: false, error: string, code?: string, details?: unknown }` with the correct HTTP status codes.
 - **Production Logging:** `apiServerError(msg, err)` logs unconditionally using `console.error('[API Server Error]:', err)` so that serverless runtime logs (e.g., Vercel Function logs) retain full error stack traces regardless of `NODE_ENV`.
 - **Client-Side Safe Fetching:** Client components can use `safeApiFetch<T>(url, init)` from `@/lib/apiClient` to safely handle non-JSON 500 HTML responses and network errors without throwing unhandled promise rejections.
+- **Intentional Route Carve-Outs (Do NOT migrate to standard apiResponse):**
+  1. `/api/payment/coupon` and `/api/payment/verify`: Preserve exact `{ status: 'APPROVED' | 'REJECTED', message: string }` contract as required domain logic that `PaymentModal.tsx` depends on.
+  2. `/api/resume-chat`, `/api/github-chat`, and `/api/linkedin-rich-chat`: Excluded from standard `apiError` / `apiServerError` response helpers. These AI chat endpoints intentionally return HTTP 200 with `{ error: string }` or `{ reply: string }` so that `ResumeChatStudio`, `GithubChatStudio`, and `LinkedinChatStudio` render inline conversational warning/limit bubbles without triggering fetch rejections or treating the turn as an aborted network request.
 
 ---
 

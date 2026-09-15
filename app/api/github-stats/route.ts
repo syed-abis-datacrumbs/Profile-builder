@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { apiSuccess, apiBadRequest, apiNotFound, apiError, apiServerError } from '@/lib/apiResponse';
 
 export const runtime = 'nodejs';
 
@@ -6,7 +7,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const username = searchParams.get('username')?.trim();
   if (!username) {
-    return NextResponse.json({ error: 'Username required' }, { status: 400 });
+    return apiBadRequest('Username required');
   }
 
   try {
@@ -27,7 +28,10 @@ export async function GET(req: NextRequest) {
     ]);
 
     if (!userRes.ok) {
-      return NextResponse.json({ error: 'User not found' }, { status: userRes.status });
+      if (userRes.status === 404) {
+        return apiNotFound('User not found');
+      }
+      return apiError('Failed to fetch GitHub profile', userRes.status);
     }
 
     const user = await userRes.json();
@@ -56,7 +60,7 @@ export async function GET(req: NextRequest) {
         pct: Math.round((count / totalLangs) * 100),
       }));
 
-    return NextResponse.json({
+    return apiSuccess({
       name: user.name || username,
       publicRepos: user.public_repos || 0,
       followers: user.followers || 0,
@@ -67,6 +71,6 @@ export async function GET(req: NextRequest) {
       bio: user.bio,
     });
   } catch (err: any) {
-    return NextResponse.json({ error: 'Failed to fetch GitHub stats' }, { status: 500 });
+    return apiServerError('Failed to fetch GitHub stats', err);
   }
 }

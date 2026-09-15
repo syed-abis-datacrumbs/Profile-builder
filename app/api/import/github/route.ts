@@ -3,17 +3,25 @@ import { currentUser } from '@clerk/nextjs/server';
 import { isUserAdmin } from '@/lib/adminAuth';
 import { GithubProfileData } from '../../../../types';
 import { CvProject } from '../../../../lib/cvTypes';
+import {
+  apiSuccess,
+  apiUnauthorized,
+  apiForbidden,
+  apiBadRequest,
+  apiNotFound,
+  apiError,
+  apiServerError,
+} from '@/lib/apiResponse';
 
 export async function GET(req: NextRequest) {
   const user = await currentUser();
   if (!user) {
-    return Response.json({ error: 'Unauthorized: Please sign in to import.' }, { status: 401 });
+    return apiUnauthorized('Unauthorized: Please sign in to import.');
   }
   const authorized = await isUserAdmin(user);
   if (!authorized) {
-    return Response.json(
-      { error: 'The Import feature is currently in private testing for administrators. Coming soon for all users!' },
-      { status: 403 }
+    return apiForbidden(
+      'The Import feature is currently in private testing for administrators. Coming soon for all users!'
     );
   }
 
@@ -31,7 +39,7 @@ export async function GET(req: NextRequest) {
     .trim();
 
   if (!username) {
-    return Response.json({ error: 'GitHub username is required.' }, { status: 400 });
+    return apiBadRequest('GitHub username is required.');
   }
 
   try {
@@ -44,9 +52,9 @@ export async function GET(req: NextRequest) {
     const userRes = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, { headers });
     if (!userRes.ok) {
       if (userRes.status === 404) {
-        return Response.json({ error: `GitHub user "${username}" was not found.` }, { status: 404 });
+        return apiNotFound(`GitHub user "${username}" was not found.`);
       }
-      return Response.json({ error: 'Failed to fetch GitHub profile. Rate limit may have been reached.' }, { status: userRes.status });
+      return apiError('Failed to fetch GitHub profile. Rate limit may have been reached.', userRes.status);
     }
     const user = await userRes.json();
 
@@ -111,7 +119,7 @@ export async function GET(req: NextRequest) {
       linkLabel: '[GitHub]',
     }));
 
-    return Response.json({
+    return apiSuccess({
       success: true,
       githubProfileData,
       cvProjects,
@@ -126,7 +134,6 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (err: any) {
-    console.error('[GitHub Import API Error]:', err);
-    return Response.json({ error: err.message || 'Failed to communicate with GitHub API.' }, { status: 500 });
+    return apiServerError(err.message || 'Failed to communicate with GitHub API.', err);
   }
 }

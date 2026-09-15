@@ -4,28 +4,32 @@ import { extractText } from 'unpdf';
 import { currentUser } from '@clerk/nextjs/server';
 import { isUserAdmin } from '@/lib/adminAuth';
 import { CvData } from '../../../../lib/cvTypes';
+import {
+  apiSuccess,
+  apiUnauthorized,
+  apiForbidden,
+  apiBadRequest,
+  apiError,
+  apiServerError,
+} from '@/lib/apiResponse';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) {
-    return Response.json({ error: 'Unauthorized: Please sign in to import.' }, { status: 401 });
+    return apiUnauthorized('Unauthorized: Please sign in to import.');
   }
   const authorized = await isUserAdmin(user);
   if (!authorized) {
-    return Response.json(
-      { error: 'The Import feature is currently in private testing for administrators. Coming soon for all users!' },
-      { status: 403 }
+    return apiForbidden(
+      'The Import feature is currently in private testing for administrators. Coming soon for all users!'
     );
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return Response.json(
-      { error: 'OPENAI_API_KEY is not configured on the server.' },
-      { status: 500 }
-    );
+    return apiServerError('OPENAI_API_KEY is not configured on the server.');
   }
 
   try {
@@ -34,11 +38,11 @@ export async function POST(req: NextRequest) {
     const cvType = (formData.get('cvType') as string) || 'professional';
 
     if (!file) {
-      return Response.json({ error: 'No PDF file provided.' }, { status: 400 });
+      return apiBadRequest('No PDF file provided.');
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      return Response.json({ error: 'File size exceeds 10MB limit.' }, { status: 400 });
+      return apiBadRequest('File size exceeds 10MB limit.');
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -49,20 +53,16 @@ export async function POST(req: NextRequest) {
       const extracted = await extractText(uint8, { mergePages: true });
       rawText = (extracted?.text || '').trim();
     } catch (parseErr: any) {
-      console.error('[PDF Parse error]:', parseErr);
-      return Response.json(
-        { error: 'Failed to extract text from PDF. Ensure the file is not password-protected or corrupted.' },
-        { status: 422 }
+      return apiError(
+        'Failed to extract text from PDF. Ensure the file is not password-protected or corrupted.',
+        422
       );
     }
 
     if (!rawText || rawText.length < 30) {
-      return Response.json(
-        {
-          error:
-            'No selectable text could be found in this PDF. It may be an image scan. Please upload a PDF with selectable text.',
-        },
-        { status: 422 }
+      return apiError(
+        'No selectable text could be found in this PDF. It may be an image scan. Please upload a PDF with selectable text.',
+        422
       );
     }
 
@@ -164,26 +164,25 @@ CRITICAL RULES:
     const parsed = JSON.parse(rawJson);
 
     if (!parsed.cvData || !parsed.cvData.personalInfo) {
-      return Response.json(
-        { error: 'AI was unable to extract structured resume data from this document.' },
-        { status: 422 }
+      return apiError(
+        'AI was unable to extract structured resume data from this document.',
+        422
       );
     }
 
     // Ensure cvType is attached
     parsed.cvData.cvType = cvType === 'student' ? 'student' : 'professional';
 
-    return Response.json({
+    return apiSuccess({
       success: true,
       cvData: parsed.cvData as CvData,
       linkedinData: parsed.linkedinData || null,
       rawTextSnippet: rawText.slice(0, 300),
     });
   } catch (err: any) {
-    console.error('[PDF Import API Error]:', err);
-    return Response.json(
-      { error: err.message || 'An unexpected error occurred while parsing the resume.' },
-      { status: 500 }
+    return apiServerError(
+      err.message || 'An unexpected error occurred while parsing the resume.',
+      err
     );
   }
 }

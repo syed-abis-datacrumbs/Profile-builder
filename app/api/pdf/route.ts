@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { apiBadRequest, apiServerError } from '@/lib/apiResponse';
 
 export const maxDuration = 60; // allow up to 60 s for Puppeteer
 
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
     };
 
     if (!html) {
-      return NextResponse.json({ error: 'html is required' }, { status: 400 });
+      return apiBadRequest('html is required');
     }
 
     // ── Resolve Chromium executable ──────────────────────────────────────────
@@ -147,10 +148,6 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error('[PDF API] Error:', err);
-    return NextResponse.json(
-      { error: 'PDF generation failed', detail: String(err) },
-      { status: 500 }
-    );
+    return apiServerError('PDF generation failed', err);
   }
 }

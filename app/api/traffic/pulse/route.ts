@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { recordVisitorPulse, resolveLocationFromHeaders } from '@/lib/realtimeTraffic';
+import { apiSuccess, apiBadRequest, apiServerError } from '@/lib/apiResponse';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!sessionId || !visitorId) {
-      return NextResponse.json({ ok: false, message: 'Missing session or visitor ID' }, { status: 400 });
+      return apiBadRequest('Missing session or visitor ID');
     }
 
     const forwardedFor = req.headers.get('x-forwarded-for');
@@ -36,9 +37,8 @@ export async function POST(req: NextRequest) {
       ip: clientIp,
     });
 
-    return NextResponse.json({ ok: true });
+    return apiSuccess({ ok: true });
   } catch (err: any) {
-    console.error('[Traffic Pulse API] Error:', err);
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+    return apiServerError(err.message, err);
   }
 }
