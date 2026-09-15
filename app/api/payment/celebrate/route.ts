@@ -1,10 +1,11 @@
 import { currentUser } from '@clerk/nextjs/server';
 import { db } from '../../../../lib/db';
+import { apiSuccess, apiUnauthorized, apiServerError } from '@/lib/apiResponse';
 
 export async function POST() {
   const user = await currentUser();
   const userId = user?.id;
-  if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!userId) return apiUnauthorized('Unauthorized');
 
   try {
     await (db.paymentUnlock as any).upsert({
@@ -12,9 +13,8 @@ export async function POST() {
       update: { celebratedAt: new Date() },
       create: { userId, celebratedAt: new Date() },
     });
-    return Response.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (err: any) {
-    console.error('Failed to mark celebration:', err);
-    return Response.json({ error: 'Failed to record celebration' }, { status: 500 });
+    return apiServerError('Failed to record celebration', err);
   }
 }

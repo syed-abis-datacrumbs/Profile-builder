@@ -1,10 +1,11 @@
 import { PAYMENT_WINDOW_HOURS } from '../../../../lib/paymentConfig';
+import { apiSuccess } from '@/lib/apiResponse';
 
 // Server-only env vars, surfaced to the client through this one route so the
 // displayed instructions and the server-side matching values can never drift
 // apart. Mirrors LMS's getCvPaymentInstructions().
 export async function GET() {
-  return Response.json({
+  return apiSuccess({
     bankName: process.env.CV_PAYMENT_BANK_NAME || '',
     bankTitle: process.env.CV_PAYMENT_BANK_TITLE || '',
     bankIban: process.env.CV_PAYMENT_BANK_IBAN || '',

@@ -2,13 +2,14 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { db } from '@/lib/db';
 import { getAdminCoupons } from '@/lib/adminData';
 import { NextRequest, NextResponse } from 'next/server';
+import { apiSuccess, apiCreated, apiBadRequest, apiConflict } from '@/lib/apiResponse';
 
 export async function GET() {
   const auth = await requireAdmin();
   if (auth instanceof NextResponse) return auth;
 
   const coupons = await getAdminCoupons();
-  return NextResponse.json(coupons);
+  return apiSuccess(coupons);
 }
 
 export async function POST(req: NextRequest) {
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
   const { code, label, maxUses, expiresAt } = body;
 
   if (!code?.trim()) {
-    return NextResponse.json({ error: 'Code is required' }, { status: 400 });
+    return apiBadRequest('Code is required');
   }
 
   try {
@@ -32,10 +33,10 @@ export async function POST(req: NextRequest) {
         createdBy: auth.userId,
       },
     });
-    return NextResponse.json(coupon, { status: 201 });
+    return apiCreated(coupon);
   } catch (err: any) {
     if (err?.code === 'P2002') {
-      return NextResponse.json({ error: 'Coupon code already exists' }, { status: 409 });
+      return apiConflict('Coupon code already exists');
     }
     throw err;
   }

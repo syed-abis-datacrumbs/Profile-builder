@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/adminAuth';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { apiSuccess, apiBadRequest, apiNotFound } from '@/lib/apiResponse';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
@@ -11,11 +12,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { action } = body; // 'approve' | 'reject' | 'pending'
 
   if (action !== 'approve' && action !== 'reject' && action !== 'pending') {
-    return NextResponse.json({ error: 'action must be approve, reject, or pending' }, { status: 400 });
+    return apiBadRequest('action must be approve, reject, or pending');
   }
 
   const proof = await db.paymentProof.findUnique({ where: { id } });
-  if (!proof) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!proof) return apiNotFound('Not found');
 
   const newStatus = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'PENDING';
 
@@ -41,5 +42,5 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  return NextResponse.json({ success: true });
+  return apiSuccess({ success: true });
 }

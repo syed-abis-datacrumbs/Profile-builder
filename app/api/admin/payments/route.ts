@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/adminAuth';
 import { getAdminPayments } from '@/lib/adminData';
 import { NextRequest, NextResponse } from 'next/server';
+import { apiSuccess } from '@/lib/apiResponse';
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin();
@@ -10,5 +11,5 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get('status') || undefined;
 
   const enrichedPayments = await getAdminPayments(status);
-  return NextResponse.json(enrichedPayments);
+  return apiSuccess(enrichedPayments);
 }

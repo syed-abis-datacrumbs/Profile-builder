@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/adminAuth';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { apiSuccess } from '@/lib/apiResponse';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
@@ -20,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     where: { id },
     data: dataToUpdate,
   });
-  return NextResponse.json(coupon);
+  return apiSuccess(coupon);
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -29,5 +30,5 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
   await db.profileBuilderCoupon.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  return apiSuccess({ success: true });
 }
