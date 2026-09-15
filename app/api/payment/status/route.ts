@@ -2,11 +2,12 @@ import { currentUser } from '@clerk/nextjs/server';
 import { db } from '../../../../lib/db';
 import { PAYMENT_TESTING_MODE } from '../../../../lib/paymentConfig';
 import { BUILDER_ACCESS_EMAILS } from '../../../../lib/accessConfig';
+import { apiSuccess } from '@/lib/apiResponse';
 
 export async function GET() {
   const user = await currentUser();
   const userId = user?.id;
-  if (!userId) return Response.json({ unlocked: false, aiMessagesUsed: 0 });
+  if (!userId) return apiSuccess({ unlocked: false, aiMessagesUsed: 0 });
 
   let aiMessagesUsed = 0;
   const usage = await db.profileBuilderAiUsage.findUnique({ where: { userId } });
@@ -27,14 +28,14 @@ export async function GET() {
     }
     const lastApprovedAt = unlock?.unlockedAt ? unlock.unlockedAt.toISOString() : 'team_access_permanent';
     const shouldCelebrate = !(unlock as any)?.celebratedAt;
-    return Response.json({ unlocked: true, aiMessagesUsed, lastApprovedAt, shouldCelebrate });
+    return apiSuccess({ unlocked: true, aiMessagesUsed, lastApprovedAt, shouldCelebrate });
   }
 
   // Testing: always report "not unlocked" so the watermark/download-block
   // and payment prompt stay available on every load, letting the flow be
   // re-tested repeatedly without cleaning up rows. Mirrors LMS's
   // hasCvDownloadAccess().
-  if (PAYMENT_TESTING_MODE) return Response.json({ unlocked: false, aiMessagesUsed, shouldCelebrate: false });
+  if (PAYMENT_TESTING_MODE) return apiSuccess({ unlocked: false, aiMessagesUsed, shouldCelebrate: false });
 
   const approvedProof = await db.paymentProof.findFirst({
     where: { userId, status: 'APPROVED' },
@@ -54,8 +55,8 @@ export async function GET() {
       ? resolvedUnlock.unlockedAt.toISOString()
       : (approvedProof?.createdAt ? approvedProof.createdAt.toISOString() : 'unlocked_permanent');
     const shouldCelebrate = !(resolvedUnlock as any)?.celebratedAt;
-    return Response.json({ unlocked: true, aiMessagesUsed, lastApprovedAt, shouldCelebrate });
+    return apiSuccess({ unlocked: true, aiMessagesUsed, lastApprovedAt, shouldCelebrate });
   }
 
-  return Response.json({ unlocked: false, aiMessagesUsed, shouldCelebrate: false });
+  return apiSuccess({ unlocked: false, aiMessagesUsed, shouldCelebrate: false });
 }

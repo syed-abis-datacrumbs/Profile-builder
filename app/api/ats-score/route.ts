@@ -1,4 +1,5 @@
 import type { CvData } from '../../../lib/cvTypes';
+import { apiSuccess, apiBadRequest, apiServerError } from '@/lib/apiResponse';
 
 export const runtime = 'nodejs';
 
@@ -158,7 +159,7 @@ const STOP_WORDS = new Set([
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { cv?: CvData; jobDescription?: string };
-    if (!body.cv) return Response.json({ error: 'Missing resume data' }, { status: 400 });
+    if (!body.cv) return apiBadRequest('Missing resume data');
 
     const { cv, jobDescription } = body;
 
@@ -318,7 +319,7 @@ export async function POST(request: Request) {
         breakdown.push('Add a Target Job Description to evaluate exact ATS keyword match.');
       }
 
-      return Response.json({ score: finalDefaultScore, breakdown });
+      return apiSuccess({ score: finalDefaultScore, breakdown });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -334,7 +335,7 @@ export async function POST(request: Request) {
 
     if (uniqueJobKeywords.length === 0) {
       const defaultScore = Math.min(96, structureScore + qualityScore + 25 + 30);
-      return Response.json({
+      return apiSuccess({
         score: defaultScore,
         breakdown: [
           `Structure: ${structureScore}/25 pts`,
@@ -446,8 +447,8 @@ export async function POST(request: Request) {
       breakdown.push('Excellent! All core keywords are demonstrated in work experience and projects.');
     }
 
-    return Response.json({ score: finalScore, breakdown });
-  } catch {
-    return Response.json({ error: 'ATS scoring failed. Check your connection and try again.' }, { status: 500 });
+    return apiSuccess({ score: finalScore, breakdown });
+  } catch (err) {
+    return apiServerError('ATS scoring failed. Check your connection and try again.', err);
   }
 }

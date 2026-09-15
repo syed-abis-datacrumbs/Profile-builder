@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUserId } from '@/lib/serverAuth';
 import { uploadToCloudinary } from '@/lib/cloudinary';
+import { apiSuccess, apiBadRequest, apiServerError } from '@/lib/apiResponse';
 
 export const runtime = 'nodejs';
 
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     
     if (!data.text) {
-      return NextResponse.json({ error: 'Text is required' }, { status: 400 });
+      return apiBadRequest('Text is required');
     }
 
     let imageUrl = null;
@@ -33,9 +34,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, issueId: issue.id });
+    return apiSuccess({ success: true, issueId: issue.id });
   } catch (err: any) {
-    console.error('Failed to submit issue:', err);
-    return NextResponse.json({ error: 'Failed to submit issue' }, { status: 500 });
+    return apiServerError('Failed to submit issue', err);
   }
 }
