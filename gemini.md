@@ -257,6 +257,13 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
   4. Added strict logged-out guards in `ResumeRoute.tsx`, `GithubRoute.tsx`, and `LinkedinRoute.tsx`: if `!isLoggedIn`, studio mode is forbidden and forces `'landing'`, mode persistence is blocked, and any action attempting to open studio or apply a template prompts `AuthModal` (`setIsAuthOpen(true)`).
   5. Studio components (`ResumeChatStudio`, `GithubChatStudio`, `LinkedinChatStudio`) only persist chat messages to `localStorage` when `isLoggedIn === true`.
 
+### 🛡️ Standardized Typed API Response Helpers (`lib/apiResponse.ts` & `lib/apiClient.ts`)
+- **Convention:** Do NOT construct raw `NextResponse.json(...)` or `Response.json(...)` in API route handlers. Always import and use the standard typed helpers from `@/lib/apiResponse`.
+- **Flat Payload Standard:** Success helpers (`apiSuccess(data)`, `apiCreated(data)`) preserve flat/direct payloads (e.g. `{ versions: rows }`, `{ data: row.data }`, `{ success: true, id, name }`) to maintain 100% backward compatibility with client expectations without breaking frontend property lookups.
+- **Canonical Error Shape:** Error helpers (`apiError`, `apiBadRequest`, `apiUnauthorized`, `apiForbidden`, `apiNotFound`, `apiConflict`, `apiServerError`) strictly return `{ success: false, error: string, code?: string, details?: unknown }` with the correct HTTP status codes.
+- **Production Logging:** `apiServerError(msg, err)` logs unconditionally using `console.error('[API Server Error]:', err)` so that serverless runtime logs (e.g., Vercel Function logs) retain full error stack traces regardless of `NODE_ENV`.
+- **Client-Side Safe Fetching:** Client components can use `safeApiFetch<T>(url, init)` from `@/lib/apiClient` to safely handle non-JSON 500 HTML responses and network errors without throwing unhandled promise rejections.
+
 ---
 
 ## 5. Verification Workflow

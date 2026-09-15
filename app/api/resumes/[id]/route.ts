@@ -1,24 +1,24 @@
-import { NextResponse } from 'next/server';
 import { getCurrentUserId } from '../../../../lib/serverAuth';
 import { db } from '../../../../lib/db';
+import { apiSuccess, apiUnauthorized, apiNotFound } from '@/lib/apiResponse';
 
 export const runtime = 'nodejs';
 
 /** Full CV snapshot of one saved resume (ownership enforced). */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!userId) return apiUnauthorized('Not authenticated');
 
   const { id } = await params;
   const row = await db.resumeSave.findFirst({ where: { id, userId }, select: { data: true } });
-  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!row) return apiNotFound('Not found');
 
-  return NextResponse.json({ data: row.data });
+  return apiSuccess({ data: row.data });
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!userId) return apiUnauthorized('Not authenticated');
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
@@ -26,7 +26,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const name = body?.name ? (body.name as string).trim() : undefined;
 
   const existing = await db.resumeSave.findFirst({ where: { id, userId } });
-  if (!existing) return NextResponse.json({ error: 'Saved resume not found' }, { status: 404 });
+  if (!existing) return apiNotFound('Saved resume not found');
 
   const updateData: any = {};
   if (data !== undefined) updateData.data = data;
@@ -37,16 +37,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     data: updateData,
   });
 
-  return NextResponse.json({ success: true, id: updated.id, name: updated.name });
+  return apiSuccess({ success: true, id: updated.id, name: updated.name });
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!userId) return apiUnauthorized('Not authenticated');
 
   const { id } = await params;
   // deleteMany so the ownership filter applies without throwing when the
   // row is already gone (e.g. deleted from another tab).
   await db.resumeSave.deleteMany({ where: { id, userId } });
-  return NextResponse.json({ success: true });
+  return apiSuccess({ success: true });
 }

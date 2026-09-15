@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { getCurrentUserId } from '../../../lib/serverAuth';
 import { db } from '../../../lib/db';
 import type { CvData } from '../../../lib/cvTypes';
+import { apiSuccess, apiCreated, apiUnauthorized, apiBadRequest } from '@/lib/apiResponse';
 
 export const runtime = 'nodejs';
 
@@ -12,25 +12,25 @@ const MAX_SAVES_PER_USER = 30;
 /** Newest-first list of the current user's saved resumes (metadata only). */
 export async function GET() {
   const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!userId) return apiUnauthorized('Not authenticated');
 
   const rows = await db.resumeSave.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
     select: { id: true, name: true, createdAt: true },
   });
-  return NextResponse.json({ versions: rows });
+  return apiSuccess({ versions: rows });
 }
 
 /** Saves the current CV as a named version. One save per name per account
  *  (case-insensitive) — refuses instead of piling up duplicates. */
 export async function POST(request: Request) {
   const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!userId) return apiUnauthorized('Not authenticated');
 
   const body = await request.json().catch(() => null);
   const data = body?.data as CvData | undefined;
-  if (!data) return NextResponse.json({ error: 'Missing resume data' }, { status: 400 });
+  if (!data) return apiBadRequest('Missing resume data');
 
   const name = (body?.name || '').trim() || 'Untitled resume';
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       where: { id: existing.id },
       data: { name, data: data as any },
     });
-    return NextResponse.json({ id: updated.id, name: updated.name, isUpdate: true });
+    return apiSuccess({ id: updated.id, name: updated.name, isUpdate: true });
   }
 
   const created = await db.resumeSave.create({ data: { userId, name, data: data as any } });
@@ -64,5 +64,5 @@ export async function POST(request: Request) {
     await db.resumeSave.deleteMany({ where: { id: { in: excess.map((e) => e.id) } } });
   }
 
-  return NextResponse.json({ id: created.id, name: created.name });
+  return apiCreated({ id: created.id, name: created.name });
 }

@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { db } from '../../../../lib/db';
 import { BUILDER_ACCESS_EMAILS } from '@/lib/accessConfig';
+import { apiSuccess, apiForbidden, apiNotFound, apiBadRequest } from '@/lib/apiResponse';
 
 export const runtime = 'nodejs';
 
@@ -17,31 +17,31 @@ async function getAuthorizedUser() {
 /** Full profile snapshot of one saved LinkedIn profile (ownership enforced). */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthorizedUser();
-  if (!user) return NextResponse.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
+  if (!user) return apiForbidden('Access restricted to authorized beta users.');
   const userId = user.id;
 
   const { id } = await params;
   const row = await db.linkedinSave.findFirst({ where: { id, userId }, select: { data: true } });
-  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!row) return apiNotFound('Not found');
 
-  return NextResponse.json({ data: row.data });
+  return apiSuccess({ data: row.data });
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthorizedUser();
-  if (!user) return NextResponse.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
+  if (!user) return apiForbidden('Access restricted to authorized beta users.');
   const userId = user.id;
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
-  if (!body) return NextResponse.json({ error: 'Missing body' }, { status: 400 });
+  if (!body) return apiBadRequest('Missing body');
 
   const updateData: any = {};
   if (body.name) updateData.name = body.name.trim();
   if (body.data) updateData.data = body.data;
 
   if (Object.keys(updateData).length === 0) {
-    return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+    return apiBadRequest('Nothing to update');
   }
 
   await db.linkedinSave.updateMany({
@@ -49,15 +49,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     data: updateData,
   });
 
-  return NextResponse.json({ success: true });
+  return apiSuccess({ success: true });
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthorizedUser();
-  if (!user) return NextResponse.json({ error: 'Access restricted to authorized beta users.' }, { status: 403 });
+  if (!user) return apiForbidden('Access restricted to authorized beta users.');
   const userId = user.id;
 
   const { id } = await params;
   await db.linkedinSave.deleteMany({ where: { id, userId } });
-  return NextResponse.json({ success: true });
+  return apiSuccess({ success: true });
 }
