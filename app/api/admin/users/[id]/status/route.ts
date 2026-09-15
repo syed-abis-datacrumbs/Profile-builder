@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/adminAuth';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { apiSuccess, apiBadRequest, apiServerError } from '@/lib/apiResponse';
 
 export async function PATCH(
   req: NextRequest,
@@ -13,7 +14,7 @@ export async function PATCH(
   const { status } = await req.json();
 
   if (!status || !['Free', 'Paid'].includes(status)) {
-    return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    return apiBadRequest('Invalid status');
   }
 
   try {
@@ -32,9 +33,8 @@ export async function PATCH(
       });
     }
 
-    return NextResponse.json({ success: true });
+    return apiSuccess({ success: true });
   } catch (err: any) {
-    console.error('Error updating user status:', err);
-    return NextResponse.json({ error: 'Failed to update user status' }, { status: 500 });
+    return apiServerError('Failed to update user status', err);
   }
 }

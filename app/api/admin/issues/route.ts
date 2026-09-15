@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { getAdminIssues } from '@/lib/adminData';
+import { apiSuccess } from '@/lib/apiResponse';
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin();
@@ -13,5 +14,5 @@ export async function GET(req: NextRequest) {
 
   const data = await getAdminIssues(status, category, page);
 
-  return NextResponse.json(data);
+  return apiSuccess(data);
 }

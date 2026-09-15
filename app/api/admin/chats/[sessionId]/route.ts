@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { db } from '@/lib/db';
+import { apiSuccess, apiServerError } from '@/lib/apiResponse';
 
 export async function GET(
   req: NextRequest,
@@ -67,10 +68,9 @@ export async function GET(
       createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
     }));
 
-    return NextResponse.json(turns);
+    return apiSuccess(turns);
   } catch (err: any) {
-    console.error('[API /api/admin/chats/[sessionId] Fatal Error]:', err);
-    return NextResponse.json({ error: err?.message || 'Failed to load transcript' }, { status: 500 });
+    return apiServerError(err?.message || 'Failed to load transcript', err);
   }
 }
 

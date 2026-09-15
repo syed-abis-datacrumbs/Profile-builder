@@ -2,40 +2,47 @@ import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { db } from '../../../../lib/db';
 import { getAdminNameRequests } from '@/lib/adminData';
+import {
+  apiSuccess,
+  apiUnauthorized,
+  apiForbidden,
+  apiBadRequest,
+  apiNotFound,
+} from '@/lib/apiResponse';
 
 export const runtime = 'nodejs';
 
 /** GET /api/admin/name-requests — list all PENDING resume name-change requests */
-export async function GET(): Promise<NextResponse> {
+export async function GET() {
   const clerk = await currentUser();
-  if (!clerk) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!clerk) return apiUnauthorized('Not authenticated');
 
   // Admin check via Clerk public metadata
   const role = (clerk.publicMetadata as any)?.role;
-  if (role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (role !== 'admin') return apiForbidden('Forbidden');
 
   const enriched = await getAdminNameRequests();
 
-  return NextResponse.json({ requests: enriched });
+  return apiSuccess({ requests: enriched });
 }
 
 /** POST /api/admin/name-requests — approve or reject a request */
-export async function POST(request: Request): Promise<NextResponse> {
+export async function POST(request: Request) {
   const clerk = await currentUser();
-  if (!clerk) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!clerk) return apiUnauthorized('Not authenticated');
 
   const role = (clerk.publicMetadata as any)?.role;
-  if (role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (role !== 'admin') return apiForbidden('Forbidden');
 
   const body = await request.json().catch(() => null);
   const { requestId, action } = body ?? {};
   if (!requestId || !['approve', 'reject'].includes(action)) {
-    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    return apiBadRequest('Invalid payload');
   }
 
   const req = await db.resumeNameChangeRequest.findUnique({ where: { id: requestId } });
   if (!req || req.status !== 'PENDING') {
-    return NextResponse.json({ error: 'Request not found or already decided' }, { status: 404 });
+    return apiNotFound('Request not found or already decided');
   }
 
   if (action === 'approve') {
@@ -59,7 +66,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       data: { status: 'APPROVED', decidedAt: new Date() },
     });
 
-    return NextResponse.json({ success: true, action: 'approved', newName: req.requestedName });
+    return apiSuccess({ success: true, action: 'approved', newName: req.requestedName });
   }
 
   // Reject
@@ -68,5 +75,5 @@ export async function POST(request: Request): Promise<NextResponse> {
     data: { status: 'REJECTED', decidedAt: new Date() },
   });
 
-  return NextResponse.json({ success: true, action: 'rejected' });
+  return apiSuccess({ success: true, action: 'rejected' });
 }

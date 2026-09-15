@@ -2,6 +2,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { getRealtimeTrafficStats } from '@/lib/realtimeTraffic';
+import { apiSuccess, apiServerError } from '@/lib/apiResponse';
 
 export const dynamic = 'force-dynamic';
 
@@ -155,7 +156,7 @@ export async function GET() {
 
     const averageDaily = Number((signups30d / 30).toFixed(1));
 
-    return NextResponse.json({
+    return apiSuccess({
       gaConfig,
       realtime,
       signups: {
@@ -181,10 +182,6 @@ export async function GET() {
       },
     });
   } catch (err: any) {
-    console.error('[Admin Traffic API Error]:', err);
-    return NextResponse.json(
-      { error: err?.message || 'Failed to compute traffic stats' },
-      { status: 500 }
-    );
+    return apiServerError(err?.message || 'Failed to compute traffic stats', err);
   }
 }

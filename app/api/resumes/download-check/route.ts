@@ -1,22 +1,20 @@
-import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { db } from '../../../../lib/db';
+import { apiSuccess, apiUnauthorized, apiServerError } from '@/lib/apiResponse';
 
 const MAX_FREE_RESUME_NAME_EDITS = 4;
-
-
 
 export async function POST(request: Request) {
   try {
     const user = await currentUser();
     if (!user) {
-      return NextResponse.json({ allowed: false, error: 'Unauthorized' }, { status: 401 });
+      return apiUnauthorized('Unauthorized');
     }
 
     const body = await request.json().catch(() => null);
     const requestedName = (body?.requestedName || '').trim();
     if (!requestedName) {
-      return NextResponse.json({ allowed: true });
+      return apiSuccess({ allowed: true });
     }
 
     let profile = await db.resumeProfile.findUnique({
@@ -52,7 +50,7 @@ export async function POST(request: Request) {
         data: { downloadedNames: newDownloadedNames },
       });
 
-      return NextResponse.json({
+      return apiSuccess({
         allowed: true,
         downloadedNames: newDownloadedNames,
       });
@@ -67,7 +65,7 @@ export async function POST(request: Request) {
         data: { downloadedNames: newDownloadedNames },
       });
 
-      return NextResponse.json({
+      return apiSuccess({
         allowed: true,
         newSlotUsed: true,
         slotsRemaining: Math.max(0, MAX_FREE_RESUME_NAME_EDITS - newDownloadedNames.length),
@@ -80,7 +78,7 @@ export async function POST(request: Request) {
       where: { userId: user.id, status: 'PENDING' },
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       allowed: false,
       requestedName,
       downloadedNames,
@@ -91,7 +89,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Download check error:', error);
-    return NextResponse.json({ allowed: false, error: 'Internal Server Error' }, { status: 500 });
+    return apiServerError('Internal Server Error', error);
   }
 }

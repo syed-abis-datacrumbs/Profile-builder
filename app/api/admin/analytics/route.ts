@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/adminAuth';
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { apiSuccess } from '@/lib/apiResponse';
 
 export async function GET() {
   const auth = await requireAdmin();
@@ -28,7 +29,7 @@ export async function GET() {
     }),
   ]);
 
-  return NextResponse.json({
+  return apiSuccess({
     totalUnlocked,
     pendingPayments,
     totalProofs,

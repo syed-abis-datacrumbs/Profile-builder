@@ -147,6 +147,7 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
 - **DO** verify admin privileges against **both** `BUILDER_ACCESS_EMAILS` (in `lib/accessConfig.ts`) and `ADMIN_EMAILS` (in `.env`).
 - **DO** use `isUserAdmin(user)` in `lib/adminAuth.ts` which iterates over all email addresses in `user.emailAddresses` (supporting multi-email Clerk accounts and OAuth sign-ins).
 - **DO NOT** pass `userId` to `isAdmin()` (it expects an email address string) and always `await` `isAdmin(email)` since it is asynchronous.
+- **Pending Architecture Scope (`lib/adminAuth.ts` decoupling):** `/api/admin/name-requests/route.ts` currently checks admin status via `(clerk.publicMetadata as any)?.role === 'admin'` rather than `requireAdmin()`. Direct API verification confirmed this correctly returns 403 for non-admins (no live security gap), but it remains an auth mechanism inconsistency. When executing the upcoming `BUILDER_ACCESS_EMAILS` / admin decoupling task in `lib/adminAuth.ts`, migrate `app/api/admin/name-requests/route.ts` to standard `requireAdmin()` like all other admin routes.
 
 ### ⚡ Client-Side Polling & Error Handling
 - **DO NOT** `throw new Error('Failed to fetch')` or log `console.error` inside recurring auto-polling loops (such as `AdminTrafficPage`'s 12-second interval). In Next.js Turbopack dev mode, unhandled errors and `console.error` in components trigger the fullscreen red dev error modal.

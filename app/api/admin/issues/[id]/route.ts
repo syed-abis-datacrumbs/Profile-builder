@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { db } from '@/lib/db';
+import { apiSuccess, apiBadRequest, apiServerError } from '@/lib/apiResponse';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin();
@@ -10,7 +11,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const data = await req.json();
 
   if (!data.status) {
-    return NextResponse.json({ error: 'Status is required' }, { status: 400 });
+    return apiBadRequest('Status is required');
   }
 
   try {
@@ -18,8 +19,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       where: { id },
       data: { status: data.status },
     });
-    return NextResponse.json({ success: true, issue: updated });
+    return apiSuccess({ success: true, issue: updated });
   } catch (err: any) {
-    return NextResponse.json({ error: 'Failed to update issue' }, { status: 500 });
+    return apiServerError('Failed to update issue', err);
   }
 }

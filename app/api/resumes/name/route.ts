@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { db } from '../../../../lib/db';
 import { MAX_FREE_RESUME_NAME_EDITS } from '../../../../lib/resumeNameLock';
+import { apiSuccess, apiUnauthorized, apiBadRequest } from '@/lib/apiResponse';
 
 export const runtime = 'nodejs';
 
@@ -24,9 +24,9 @@ export type UpdateNameResult =
  * Returns the current locked name, edits used/remaining, and any pending request.
  * Mirrors LMS's getFullNameStatus().
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET() {
   const clerk = await currentUser();
-  if (!clerk) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!clerk) return apiUnauthorized('Not authenticated');
 
   const userId = clerk.id;
 
@@ -54,7 +54,7 @@ export async function GET(): Promise<NextResponse> {
       : null,
   };
 
-  return NextResponse.json(result);
+  return apiSuccess(result);
 }
 
 /**
@@ -64,14 +64,14 @@ export async function GET(): Promise<NextResponse> {
  * - If locked → creates a PENDING request for admin approval
  * Mirrors LMS's updateFullName().
  */
-export async function POST(request: Request): Promise<NextResponse> {
+export async function POST(request: Request) {
   const clerk = await currentUser();
-  if (!clerk) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!clerk) return apiUnauthorized('Not authenticated');
 
   const userId = clerk.id;
   const body = await request.json().catch(() => null);
   const newName: string = (body?.newName ?? '').trim();
-  if (!newName) return NextResponse.json({ status: 'error', error: "Name can't be empty" });
+  if (!newName) return apiBadRequest("Name can't be empty");
 
   // Get current profile + the name stored in the latest save
   const [profile, latestSave, pending] = await Promise.all([
@@ -92,7 +92,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // Only one pending request allowed at a time
   if (pending) {
-    return NextResponse.json({
+    return apiSuccess({
       status: 'pending',
       requestedName: pending.requestedName,
       fullName: currentName,
@@ -104,7 +104,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     data: { userId, currentName, requestedName: newName },
   });
 
-  return NextResponse.json({
+  return apiSuccess({
     status: 'pendingCreated',
     requestedName: newName,
     fullName: currentName,
