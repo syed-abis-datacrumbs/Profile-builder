@@ -78,7 +78,16 @@ function getTargetParent(
  */
 function applySingleOp(doc: unknown, operation: JsonPatchOperation): void {
   const op = operation.op.toLowerCase();
-  const tokens = parsePointer(operation.path);
+  let path = operation.path;
+
+  // Resilient normalization for LLMs targeting string fields (bullets, skills, interests, description) with array-like notation:
+  // e.g. /workExperience/0/bullets/- or /workExperience/0/bullets/0 -> /workExperience/0/bullets
+  const arrayOnStringMatch = path.match(/^(.+\/(?:bullets|skills|interests|description))\/(?:-|\d+)$/);
+  if (arrayOnStringMatch) {
+    path = arrayOnStringMatch[1];
+  }
+
+  const tokens = parsePointer(path);
 
   if (tokens.length === 0) {
     if (op === 'replace') {
@@ -111,7 +120,39 @@ function applySingleOp(doc: unknown, operation: JsonPatchOperation): void {
           }
         }
       } else if (isObject(parent)) {
-        parent[key] = operation.value;
+        if ((key === 'bullets' || key === 'description') && typeof parent[key] === 'string' && typeof operation.value === 'string') {
+          const existingText = parent[key].trim();
+          const incomingText = operation.value.trim();
+          if (!existingText) {
+            parent[key] = incomingText;
+          } else if (incomingText) {
+            const existingLines = existingText.split('\n').map((l) => l.trim()).filter(Boolean);
+            const incomingLines = incomingText.split('\n').map((l) => l.trim()).filter(Boolean);
+            const newLinesToAdd = incomingLines.filter(
+              (inc) => !existingLines.some((ex) => ex.toLowerCase() === inc.toLowerCase())
+            );
+            if (newLinesToAdd.length > 0) {
+              parent[key] = [...existingLines, ...newLinesToAdd].join('\n');
+            }
+          }
+        } else if ((key === 'skills' || key === 'interests') && typeof parent[key] === 'string' && typeof operation.value === 'string') {
+          const existingText = parent[key].trim();
+          const incomingText = operation.value.trim();
+          if (!existingText) {
+            parent[key] = incomingText;
+          } else if (incomingText) {
+            const existingItems = existingText.split(',').map((s) => s.trim()).filter(Boolean);
+            const incomingItems = incomingText.split(',').map((s) => s.trim()).filter(Boolean);
+            const newItemsToAdd = incomingItems.filter(
+              (inc) => !existingItems.some((ex) => ex.toLowerCase() === inc.toLowerCase())
+            );
+            if (newItemsToAdd.length > 0) {
+              parent[key] = [...existingItems, ...newItemsToAdd].join(', ');
+            }
+          }
+        } else {
+          parent[key] = operation.value;
+        }
       } else {
         throw new Error(`Cannot add property to non-object parent at ${operation.path}`);
       }

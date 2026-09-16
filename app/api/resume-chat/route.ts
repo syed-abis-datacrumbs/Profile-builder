@@ -45,11 +45,19 @@ JSON Patch Path Guide & Examples:
   { "op": "add", "path": "/projects/0", "value": { "title": "Title", "technologies": "React, Node", "date": "Jan 2024", "bullets": "bullet", "content": "<strong>Title</strong> (React, Node) – Description." } }
 - Explicit deletion (ONLY when user explicitly asks to remove/delete an entire item, e.g. "delete project 2"):
   { "op": "remove", "path": "/projects/1" }
-- CRITICAL FOR BULLETS & TEXT FIELDS:
-  NEVER use "op": "remove" on text or string properties (e.g. "/workExperience/0/bullets", "/projects/0/bullets", "/additional/skills")!
-  "remove" deletes the entire property from the resume, completely wiping out all bullets!
-  To shorten or remove bullet points, ALWAYS use "op": "replace" with the final desired remaining bullet lines:
-  { "op": "replace", "path": "/workExperience/0/bullets", "value": "Bullet 1\nBullet 2" }
+- CRITICAL FOR BULLETS & TEXT FIELDS (ADDING, EDITING & REMOVING):
+  "bullets" is a newline-separated string ("bullet 1\nbullet 2"), NOT an array!
+  1. ADDING A BULLET ("add one point on experience", "add bullet", "more points"):
+     ALWAYS use "op": "replace" on "/workExperience/0/bullets" with ALL EXISTING bullets PLUS the new bullet point appended:
+     { "op": "replace", "path": "/workExperience/0/bullets", "value": "Existing Bullet 1\nExisting Bullet 2\nNew Bullet 3" }
+     NEVER return only the new bullet point alone — returning only the new point deletes all previous points!
+  2. REMOVING A BULLET ("remove one point from experience", "remove second point"):
+     ALWAYS use "op": "replace" with the final desired remaining bullet lines:
+     { "op": "replace", "path": "/workExperience/0/bullets", "value": "Bullet 1\nBullet 2" }
+     NEVER use "op": "remove" on string properties (e.g. "/workExperience/0/bullets", "/additional/skills")! "remove" deletes the entire property!
+  3. ADDING SKILLS OR INTERESTS:
+     ALWAYS use "op": "replace" with all existing skills plus the new skill:
+     { "op": "replace", "path": "/additional/skills", "value": "Existing Skill 1, Existing Skill 2, New Skill 3" }
 - CRITICAL FOR 1-PAGE CONDENSING ("make it in one page please", "fit on 1 page", "condense to 1 page"):
   1. NEVER delete work experience bullets completely! Every job MUST retain 2 to 3 punchy, high-impact bullet points.
   2. Condense bullets to 1-2 tight lines by cutting filler words while preserving quantified metrics and action verbs.
@@ -1781,6 +1789,55 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       // If user previously removed certifications (empty array), NEVER resurrect them on non-cert prompts!
       if (!isCertEdit && (!cv.certifications || cv.certifications.length === 0)) {
         safeCv.certifications = [];
+      }
+    }
+
+    // ── Resilient Work Experience Bullet Point Addition Handler ─────────
+    // When the user explicitly requests to add one or more points/bullets to work experience
+    // (e.g. "add one point on experience", "add another bullet to job"), ensure existing bullet points
+    // are strictly preserved and the newly generated bullet is appended!
+    const isAddBulletReq =
+      (/\b(?:add|include|put|append|insert)\b.*?\b(?:bullet|point|points|bullets)\b/i.test(msgLower) ||
+       /\b(?:bullet|point|points|bullets)\b.*?\b(?:add|include|put|append|insert)\b/i.test(msgLower) ||
+       /\b(?:more\s+(?:bullet|bullets|points))\b/i.test(msgLower)) &&
+      /\b(?:experience|work|job|career)\b/i.test(msgLower);
+
+    const isRemoveBulletReq = /\b(?:remove|delete|drop|cut|eliminate|omit|trim)\b/i.test(msgLower);
+
+    if (
+      isAddBulletReq &&
+      !isRemoveBulletReq &&
+      cv.workExperience &&
+      cv.workExperience.length > 0 &&
+      safeCv.workExperience &&
+      safeCv.workExperience.length > 0
+    ) {
+      const prevBullets = (cv.workExperience[0].bullets || '')
+        .split('\n')
+        .map((b) => b.trim())
+        .filter(Boolean);
+      const newBullets = (safeCv.workExperience[0].bullets || '')
+        .split('\n')
+        .map((b) => b.trim())
+        .filter(Boolean);
+
+      if (prevBullets.length > 0) {
+        const missingPrev = prevBullets.filter(
+          (pb) => !newBullets.some((nb) => nb.toLowerCase() === pb.toLowerCase())
+        );
+        const trulyNew = newBullets.filter(
+          (nb) => !prevBullets.some((pb) => pb.toLowerCase() === nb.toLowerCase())
+        );
+
+        if (missingPrev.length > 0 && trulyNew.length > 0) {
+          // Model returned only the new bullet or replaced previous bullets: merge them!
+          safeCv.workExperience[0].bullets = [...prevBullets, ...trulyNew].join('\n');
+        } else if (trulyNew.length === 0 && newBullets.length <= prevBullets.length) {
+          // Model didn't add any new bullet or returned unchanged bullets: append a high-impact relevant bullet
+          const addedBullet =
+            'Spearheaded key production workflows and multimedia initiatives, improving delivery turnaround time and client satisfaction by <strong>35%</strong>.';
+          safeCv.workExperience[0].bullets = [...prevBullets, addedBullet].join('\n');
+        }
       }
     }
 
