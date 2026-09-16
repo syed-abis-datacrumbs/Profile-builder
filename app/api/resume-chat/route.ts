@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
 import { applyJsonPatches } from '@/lib/jsonPatch';
+import { parseEducationMessage } from '@/lib/resume-chat/educationParser';
 
 export const runtime = 'nodejs';
 
@@ -903,8 +904,10 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
 
     const isEduAction = (
       /\b(add|change|update|set|replace|put|insert|switch|rename)\b.*?\b(college|collage|university|uni|intermediate|internmediate|school|degree|education|bachelor|master|phd)\b/i.test(lastMsgLower) ||
-      /\b(?:my\s+)?(college|collage|university|uni|intermediate|internmediate)\s*(?:is|was|to|:|=)\s*(.+?)$/i.test(lastMsgLower) ||
+      /\b(?:my\s+)?(college|collage|university|uni|intermediate|internmediate)\s*(?:name)?\b.*?\b(change|update|replace|set|fix)\b/i.test(lastMsgLower) ||
+      /\b(?:my\s+)?(college|collage|university|uni|intermediate|internmediate)\s*(?:name\s+)?(?:is|was|to|:|=)\s*(.+?)$/i.test(lastMsgLower) ||
       (/\bfrom\s+.+?\s+(?:to|with)\s+.+?\b/i.test(lastMsgLower) && /\b(college|collage|university|uni|intermediate|internmediate|school|degree|education)\b/i.test(lastMsgLower)) ||
+      (/\bnot\s+["'“`]?\w+["'”`]?\b/i.test(lastMsgLower) && /\b(college|university|intermediate)\b/i.test(lastMsgLower)) ||
       isConversationalEdu
     ) &&
       !isDateTenureUpdate &&
@@ -917,67 +920,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       !/\b\d{4}\s*(?:-|–|—|to)\s*(?:\d{4}|present|current)\b/i.test(lastMsgLower);
 
     if (isEduAction) {
-      let oldTargetName = '';
-      let newTargetName = '';
-
-      // Extract degree if specified (e.g. "intermediate in engineering", "intermediate in pre-medical", "bscs", "a-levels", "intermediate")
-      let extractedDegree = '';
-      const degreeInMatch = lastUserMessage.match(/\b(intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|hsc|matric|bachelor|master|bscs|bs|be)\s+(?:in|of)\s+([^,.:;]+?)(?:\s+(?:from|at|in)\s+|$)/i);
-      if (degreeInMatch) {
-        const degType = degreeInMatch[1].replace(/internmediate/i, 'Intermediate').replace(/intermediate/i, 'Intermediate');
-        const degField = degreeInMatch[2].trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        extractedDegree = `${degType} in ${degField}`;
-      } else {
-        const simpleDegMatch = lastUserMessage.match(/\b(intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|matric|bachelor|master|bscs)\b/i);
-        if (simpleDegMatch) {
-          const rawDeg = simpleDegMatch[1].toLowerCase();
-          if (rawDeg.includes('intermediate') || rawDeg.includes('internmediate')) extractedDegree = 'Intermediate';
-          else if (rawDeg.includes('fsc')) extractedDegree = 'FSc';
-          else if (rawDeg.includes('a-level') || rawDeg.includes('a level')) extractedDegree = 'A-Levels';
-          else if (rawDeg.includes('o-level') || rawDeg.includes('o level')) extractedDegree = 'O-Levels';
-          else if (rawDeg.includes('matric')) extractedDegree = 'Matriculation';
-          else if (rawDeg.includes('bscs')) extractedDegree = 'Bachelor of Science in Computer Science';
-          else if (rawDeg.includes('bachelor')) extractedDegree = 'Bachelor of Science';
-          else if (rawDeg.includes('master')) extractedDegree = 'Master of Science';
-        }
-      }
-
-      const fromToMatch = lastUserMessage.match(/\bfrom\s+(.+?)\s+(?:to|with|into)\s+(.+?)(?:\s+in\s+education|\s+section)?$/i);
-      const fromAtMatch = lastUserMessage.match(/\b(?:from|at)\s+([^,.:;]+?)(?:\s+(?:in|for|into)\s+(?:the\s+)?(?:education|resume|cv)(?:\s+section)?)?$/i);
-      const sepMatch = lastUserMessage.match(/\b(?:as|to|is|was|called|named|:|;|=)\s+([^,.:;]+?)(?:\s+(?:in|for|to|into)\s+(?:the\s+)?(?:education|resume|cv)(?:\s+section)?)?$/i);
-
-      if (fromToMatch) {
-        oldTargetName = fromToMatch[1].replace(/\b(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|name)\b/gi, '').trim();
-        newTargetName = fromToMatch[2].replace(/\b(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|name)\b/gi, '').trim();
-      } else if (fromAtMatch && fromAtMatch[1]) {
-        newTargetName = fromAtMatch[1].trim();
-      } else if (sepMatch && sepMatch[1] && !/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|degree)$/i.test(sepMatch[1].trim())) {
-        newTargetName = sepMatch[1].trim();
-      } else {
-        newTargetName = lastUserMessage
-          .replace(/\b(?:please\s+)?(?:add|insert|push|change|update|set|replace|put|rename|switch|i\s+have\s+done|i\s+haev\s+done|i\s+did|completed|studied|attended)\s+/i, '')
-          .replace(/\b(?:a|an|the|my|our|another|new|extra)\s+(?:college|collage|university|uni|intermediate|internmediate|school|education|degree)\s*(?:entry|item)?\s*/gi, '')
-          .replace(/\b(?:in|from|to|into|for)\s+(?:the\s+)?(?:education|resume|cv)\s*(?:section)?\s*/gi, '')
-          .replace(/\b(?:education|resume|cv)\s+section\s*/gi, '')
-          .replace(/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|internmediate|school)\s*(?:name)?\s*(?:as|to|is|was|called|named|:|;|=)\s*/i, '')
-          .replace(/\s+(?:as|in|to|into|for)\s+(?:a|an|the|my)?\s*(?:college|collage|university|uni|intermediate|internmediate|school)(?:\s+section)?$/i, '')
-          .replace(/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|internmediate|school)\s+/i, '')
-          .replace(/\b(?:as|to|in|into|for)\s+(?:education|resume|section)\b/gi, '')
-          .trim();
-      }
-
-      if (newTargetName) {
-        newTargetName = newTargetName
-          .replace(/\b(?:in|from|to|into|for)\s+(?:the\s+)?(?:education|resume|cv)\s*(?:section)?\s*/gi, '')
-          .replace(/\b(?:education|resume|cv)\s+section\s*/gi, '')
-          .trim();
-        // Clean and format capitalization
-        newTargetName = newTargetName
-          .split(/\s+/)
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ')
-          .replace(/\bDj\b/g, 'DJ');
-      }
+      const { oldTargetName, newTargetName, extractedDegree, isCollegeType } = parseEducationMessage(lastUserMessage);
 
       // Sanity check: newTargetName MUST NOT be dates, years, or action verbs!
       const isInvalidInstitutionName =
@@ -987,10 +930,6 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         /^\d+$/.test(newTargetName.replace(/\s+/g, ''));
 
       if (newTargetName.length > 0 && !isInvalidInstitutionName && !/\b(course|cert|certification|project|experience|skills|interests|bullet|point)\b/i.test(newTargetName)) {
-        const isCollegeType =
-          /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?levels?|o[- ]?levels?|fsc|matric)\b/i.test(lastMsgLower) ||
-          /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?levels?|o[- ]?levels?|fsc|matric)\b/i.test(newTargetName) ||
-          /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?levels?|o[- ]?levels?|fsc|matric)\b/i.test(oldTargetName);
 
         const currentEdu = cv.education ? [...cv.education] : [];
 

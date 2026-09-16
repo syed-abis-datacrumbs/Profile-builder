@@ -20,83 +20,27 @@ function isNegationReq(msgLower: string): boolean {
   return /\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\b/i.test(msgLower);
 }
 
-function parseEducationMessage(message: string): { newTargetName: string; extractedDegree: string; isCollegeType: boolean } {
-  const lastMsgLower = message.toLowerCase();
-
-  let extractedDegree = '';
-  const degreeInMatch = message.match(/\b(intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|hsc|matric|bachelor|master|bscs|bs|be)\s+(?:in|of)\s+([^,.:;]+?)(?:\s+(?:from|at|in)\s+|$)/i);
-  if (degreeInMatch) {
-    const degType = degreeInMatch[1].replace(/internmediate/i, 'Intermediate').replace(/intermediate/i, 'Intermediate');
-    const degField = degreeInMatch[2].trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    extractedDegree = `${degType} in ${degField}`;
-  } else {
-    const simpleDegMatch = message.match(/\b(intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|matric|bachelor|master|bscs)\b/i);
-    if (simpleDegMatch) {
-      const rawDeg = simpleDegMatch[1].toLowerCase();
-      if (rawDeg.includes('intermediate') || rawDeg.includes('internmediate')) extractedDegree = 'Intermediate';
-      else if (rawDeg.includes('fsc')) extractedDegree = 'FSc';
-      else if (rawDeg.includes('a-level') || rawDeg.includes('a level')) extractedDegree = 'A-Levels';
-      else if (rawDeg.includes('o-level') || rawDeg.includes('o level')) extractedDegree = 'O-Levels';
-      else if (rawDeg.includes('matric')) extractedDegree = 'Matriculation';
-      else if (rawDeg.includes('bscs')) extractedDegree = 'Bachelor of Science in Computer Science';
-      else if (rawDeg.includes('bachelor')) extractedDegree = 'Bachelor of Science';
-      else if (rawDeg.includes('master')) extractedDegree = 'Master of Science';
-    }
-  }
-
-  const fromToMatch = message.match(/\bfrom\s+(.+?)\s+(?:to|with|into)\s+(.+?)(?:\s+in\s+education|\s+section)?$/i);
-  const fromAtMatch = message.match(/\b(?:from|at)\s+([^,.:;]+?)(?:\s+(?:in|for|into)\s+(?:the\s+)?(?:education|resume|cv)(?:\s+section)?)?$/i);
-  const sepMatch = message.match(/\b(?:as|to|is|was|called|named|:|;|=)\s+([^,.:;]+?)(?:\s+(?:in|for|to|into)\s+(?:the\s+)?(?:education|resume|cv)(?:\s+section)?)?$/i);
-
-  let newTargetName = '';
-  if (fromToMatch) {
-    newTargetName = fromToMatch[2].replace(/\b(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|name)\b/gi, '').trim();
-  } else if (fromAtMatch && fromAtMatch[1]) {
-    newTargetName = fromAtMatch[1].trim();
-  } else if (sepMatch && sepMatch[1] && !/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|degree)$/i.test(sepMatch[1].trim())) {
-    newTargetName = sepMatch[1].trim();
-  } else {
-    newTargetName = message
-      .replace(/\b(?:please\s+)?(?:add|insert|push|change|update|set|replace|put|rename|switch|i\s+have\s+done|i\s+haev\s+done|i\s+did|completed|studied|attended)\s+/i, '')
-      .replace(/\b(?:a|an|the|my|our|another|new|extra)\s+(?:college|collage|university|uni|intermediate|internmediate|school|education|degree)\s*(?:entry|item)?\s*/gi, '')
-      .replace(/\b(?:in|from|to|into|for)\s+(?:the\s+)?(?:education|resume|cv)\s*(?:section)?\s*/gi, '')
-      .replace(/\b(?:education|resume|cv)\s+section\s*/gi, '')
-      .replace(/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|internmediate|school)\s*(?:name)?\s*(?:as|to|is|was|called|named|:|;|=)\s*/i, '')
-      .replace(/\s+(?:as|in|to|into|for)\s+(?:a|an|the|my)?\s*(?:college|collage|university|uni|intermediate|internmediate|school)(?:\s+section)?$/i, '')
-      .replace(/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|internmediate|school)\s+/i, '')
-      .replace(/\b(?:as|to|in|into|for)\s+(?:education|resume|section)\b/gi, '')
-      .trim();
-  }
-
-  if (newTargetName) {
-    newTargetName = newTargetName
-      .replace(/\b(?:in|from|to|into|for)\s+(?:the\s+)?(?:education|resume|cv)\s*(?:section)?\s*/gi, '')
-      .replace(/\b(?:education|resume|cv)\s+section\s*/gi, '')
-      .trim();
-    newTargetName = newTargetName
-      .split(/\s+/)
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ')
-      .replace(/\bDj\b/g, 'DJ');
-  }
-
-  const isCollegeType =
-    /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?levels?|o[- ]?levels?|fsc|matric)\b/i.test(lastMsgLower) ||
-    /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?levels?|o[- ]?levels?|fsc|matric)\b/i.test(newTargetName);
-
-  return { newTargetName, extractedDegree, isCollegeType };
-}
+import { parseEducationMessage } from './educationParser';
 
 function applyEduReplacement(education: EduEntry[], message: string): EduEntry[] {
-  const { newTargetName, extractedDegree, isCollegeType } = parseEducationMessage(message);
+  const { oldTargetName, newTargetName, extractedDegree, isCollegeType } = parseEducationMessage(message);
   const currentEdu = [...education];
 
   if (isCollegeType) {
-    let targetIdx = currentEdu.findIndex(e =>
-      /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|your college|nixor|premier|state college|a[- ]?level|o[- ]?level|fsc|matric)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
-    );
-    if (targetIdx === -1 && currentEdu.length > 1) {
-      targetIdx = 1;
+    let targetIdx = -1;
+    if (oldTargetName) {
+      targetIdx = currentEdu.findIndex(e =>
+        e.institution.toLowerCase().includes(oldTargetName.toLowerCase()) ||
+        oldTargetName.toLowerCase().includes(e.institution.toLowerCase())
+      );
+    }
+    if (targetIdx === -1) {
+      targetIdx = currentEdu.findIndex(e =>
+        /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|your college|nixor|premier|state college|a[- ]?level|o[- ]?level|fsc|matric)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
+      );
+      if (targetIdx === -1 && currentEdu.length > 1) {
+        targetIdx = 1;
+      }
     }
 
     if (targetIdx !== -1) {
@@ -428,6 +372,76 @@ describe('Resume Chat - Education & College Replacement', () => {
       expect(result[1].end).toBe('Jun 2022');
       expect(result[1].institution.includes('2022')).toBe(false);
       expect(result[1].institution.includes('Started')).toBe(false);
+    });
+  });
+
+  describe('Negation & Name Replacement ("DJ not SMI change it")', () => {
+    it('parses "my college name is DJ not SMI change it" into newTargetName "DJ" and oldTargetName "SMI"', () => {
+      const { newTargetName, oldTargetName, isCollegeType } = parseEducationMessage('my college name is DJ not SMI change it');
+      expect(newTargetName).toBe('DJ');
+      expect(oldTargetName).toBe('SMI');
+      expect(isCollegeType).toBe(true);
+    });
+
+    it('parses \'my college name is "DJ" not "SMI" please change it\' without quotes or action verbs', () => {
+      const { newTargetName, oldTargetName, isCollegeType } = parseEducationMessage('my college name is "DJ" not "SMI" please change it');
+      expect(newTargetName).toBe('DJ');
+      expect(oldTargetName).toBe('SMI');
+      expect(isCollegeType).toBe(true);
+    });
+
+    it('parses "my college is DJ change it" without trailing command', () => {
+      const { newTargetName, isCollegeType } = parseEducationMessage('my college is DJ change it');
+      expect(newTargetName).toBe('DJ');
+      expect(isCollegeType).toBe(true);
+    });
+
+    it('parses "change SMI to DJ" and "replace SMI with DJ"', () => {
+      const res1 = parseEducationMessage('change SMI to DJ');
+      expect(res1.newTargetName).toBe('DJ');
+      expect(res1.oldTargetName).toBe('SMI');
+
+      const res2 = parseEducationMessage('replace SMI with DJ');
+      expect(res2.newTargetName).toBe('DJ');
+      expect(res2.oldTargetName).toBe('SMI');
+    });
+
+    it('parses "DJ instead of SMI" and "not SMI but DJ"', () => {
+      const res1 = parseEducationMessage('DJ instead of SMI');
+      expect(res1.newTargetName).toBe('DJ');
+      expect(res1.oldTargetName).toBe('SMI');
+
+      const res2 = parseEducationMessage('not SMI but DJ');
+      expect(res2.newTargetName).toBe('DJ');
+      expect(res2.oldTargetName).toBe('SMI');
+    });
+
+    it('replaces SMI with DJ when user says "my college name is DJ not SMI change it"', () => {
+      const eduWithSMI: EduEntry[] = [
+        { institution: 'NED University', degree: 'B.S. in Computer Science', start: '2020', end: '2024' },
+        { institution: 'SMI', degree: 'Intermediate', start: '2020', end: '2022' },
+      ];
+
+      const result = applyEduReplacement(eduWithSMI, 'my college name is DJ not SMI change it');
+      expect(result.length).toBe(2);
+      expect(result[1].institution).toBe('DJ');
+      expect(result[1].degree).toBe('Intermediate');
+      expect(result[1].institution.includes('Not SMI')).toBe(false);
+      expect(result[1].institution.includes('Change It')).toBe(false);
+    });
+
+    it('replaces SMI with DJ when user says \'my college name is "DJ" not "SMI" please change it\'', () => {
+      const eduWithSMI: EduEntry[] = [
+        { institution: 'NED University', degree: 'B.S. in Computer Science', start: '2020', end: '2024' },
+        { institution: 'SMI', degree: 'Intermediate', start: '2020', end: '2022' },
+      ];
+
+      const result = applyEduReplacement(eduWithSMI, 'my college name is "DJ" not "SMI" please change it');
+      expect(result.length).toBe(2);
+      expect(result[1].institution).toBe('DJ');
+      expect(result[1].degree).toBe('Intermediate');
+      expect(result[1].institution.includes('"')).toBe(false);
+      expect(result[1].institution.includes('Please Change It')).toBe(false);
     });
   });
 });
