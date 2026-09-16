@@ -309,4 +309,125 @@ describe('Resume Chat - Education & College Replacement', () => {
       expect(consolidated.some(e => e.institution === 'Nixor College')).toBe(false);
     });
   });
+
+  describe('Conversational Date & Tenure Updates', () => {
+    function isDateTenureUpdate(msgLower: string): boolean {
+      const hasYearNumbers = /\b(19\d\d|20\d\d)\b/.test(msgLower);
+      const hasDateKeywords = /\b(dates?|tenure|duration|timeline|period|years?)\b/i.test(msgLower);
+      const hasStartEndVerbs = /\b(started|start|began|enrolled|joined|completed|complete|ended|end|finished|graduated|passed)\b/i.test(msgLower);
+      const hasRangeHyphen = /\b(19\d\d|20\d\d)\s*(?:-|–|—|to|until)\s*(?:19\d\d|20\d\d|present|current)\b/i.test(msgLower);
+
+      return (hasDateKeywords || hasRangeHyphen || (hasStartEndVerbs && hasYearNumbers));
+    }
+
+    function parseDates(message: string): { newStart: string; newEnd: string } {
+      let newStart = '';
+      let newEnd = '';
+
+      const MONTH_NAME = '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)';
+      const DATE_STR = `(?:${MONTH_NAME}\\s+)?\\d{4}`;
+      const DATE_END_STR = `(?:${MONTH_NAME}\\s+)?(?:\\d{4}|present|current)`;
+      const DATE_RANGE_RE = new RegExp(`\\b(${DATE_STR})\\s*(?:-|–|—|to|until)\\s*(${DATE_END_STR})\\b`, 'i');
+
+      const endStartMatch = message.match(
+        new RegExp(`\\b(?:completed|ended|finished|graduated|passed)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_STR})\\b.*?\\b(?:started|began|enrolled|joined)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_STR})\\b`, 'i')
+      );
+      const startEndMatch = message.match(
+        new RegExp(`\\b(?:started|began|enrolled|joined)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_STR})\\b.*?\\b(?:completed|ended|finished|graduated|passed|to|until)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_END_STR})\\b`, 'i')
+      );
+      const dateRangeMatch = message.match(DATE_RANGE_RE);
+
+      if (endStartMatch) {
+        newEnd = endStartMatch[1].trim();
+        newStart = endStartMatch[2].trim();
+      } else if (startEndMatch) {
+        newStart = startEndMatch[1].trim();
+        newEnd = startEndMatch[2].trim();
+      } else if (dateRangeMatch) {
+        newStart = dateRangeMatch[1].trim();
+        newEnd = dateRangeMatch[2].trim();
+      } else {
+        const allYears = Array.from(message.matchAll(/\b(19\d\d|20\d\d)\b/g)).map((m) => m[1]);
+        if (allYears.length >= 2) {
+          const y1 = parseInt(allYears[0], 10);
+          const y2 = parseInt(allYears[1], 10);
+          if (y1 < y2) {
+            newStart = String(y1);
+            newEnd = String(y2);
+          } else {
+            newStart = String(y2);
+            newEnd = String(y1);
+          }
+        }
+      }
+
+      return { newStart, newEnd };
+    }
+
+    function applyDateUpdate(education: EduEntry[], message: string): EduEntry[] {
+      const { newStart, newEnd } = parseDates(message);
+      const currentEdu = [...education];
+      const targetIdx = currentEdu.findIndex(e =>
+        /\b(college|intermediate|internmediate|school|diploma|a[- ]?level|o[- ]?level|fsc|matric|smi|dj)\b/i.test(`${e.institution} ${e.degree}`)
+      );
+
+      if (targetIdx !== -1 && newStart && newEnd) {
+        const formatWithExistingMonth = (newVal: string, oldVal?: string): string => {
+          if (/^[A-Za-z]{3,9}\s+\d{4}$/i.test(newVal)) return newVal;
+          if (/^\d{4}$/.test(newVal) && oldVal) {
+            const mMatch = oldVal.match(/^([A-Za-z]{3,9})\s+\d{4}$/);
+            if (mMatch) {
+              return `${mMatch[1]} ${newVal}`;
+            }
+          }
+          return newVal;
+        };
+
+        currentEdu[targetIdx] = {
+          ...currentEdu[targetIdx],
+          start: formatWithExistingMonth(newStart, currentEdu[targetIdx].start),
+          end: formatWithExistingMonth(newEnd, currentEdu[targetIdx].end),
+        };
+      }
+      return currentEdu;
+    }
+
+    it('identifies "i completed intermediate on 2022 and started 2020" as date tenure update', () => {
+      expect(isDateTenureUpdate('i completed intermediate on 2022 and started 2020')).toBe(true);
+    });
+
+    it('parses start and end years when end is mentioned first', () => {
+      const { newStart, newEnd } = parseDates('i completed intermediate on 2022 and started 2020');
+      expect(newStart).toBe('2020');
+      expect(newEnd).toBe('2022');
+    });
+
+    it('parses start and end years when start is mentioned first', () => {
+      const { newStart, newEnd } = parseDates('started in 2020 and completed 2022');
+      expect(newStart).toBe('2020');
+      expect(newEnd).toBe('2022');
+    });
+
+    it('parses start and end years from hyphen range "2020 - 2022"', () => {
+      const { newStart, newEnd } = parseDates('intermediate duration 2020 - 2022');
+      expect(newStart).toBe('2020');
+      expect(newEnd).toBe('2022');
+    });
+
+    it('updates intermediate dates while keeping institution "SMI" completely intact', () => {
+      const eduWithSMI: EduEntry[] = [
+        { institution: 'Indus University', degree: 'Bachelor of Science in Artificial Intelligence', start: 'Jul 2022', end: 'Jun 2026' },
+        { institution: 'SMI', degree: 'Intermediate', start: 'Jun 2018', end: 'Jun 2020' },
+      ];
+
+      const result = applyDateUpdate(eduWithSMI, 'i completed intermediate on 2022 and started 2020');
+      expect(result.length).toBe(2);
+      expect(result[1].institution).toBe('SMI');
+      expect(result[1].degree).toBe('Intermediate');
+      expect(result[1].start).toBe('Jun 2020');
+      expect(result[1].end).toBe('Jun 2022');
+      expect(result[1].institution.includes('2022')).toBe(false);
+      expect(result[1].institution.includes('Started')).toBe(false);
+    });
+  });
 });

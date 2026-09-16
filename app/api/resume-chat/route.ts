@@ -810,27 +810,87 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     }
 
     // 2c. Direct Date & Tenure / Duration Update Handler (MUST RUN BEFORE INSTITUTION ACTIONS)
-    // e.g. "change the duration of the university : Jan 2022- Feb 2026", "update university dates to 2022 - 2026", "change tenure to Jan 2022 - Present"
-    const isDateTenureUpdate = (
-      /\b(dates?|tenure|duration|timeline|period|years?)\b/i.test(lastMsgLower) ||
-      /\b\d{4}\s*(?:-|–|—|to)\s*(?:\d{4}|present|current)\b/i.test(lastMsgLower)
-    ) && /\b(change|update|set|replace|modify|to|with|of|:)\b/i.test(lastMsgLower);
+    // e.g. "change the duration of the university : Jan 2022- Feb 2026", "update university dates to 2022 - 2026", "change tenure to Jan 2022 - Present",
+    // "i completed intermediate on 2022 and started 2020", "started in 2020 and completed 2022"
+    const hasYearNumbers = /\b(19\d\d|20\d\d)\b/.test(lastMsgLower);
+    const hasDateKeywords = /\b(dates?|tenure|duration|timeline|period|years?)\b/i.test(lastMsgLower);
+    const hasStartEndVerbs = /\b(started|start|began|enrolled|joined|completed|complete|ended|end|finished|graduated|passed)\b/i.test(lastMsgLower);
+    const hasRangeHyphen = /\b(19\d\d|20\d\d)\s*(?:-|–|—|to|until)\s*(?:19\d\d|20\d\d|present|current)\b/i.test(lastMsgLower);
+
+    const isDateTenureUpdate =
+      (hasDateKeywords || hasRangeHyphen || (hasStartEndVerbs && hasYearNumbers)) &&
+      !isNamedRemovalReq &&
+      !isFullSectionRemoval;
 
     if (isDateTenureUpdate) {
-      const dateRangeMatch =
-        lastUserMessage.match(/([A-Za-z]{3,9}\s*\d{4}|\b\d{4})\s*(?:-|–|—|to)\s*([A-Za-z]{3,9}\s*\d{4}|\b\d{4}|present|current)\b/i) ||
-        lastUserMessage.match(/\b(?:from\s+)?([A-Za-z]{3,9}\s*\d{4}|\b\d{4})\s+(?:to|until)\s+([A-Za-z]{3,9}\s*\d{4}|\b\d{4}|present|current)\b/i);
+      let newStart = '';
+      let newEnd = '';
 
-      if (dateRangeMatch) {
-        const newStart = dateRangeMatch[1].trim();
-        const newEnd = dateRangeMatch[2].trim();
+      const MONTH_NAME = '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)';
+      const DATE_STR = `(?:${MONTH_NAME}\\s+)?\\d{4}`;
+      const DATE_END_STR = `(?:${MONTH_NAME}\\s+)?(?:\\d{4}|present|current)`;
+      const DATE_RANGE_RE = new RegExp(`\\b(${DATE_STR})\\s*(?:-|–|—|to|until)\\s*(${DATE_END_STR})\\b`, 'i');
+
+      // Pattern A: End mentioned first, then Start (e.g. "completed intermediate on 2022 and started 2020", "ended in 2022, started 2020")
+      const endStartMatch = lastUserMessage.match(
+        new RegExp(`\\b(?:completed|ended|finished|graduated|passed)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_STR})\\b.*?\\b(?:started|began|enrolled|joined)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_STR})\\b`, 'i')
+      );
+
+      // Pattern B: Start mentioned first, then End (e.g. "started intermediate in 2020 and completed 2022", "started 2020 and ended 2022")
+      const startEndMatch = lastUserMessage.match(
+        new RegExp(`\\b(?:started|began|enrolled|joined)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_STR})\\b.*?\\b(?:completed|ended|finished|graduated|passed|to|until)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_END_STR})\\b`, 'i')
+      );
+
+      // Pattern C: Hyphen or "to" / "until" range (e.g. "2020 - 2022", "from 2020 to 2022", "Jan 2022 - Feb 2026")
+      const dateRangeMatch = lastUserMessage.match(DATE_RANGE_RE);
+
+      if (endStartMatch) {
+        newEnd = endStartMatch[1].trim();
+        newStart = endStartMatch[2].trim();
+      } else if (startEndMatch) {
+        newStart = startEndMatch[1].trim();
+        newEnd = startEndMatch[2].trim();
+      } else if (dateRangeMatch) {
+        newStart = dateRangeMatch[1].trim();
+        newEnd = dateRangeMatch[2].trim();
+      } else {
+        // Pattern D: Two standalone 4-digit years in message
+        const allYears = Array.from(lastUserMessage.matchAll(/\b(19\d\d|20\d\d)\b/g)).map((m) => m[1]);
+        if (allYears.length >= 2) {
+          const y1 = parseInt(allYears[0], 10);
+          const y2 = parseInt(allYears[1], 10);
+          if (y1 < y2) {
+            newStart = String(y1);
+            newEnd = String(y2);
+          } else {
+            newStart = String(y2);
+            newEnd = String(y1);
+          }
+        }
+      }
+
+      if (newStart && newEnd) {
+        const formatWithExistingMonth = (newVal: string, oldVal?: string): string => {
+          if (/^[A-Za-z]{3,9}\s+\d{4}$/i.test(newVal)) return newVal;
+          if (/^\d{4}$/.test(newVal) && oldVal) {
+            const mMatch = oldVal.match(/^([A-Za-z]{3,9})\s+\d{4}$/);
+            if (mMatch) {
+              return `${mMatch[1]} ${newVal}`;
+            }
+          }
+          return newVal;
+        };
 
         // Check if education is targeted
-        if (/\b(university|uni|college|school|intermediate|degree|education|bachelor|master|fast|habib|szabist|berkeley)\b/i.test(lastMsgLower) && cv.education && cv.education.length > 0) {
+        if (
+          (/\b(university|uni|college|school|intermediate|internmediate|degree|education|bachelor|master|phd|fast|habib|szabist|berkeley)\b/i.test(lastMsgLower) ||
+           !cv.workExperience || cv.workExperience.length === 0) &&
+          cv.education && cv.education.length > 0
+        ) {
           const currentEdu = [...cv.education];
           let targetIdx = 0;
-          if (/\b(college|intermediate|school)\b/i.test(lastMsgLower)) {
-            targetIdx = currentEdu.findIndex(e => /\b(college|intermediate|school|diploma)\b/i.test(`${e.institution} ${e.degree}`));
+          if (/\b(college|intermediate|internmediate|school|diploma|a[- ]?level|o[- ]?level|fsc|matric)\b/i.test(lastMsgLower)) {
+            targetIdx = currentEdu.findIndex(e => /\b(college|intermediate|internmediate|school|diploma|a[- ]?level|o[- ]?level|fsc|matric|nixor|smi|dj)\b/i.test(`${e.institution} ${e.degree}`));
             if (targetIdx === -1 && currentEdu.length > 1) targetIdx = 1;
           } else {
             targetIdx = currentEdu.findIndex(e => /\b(university|degree|bachelor|master|phd)\b/i.test(`${e.institution} ${e.degree}`));
@@ -838,26 +898,32 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           }
 
           if (targetIdx !== -1 && targetIdx < currentEdu.length) {
+            const formattedStart = formatWithExistingMonth(newStart, currentEdu[targetIdx].start);
+            const formattedEnd = formatWithExistingMonth(newEnd, currentEdu[targetIdx].end);
+
             currentEdu[targetIdx] = {
               ...currentEdu[targetIdx],
-              start: newStart,
-              end: newEnd,
+              start: formattedStart,
+              end: formattedEnd,
             };
 
             const updatedCv: CvData = { ...cv, education: currentEdu };
+            const targetLabel = currentEdu[targetIdx].institution || (/\b(intermediate|internmediate)\b/i.test(lastMsgLower) ? 'intermediate' : 'education');
+            const aiReply = `Done — updated your ${targetLabel} duration to ${formattedStart} – ${formattedEnd}.`;
+
             if (sessionId !== 'unknown') {
               await db.profileBuilderChatLog.create({
                 data: {
                   sessionId,
                   userId: user?.id,
                   userMessage,
-                  aiReply: `Done — updated your education duration to ${newStart} – ${newEnd}.`,
+                  aiReply,
                   isAutoFit: false,
                 },
               });
             }
             return Response.json({
-              reply: `Done — updated your education duration to ${newStart} – ${newEnd}.`,
+              reply: aiReply,
               cv: updatedCv,
             });
           }
@@ -869,26 +935,31 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           let targetIdx = findBestMatchIndex(currentExp, lastUserMessage, w => `${w.company} ${w.title}`);
           if (targetIdx === -1) targetIdx = 0;
 
+          const formattedStart = formatWithExistingMonth(newStart, currentExp[targetIdx].start);
+          const formattedEnd = formatWithExistingMonth(newEnd, currentExp[targetIdx].end);
+
           currentExp[targetIdx] = {
             ...currentExp[targetIdx],
-            start: newStart,
-            end: newEnd,
+            start: formattedStart,
+            end: formattedEnd,
           };
 
           const updatedCv: CvData = { ...cv, workExperience: currentExp };
+          const aiReply = `Done — updated your experience dates to ${formattedStart} – ${formattedEnd}.`;
+
           if (sessionId !== 'unknown') {
             await db.profileBuilderChatLog.create({
               data: {
                 sessionId,
                 userId: user?.id,
                 userMessage,
-                aiReply: `Done — updated your experience dates to ${newStart} – ${newEnd}.`,
+                aiReply,
                 isAutoFit: false,
               },
             });
           }
           return Response.json({
-            reply: `Done — updated your experience dates to ${newStart} – ${newEnd}.`,
+            reply: aiReply,
             cv: updatedCv,
           });
         }
@@ -906,10 +977,13 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       (/\bfrom\s+.+?\s+(?:to|with)\s+.+?\b/i.test(lastMsgLower) && /\b(college|collage|university|uni|intermediate|internmediate|school|degree|education)\b/i.test(lastMsgLower)) ||
       isConversationalEdu
     ) &&
+      !isDateTenureUpdate &&
       !isNamedRemovalReq &&
       !isFullSectionRemoval &&
       !/\b(duration|dates?|tenure|timeline|period|years?)\b/i.test(lastMsgLower) &&
       !/\b(transition|pivot|pivoting|career|switch\s+to|switch\s+from)\b/i.test(lastMsgLower) &&
+      !/\b(?:started|completed|ended|graduated|passed)\b.*?\b\d{4}\b/i.test(lastMsgLower) &&
+      !/\b\d{4}\b.*?\b(?:started|completed|ended|graduated|passed)\b/i.test(lastMsgLower) &&
       !/\b\d{4}\s*(?:-|–|—|to)\s*(?:\d{4}|present|current)\b/i.test(lastMsgLower);
 
     if (isEduAction) {
@@ -975,7 +1049,14 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           .replace(/\bDj\b/g, 'DJ');
       }
 
-      if (newTargetName.length > 0 && !/\b(course|cert|certification|project|experience|skills|interests|bullet|point)\b/i.test(newTargetName)) {
+      // Sanity check: newTargetName MUST NOT be dates, years, or action verbs!
+      const isInvalidInstitutionName =
+        !newTargetName ||
+        /^(?:i\s+)?(?:intermediate|internmediate|college|university|education|degree)?\s*(?:on|in|from|at)?\s*\d{4}/i.test(newTargetName) ||
+        /\b(started|completed|ended|graduated|passed)\b/i.test(newTargetName) ||
+        /^\d+$/.test(newTargetName.replace(/\s+/g, ''));
+
+      if (newTargetName.length > 0 && !isInvalidInstitutionName && !/\b(course|cert|certification|project|experience|skills|interests|bullet|point)\b/i.test(newTargetName)) {
         const isCollegeType =
           /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?levels?|o[- ]?levels?|fsc|matric)\b/i.test(lastMsgLower) ||
           /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?levels?|o[- ]?levels?|fsc|matric)\b/i.test(newTargetName) ||
