@@ -85,7 +85,21 @@ Rules:
   5. ONLY perform a full multi-section rewrite (Mode 2) when the user explicitly requests a full role transformation or new resume (e.g. "transform whole resume for video editor", "build ATS resume for data analyst"). In ALL other turns, treat the request as a surgical edit with JSON patches!
   6. Cross-Section Project Alignment: When the user asks to update work experience, skills, or interests "as per my projects" (or based on projects), you MUST examine the user's active projects, extract all technologies, frameworks, APIs, and achievements (e.g. Meta API, React Native, WhatsApp integrations, AI generators, Python, YOLO, dlib, Arduino), and rewrite the work experience bullets, technical skills, and interests to authentically reflect those exact technologies while keeping existing projects intact!
   7. Strict Information Purge Rule ("just keep what information I have given you and remove what was already written before"): When the user asks to keep only the information they provided and remove previous/old content, you MUST strictly purge any previous companies, unmentioned projects, old degrees, and template certifications. You MUST return ONLY the authentic entities and items the user explicitly provided in the conversation (e.g. DataCrumbs, Habib University, Saylani Mass IT, and the specific user projects), with ZERO leftover template or unmentioned data!
-  8. NEVER ACCIDENTALLY DELETE WHEN ADDING (CRITICAL): When the user asks to "add" an experience, project, education, or certification (e.g. "add full stack engineer at datacrumbs as experience"), YOU MUST ONLY EMIT AN "add" PATCH OPERATION. NEVER pair an "add" with a "remove" operation! All existing experiences, projects, and education MUST REMAIN INTACT in the array. If replacing an empty/generic placeholder (e.g. "Company / Organization Name"), use a single { "op": "replace", "path": "/workExperience/0", "value": ... } patch. NEVER emit a "remove" patch unless the user specifically and explicitly requested to delete/remove an item!
+  8. NEVER ACCIDENTALLY DELETE WHEN ADDING (CRITICAL): When the user asks to "add" an experience, project, education, or certification (e.g. "add full stack engineer at datacrumbs as experience"), YOU MUST ONLY EMIT AN "add" PATCH OPERATION. NEVER pair an "add" with a "remove" operation! All existing experiences, projects, and education MUST REMAIN INTACT in the array. If replacing an empty/generic placeholder (e.g. "Company / Organization Name"), use a single { "op": "replace", "path": "/workExperience/0", "value": ... } patch. EXCEPTION: Replacing a secondary education / college entry (e.g. replacing Nixor College / A-Levels when the user mentions their Intermediate or College) MUST use "replace", NEVER "add"! Never emit a "remove" patch unless the user specifically and explicitly requested to delete/remove an item!
+
+- CRITICAL — SECONDARY EDUCATION / COLLEGE REPLACEMENT RULE:
+  Resumes standardly contain at most ONE secondary education tier (Intermediate, A-Levels, FSc, High School, College). When the user provides their college or intermediate education (e.g. "i have done intermediate from DJ Science", "i did intermediate from Beaconhouse", "my college is Askari College", "intermediate from DJ Science", "add intermediate from Beaconhouse"):
+  1. If the resume ALREADY contains a secondary education / college / A-Levels entry (such as "Nixor College", "A-Levels", "State College Preparatory", or any entry at /education/1 with degree or institution matching College, A-Levels, Intermediate, or High School):
+     YOU MUST REPLACE that secondary education entry!
+     Use: { "op": "replace", "path": "/education/1", "value": { "institution": "<College Name>", "degree": "<Intermediate / Degree>", "start": "Jun 2018", "end": "Jun 2020", "location": "Karachi, Pakistan" } } (or replace the individual "institution" and "degree" fields).
+  2. NEVER emit an "add" patch that adds a second college/intermediate entry on top of the existing college/A-levels entry! A candidate has only one college/intermediate qualification.
+  3. If the current resume only has 1 education entry (University), you may add the secondary education entry at /education/1.
+
+- CRITICAL — NEGATION AS EXPLICIT REMOVAL:
+  Statements like "i have not done a-levels", "i haven't done a-levels", "i didn't do a levels", "i don't have a-levels", "no a-levels", "remove college", "i have no certifications", "i haven't done any projects" ARE UNAMBIGUOUS EXPLICIT REMOVAL REQUESTS.
+  For example, when the user says "i have not done a-levels", YOU MUST EMIT:
+  { "op": "remove", "path": "/education/1" } (or the index of the matching A-Levels / Nixor College entry).
+  NEVER preserve an entry when the user explicitly states they did not do it or do not have it!
 
 - ALWAYS make forward progress on resume generation and editing requests. Never respond with only a clarifying question and no changes to the cv when the user is asking to build or update a resume — a beginner providing their details should still get a complete, realistic, ready-to-edit resume back immediately. If you have a genuine follow-up question, ask it in "reply" AFTER you've already filled in a full, plausible draft — never before.
 - EXCEPTIONS FOR RETURNING UNCHANGED CV:
@@ -440,9 +454,19 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     // Multi-Sentence / Comprehensive Background / Story / Full Transformation Check
     // When user provides multiple details or explicitly requests a full resume rewrite,
     // ALL fast single-field interceptors MUST be bypassed and forwarded directly to the AI engine!
+    const isSingleEduStatement =
+      lastUserMessage.length < 120 &&
+      !lastUserMessage.includes('\n') &&
+      !/\b(and\s+my\s+name|and\s+i\s+worked|and\s+my\s+skills|projects?|work\s*experience|certifications?)\b/i.test(lastMsgLower) &&
+      (/\b(?:i\s+)?(?:have\s+|haev\s+|had\s+|did\s+)?(?:done|completed|studied|attended)?\s*(?:my\s+)?(?:intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|college|collage|matric|high\s*school)\b/i.test(lastMsgLower) ||
+       /\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\s+(?:a[- ]?levels?|o[- ]?levels?|intermediate|internmediate|college|collage|fsc|matric)\b/i.test(lastMsgLower));
+
     const isMultiSentenceOrStory =
-      lastUserMessage.length > 120 ||
-      /\b(my name is|i am an?|i have been working|i worked|i have done|i have created|i graduated|transform\s+(?:the|this|my)?\s*(?:whole)?\s*resume|build\s+(?:me\s+)?(?:a\s+)?resume|create\s+(?:a\s+)?resume|craft\s+(?:a\s+)?(?:transition\s+)?resume|transition\s+resume|pivoting\s+from|pivot\s+from|career\s+switch|career\s+transition|switch\s+to|as per the information|just\s+keep\s+what\s+information|remove\s+what\s+was\s+already\s+written|only\s+what\s+i\s+(?:have\s+)?given|keep\s+only\s+what)\b/i.test(lastMsgLower);
+      !isSingleEduStatement && (
+        lastUserMessage.length > 120 ||
+        /\b(my name is|i am an?|i have been working|i worked|i have created|i graduated|transform\s+(?:the|this|my)?\s*(?:whole)?\s*resume|build\s+(?:me\s+)?(?:a\s+)?resume|create\s+(?:a\s+)?resume|craft\s+(?:a\s+)?(?:transition\s+)?resume|transition\s+resume|pivoting\s+from|pivot\s+from|career\s+switch|career\s+transition|switch\s+to|as per the information|just\s+keep\s+what\s+information|remove\s+what\s+was\s+already\s+written|only\s+what\s+i\s+(?:have\s+)?given|keep\s+only\s+what)\b/i.test(lastMsgLower) ||
+        (/\bi have done\b/i.test(lastMsgLower) && !/\b(intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|college|collage|matric|bachelor|master|bscs|be|bs)\b/i.test(lastMsgLower))
+      );
 
     if (!isMultiSentenceOrStory) {
       const WORD_NUMS: Record<string, number> = {
@@ -581,7 +605,10 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     }
 
     // 2. Specific Item Removal by Exact Name / Keyword Match across all sections
-    const isNamedRemovalReq = /\b(?:please\s+)?(?:remove|delete|drop|clear|strip|hide|eliminate)\b/i.test(lastMsgLower) &&
+    const isNamedRemovalReq = (
+      /\b(?:please\s+)?(?:remove|delete|drop|clear|strip|hide|eliminate)\b/i.test(lastMsgLower) ||
+      /\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\b/i.test(lastMsgLower)
+    ) &&
       !isFullSectionRemoval &&
       !/\b(percent|percentages|percentage|numbers|number|metrics|numeric|stats)\b/i.test(lastMsgLower) &&
       !/\b(github|kaggle|linkedin|portfolio|website|all\s+links)\b/i.test(lastMsgLower) &&
@@ -593,6 +620,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     if (isNamedRemovalReq) {
       const targetQuery = lastUserMessage
         .replace(/\b(?:please\s+)?(?:remove|delete|drop|clear|strip|hide|take\s+out|eliminate)\s+(?:the\s+)?/i, '')
+        .replace(/\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\s+(?:the\s+)?/i, '')
         .replace(/\b(?:from\s+my\s+resume|from\s+resume|from\s+education|from\s+projects|from\s+experience|from\s+certifications|section|entirely|completely|entry|item)\b/gi, '')
         .trim();
 
@@ -601,10 +629,10 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         if (cv.education && cv.education.length > 0) {
           let matchIdx = findBestMatchIndex(cv.education, targetQuery, e => `${e.institution} ${e.degree}`);
           if (matchIdx === -1) {
-            // Category-level fallback matching (e.g. "remove college", "delete university", "remove school")
-            if (/\b(college|collage|intermediate|preparatory|school|a[- ]?levels?|o[- ]?levels?|diploma|matric)\b/i.test(targetQuery)) {
+            // Category-level fallback matching (e.g. "remove college", "delete university", "remove school", "i have not done a-levels")
+            if (/\b(college|collage|intermediate|internmediate|preparatory|school|a[- ]?levels?|o[- ]?levels?|diploma|matric|fsc)\b/i.test(targetQuery)) {
               matchIdx = cv.education.findIndex(e =>
-                /\b(college|collage|intermediate|preparatory|school|diploma|a[- ]?level|o[- ]?level|hsc|ssc|matric)\b/i.test(`${e.institution} ${e.degree}`)
+                /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?level|o[- ]?level|hsc|ssc|matric|fsc|nixor)\b/i.test(`${e.institution} ${e.degree}`)
               );
               if (matchIdx === -1 && cv.education.length > 1) {
                 matchIdx = 1;
@@ -868,10 +896,15 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     }
 
     // 2d. Add or Update Education Entry Handler
+    const isConversationalEdu =
+      /\b(?:i\s+)?(?:have\s+|haev\s+|had\s+|did\s+)?(?:done|completed|studied|attended)?\s*(?:my\s+)?(?:intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|college|collage|matric|high\s*school)\b/i.test(lastMsgLower) ||
+      /\b(?:intermediate|internmediate|fsc|a[- ]?levels?|college|collage)\s+(?:in\s+[^,]+?\s+)?(?:from|at|in)\s+/i.test(lastMsgLower);
+
     const isEduAction = (
-      /\b(add|change|update|set|replace|put|insert|switch|rename)\b.*?\b(college|collage|university|uni|intermediate|school|degree|education|bachelor|master|phd)\b/i.test(lastMsgLower) ||
-      /\b(?:my\s+)?(college|collage|university|uni|intermediate)\s*(?:is|was|to|:|=)\s*(.+?)$/i.test(lastMsgLower) ||
-      (/\bfrom\s+.+?\s+(?:to|with)\s+.+?\b/i.test(lastMsgLower) && /\b(college|collage|university|uni|intermediate|school|degree|education)\b/i.test(lastMsgLower))
+      /\b(add|change|update|set|replace|put|insert|switch|rename)\b.*?\b(college|collage|university|uni|intermediate|internmediate|school|degree|education|bachelor|master|phd)\b/i.test(lastMsgLower) ||
+      /\b(?:my\s+)?(college|collage|university|uni|intermediate|internmediate)\s*(?:is|was|to|:|=)\s*(.+?)$/i.test(lastMsgLower) ||
+      (/\bfrom\s+.+?\s+(?:to|with)\s+.+?\b/i.test(lastMsgLower) && /\b(college|collage|university|uni|intermediate|internmediate|school|degree|education)\b/i.test(lastMsgLower)) ||
+      isConversationalEdu
     ) &&
       !isNamedRemovalReq &&
       !isFullSectionRemoval &&
@@ -880,108 +913,89 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       !/\b\d{4}\s*(?:-|–|—|to)\s*(?:\d{4}|present|current)\b/i.test(lastMsgLower);
 
     if (isEduAction) {
-      const isExplicitAdd = /\b(add|insert|push|new)\b/i.test(lastMsgLower) && !/\b(from\s+.+?\s+to)\b/i.test(lastMsgLower);
-      const isExplicitChange = /\b(change|update|set|replace|rename|switch)\b/i.test(lastMsgLower) || /\b(from\s+.+?\s+to)\b/i.test(lastMsgLower);
-
       let oldTargetName = '';
       let newTargetName = '';
 
-      const fromToMatch = lastUserMessage.match(/\bfrom\s+(.+?)\s+(?:to|with|into)\s+(.+?)(?:\s+in\s+education|\s+section)?$/i);
-      if (fromToMatch) {
-        oldTargetName = fromToMatch[1].replace(/\b(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|name)\b/gi, '').trim();
-        newTargetName = fromToMatch[2].replace(/\b(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|name)\b/gi, '').trim();
+      // Extract degree if specified (e.g. "intermediate in engineering", "intermediate in pre-medical", "bscs", "a-levels", "intermediate")
+      let extractedDegree = '';
+      const degreeInMatch = lastUserMessage.match(/\b(intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|hsc|matric|bachelor|master|bscs|bs|be)\s+(?:in|of)\s+([^,.:;]+?)(?:\s+(?:from|at|in)\s+|$)/i);
+      if (degreeInMatch) {
+        const degType = degreeInMatch[1].replace(/internmediate/i, 'Intermediate').replace(/intermediate/i, 'Intermediate');
+        const degField = degreeInMatch[2].trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        extractedDegree = `${degType} in ${degField}`;
       } else {
-        // Match explicit separators: "as", "to", ":", "called", "named", "is", "was"
-        // e.g. "add a college in education section as Kent College" -> "Kent College"
-        const sepMatch = lastUserMessage.match(/\b(?:as|to|is|was|called|named|:|;|=)\s+([^,]+?)(?:\s+(?:in|for|to|into)\s+(?:the\s+)?(?:education|resume|cv)(?:\s+section)?)?$/i);
-        const candidate = sepMatch ? sepMatch[1].trim() : '';
-
-        if (candidate && !/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|degree)$/i.test(candidate)) {
-          newTargetName = candidate
-            .replace(/\b(?:in|from|to|into|for)\s+(?:the\s+)?(?:education|resume|cv)\s*(?:section)?\s*/gi, '')
-            .replace(/\b(?:education|resume|cv)\s+section\s*/gi, '')
-            .trim();
-        } else {
-          newTargetName = lastUserMessage
-            .replace(/\b(?:please\s+)?(?:add|insert|push|change|update|set|replace|put|rename|switch)\s+/i, '')
-            .replace(/\b(?:a|an|the|my|our|another|new|extra)\s+(?:college|collage|university|uni|intermediate|school|education|degree)\s*(?:entry|item)?\s*/gi, '')
-            .replace(/\b(?:in|from|to|into|for)\s+(?:the\s+)?(?:education|resume|cv)\s*(?:section)?\s*/gi, '')
-            .replace(/\b(?:education|resume|cv)\s+section\s*/gi, '')
-            .replace(/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school)\s*(?:name)?\s*(?:as|to|is|was|called|named|:|;|=)\s*/i, '')
-            .replace(/\s+(?:as|in|to|into|for)\s+(?:a|an|the|my)?\s*(?:college|collage|university|uni|intermediate|school)(?:\s+section)?$/i, '')
-            .replace(/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school)\s+/i, '')
-            .replace(/\b(?:as|to|in|into|for)\s+(?:education|resume|section)\b/gi, '')
-            .trim();
+        const simpleDegMatch = lastUserMessage.match(/\b(intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|matric|bachelor|master|bscs)\b/i);
+        if (simpleDegMatch) {
+          const rawDeg = simpleDegMatch[1].toLowerCase();
+          if (rawDeg.includes('intermediate') || rawDeg.includes('internmediate')) extractedDegree = 'Intermediate';
+          else if (rawDeg.includes('fsc')) extractedDegree = 'FSc';
+          else if (rawDeg.includes('a-level') || rawDeg.includes('a level')) extractedDegree = 'A-Levels';
+          else if (rawDeg.includes('o-level') || rawDeg.includes('o level')) extractedDegree = 'O-Levels';
+          else if (rawDeg.includes('matric')) extractedDegree = 'Matriculation';
+          else if (rawDeg.includes('bscs')) extractedDegree = 'Bachelor of Science in Computer Science';
+          else if (rawDeg.includes('bachelor')) extractedDegree = 'Bachelor of Science';
+          else if (rawDeg.includes('master')) extractedDegree = 'Master of Science';
         }
       }
 
+      const fromToMatch = lastUserMessage.match(/\bfrom\s+(.+?)\s+(?:to|with|into)\s+(.+?)(?:\s+in\s+education|\s+section)?$/i);
+      const fromAtMatch = lastUserMessage.match(/\b(?:from|at)\s+([^,.:;]+?)(?:\s+(?:in|for|into)\s+(?:the\s+)?(?:education|resume|cv)(?:\s+section)?)?$/i);
+      const sepMatch = lastUserMessage.match(/\b(?:as|to|is|was|called|named|:|;|=)\s+([^,.:;]+?)(?:\s+(?:in|for|to|into)\s+(?:the\s+)?(?:education|resume|cv)(?:\s+section)?)?$/i);
+
+      if (fromToMatch) {
+        oldTargetName = fromToMatch[1].replace(/\b(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|name)\b/gi, '').trim();
+        newTargetName = fromToMatch[2].replace(/\b(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|name)\b/gi, '').trim();
+      } else if (fromAtMatch && fromAtMatch[1]) {
+        newTargetName = fromAtMatch[1].trim();
+      } else if (sepMatch && sepMatch[1] && !/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|school|education|degree)$/i.test(sepMatch[1].trim())) {
+        newTargetName = sepMatch[1].trim();
+      } else {
+        newTargetName = lastUserMessage
+          .replace(/\b(?:please\s+)?(?:add|insert|push|change|update|set|replace|put|rename|switch|i\s+have\s+done|i\s+haev\s+done|i\s+did|completed|studied|attended)\s+/i, '')
+          .replace(/\b(?:a|an|the|my|our|another|new|extra)\s+(?:college|collage|university|uni|intermediate|internmediate|school|education|degree)\s*(?:entry|item)?\s*/gi, '')
+          .replace(/\b(?:in|from|to|into|for)\s+(?:the\s+)?(?:education|resume|cv)\s*(?:section)?\s*/gi, '')
+          .replace(/\b(?:education|resume|cv)\s+section\s*/gi, '')
+          .replace(/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|internmediate|school)\s*(?:name)?\s*(?:as|to|is|was|called|named|:|;|=)\s*/i, '')
+          .replace(/\s+(?:as|in|to|into|for)\s+(?:a|an|the|my)?\s*(?:college|collage|university|uni|intermediate|internmediate|school)(?:\s+section)?$/i, '')
+          .replace(/^(?:a|an|the|my|our|another|new|extra)?\s*(?:college|collage|university|uni|intermediate|internmediate|school)\s+/i, '')
+          .replace(/\b(?:as|to|in|into|for)\s+(?:education|resume|section)\b/gi, '')
+          .trim();
+      }
+
+      if (newTargetName) {
+        newTargetName = newTargetName
+          .replace(/\b(?:in|from|to|into|for)\s+(?:the\s+)?(?:education|resume|cv)\s*(?:section)?\s*/gi, '')
+          .replace(/\b(?:education|resume|cv)\s+section\s*/gi, '')
+          .trim();
+        // Clean and format capitalization
+        newTargetName = newTargetName
+          .split(/\s+/)
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ')
+          .replace(/\bDj\b/g, 'DJ');
+      }
+
       if (newTargetName.length > 0 && !/\b(course|cert|certification|project|experience|skills|interests|bullet|point)\b/i.test(newTargetName)) {
-        const isCollegeType = /\b(college|collage|intermediate|preparatory|school|diploma)\b/i.test(lastMsgLower) ||
-          /\b(college|collage|intermediate|preparatory|school|diploma)\b/i.test(newTargetName) ||
-          /\b(college|collage|intermediate|preparatory|school|diploma)\b/i.test(oldTargetName);
+        const isCollegeType =
+          /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?levels?|o[- ]?levels?|fsc|matric)\b/i.test(lastMsgLower) ||
+          /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?levels?|o[- ]?levels?|fsc|matric)\b/i.test(newTargetName) ||
+          /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?levels?|o[- ]?levels?|fsc|matric)\b/i.test(oldTargetName);
 
         const currentEdu = cv.education ? [...cv.education] : [];
 
-        if (isExplicitAdd) {
-          // If an existing entry is a raw placeholder token, fill it; otherwise append a new entry!
-          const placeholderIdx = currentEdu.findIndex(e => isPlaceholderToken(e.institution));
-          if (placeholderIdx !== -1) {
-            currentEdu[placeholderIdx] = {
-              ...currentEdu[placeholderIdx],
-              institution: newTargetName,
-              degree: currentEdu[placeholderIdx].degree && !isPlaceholderToken(currentEdu[placeholderIdx].degree)
-                ? currentEdu[placeholderIdx].degree
-                : (isCollegeType ? 'Intermediate / Pre-Engineering' : 'Bachelor of Science'),
-            };
-          } else {
-            currentEdu.push({
-              institution: newTargetName,
-              degree: isCollegeType
-                ? (newTargetName.toLowerCase().includes('degree') ? 'Associate Degree in Commerce' : 'Intermediate / Pre-Engineering')
-                : 'Bachelor of Science',
-              start: isCollegeType ? '2018' : '2020',
-              end: isCollegeType ? '2020' : '2024',
-            });
-          }
-
-          const updatedCv: CvData = { ...cv, education: currentEdu };
-
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply: `Done — added ${newTargetName} to your education section.`,
-                isAutoFit: false,
-              },
-            });
-          }
-
-          return Response.json({
-            reply: `Done — added ${newTargetName} to your education section.`,
-            cv: updatedCv,
-          });
-        } else if (isExplicitChange) {
+        if (isCollegeType) {
+          // A candidate standardly has at most ONE secondary education tier (Intermediate / A-Levels / College / High School).
+          // Always replace the existing secondary education entry if one exists, rather than adding a second one on top!
           let targetIdx = -1;
           if (oldTargetName) {
             targetIdx = findBestMatchIndex(currentEdu, oldTargetName, e => `${e.institution} ${e.degree}`);
           }
           if (targetIdx === -1) {
-            if (isCollegeType) {
-              targetIdx = currentEdu.findIndex(e =>
-                /\b(college|collage|intermediate|preparatory|school|diploma|your college|nixor|premier)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
-              );
-              if (targetIdx === -1 && currentEdu.length > 1) {
-                targetIdx = 1;
-              }
-            } else {
-              targetIdx = currentEdu.findIndex(e =>
-                /\b(university|bachelor|master|degree|szabist|berkeley|harvard|indus|your university)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
-              );
-              if (targetIdx === -1 && currentEdu.length > 0) {
-                targetIdx = 0;
-              }
+            targetIdx = currentEdu.findIndex(e =>
+              /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|your college|nixor|premier|state college|a[- ]?level|o[- ]?level|fsc|matric)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
+            );
+            if (targetIdx === -1 && currentEdu.length > 1) {
+              targetIdx = 1;
             }
           }
 
@@ -989,17 +1003,21 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             currentEdu[targetIdx] = {
               ...currentEdu[targetIdx],
               institution: newTargetName,
+              degree: extractedDegree || currentEdu[targetIdx].degree || 'Intermediate',
             };
           } else {
             currentEdu.push({
               institution: newTargetName,
-              degree: isCollegeType ? 'Intermediate / Pre-Engineering' : 'Bachelor of Science',
-              start: isCollegeType ? '2018' : '2020',
-              end: isCollegeType ? '2020' : '2024',
+              degree: extractedDegree || (newTargetName.toLowerCase().includes('degree') ? 'Associate Degree in Commerce' : 'Intermediate'),
+              start: 'Jun 2018',
+              end: 'Jun 2020',
             });
           }
 
           const updatedCv: CvData = { ...cv, education: currentEdu };
+          const aiReply = extractedDegree
+            ? `I've updated your education to reflect your ${extractedDegree} at ${newTargetName}.`
+            : `I've updated your education to reflect your studies at ${newTargetName}.`;
 
           if (sessionId !== 'unknown') {
             await db.profileBuilderChatLog.create({
@@ -1007,14 +1025,65 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
                 sessionId,
                 userId: user?.id,
                 userMessage,
-                aiReply: `Done — updated your education to ${newTargetName}.`,
+                aiReply,
                 isAutoFit: false,
               },
             });
           }
 
           return Response.json({
-            reply: `Done — updated your education to ${newTargetName}.`,
+            reply: aiReply,
+            cv: updatedCv,
+          });
+        } else {
+          // University / Higher education entry
+          let targetIdx = -1;
+          if (oldTargetName) {
+            targetIdx = findBestMatchIndex(currentEdu, oldTargetName, e => `${e.institution} ${e.degree}`);
+          }
+          if (targetIdx === -1) {
+            targetIdx = currentEdu.findIndex(e =>
+              /\b(university|bachelor|master|degree|szabist|berkeley|harvard|indus|your university|fast|ned|nust|giki|iba)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
+            );
+            if (targetIdx === -1 && currentEdu.length > 0) {
+              targetIdx = 0;
+            }
+          }
+
+          if (targetIdx !== -1) {
+            currentEdu[targetIdx] = {
+              ...currentEdu[targetIdx],
+              institution: newTargetName,
+              degree: extractedDegree || currentEdu[targetIdx].degree || 'Bachelor of Science',
+            };
+          } else {
+            currentEdu.unshift({
+              institution: newTargetName,
+              degree: extractedDegree || 'Bachelor of Science',
+              start: 'Jun 2022',
+              end: 'Jun 2026',
+            });
+          }
+
+          const updatedCv: CvData = { ...cv, education: currentEdu };
+          const aiReply = extractedDegree
+            ? `I've updated your education to reflect your ${extractedDegree} at ${newTargetName}.`
+            : `I've updated your education to ${newTargetName}.`;
+
+          if (sessionId !== 'unknown') {
+            await db.profileBuilderChatLog.create({
+              data: {
+                sessionId,
+                userId: user?.id,
+                userMessage,
+                aiReply,
+                isAutoFit: false,
+              },
+            });
+          }
+
+          return Response.json({
+            reply: aiReply,
             cv: updatedCv,
           });
         }
@@ -1592,7 +1661,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     const defaultAdditional: CvData['additional'] = { skills: '', interests: '' };
 
     // Auto-fix: Ensure non-degree courses (Saylani, Coursera, Bootcamps, etc.) are in certifications, NOT education
-    const cleanEducation: CvData['education'] = [];
+    let cleanEducation: CvData['education'] = [];
     const extraCertifications: CvData['certifications'] = [];
 
     const isNonDegreeCourse = (e: CvData['education'][number]) => {
@@ -1608,7 +1677,9 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       );
     };
 
-    const isEduRemoval = /\b(remove|delete|drop|clear)\b.*?\b(education|educaton|university|college|school|bachelor|master|degree)\b/i.test(lastMsgLower);
+    const isEduRemoval =
+      /\b(remove|delete|drop|clear)\b.*?\b(education|educaton|university|college|school|bachelor|master|degree|a[- ]?levels?|o[- ]?levels?|intermediate|fsc)\b/i.test(lastMsgLower) ||
+      /\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\s+(?:a[- ]?levels?|o[- ]?levels?|intermediate|college|school|fsc|matric)\b/i.test(lastMsgLower);
     const isCertRemoval = /\b(remove|delete|drop|clear)\b.*?\b(cert|certification|certificate)s?\b/i.test(lastMsgLower);
 
     for (const edu of nextCv.education ?? []) {
@@ -1637,10 +1708,44 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
              (c.degree.toLowerCase().includes(prevEdu.degree.toLowerCase()) ||
               prevEdu.degree.toLowerCase().includes(c.degree.toLowerCase())))
           );
-          if (!alreadyExists) {
+          // CRITICAL: DO NOT resurrect an unedited secondary education entry (like Nixor College) if cleanEducation already has a secondary education entry!
+          const isPrevSecondary = /\b(college|intermediate|a[- ]?level|o[- ]?level|fsc|matric|nixor|preparatory)\b/i.test(`${prevEdu.institution || ''} ${prevEdu.degree || ''}`);
+          const hasSecondaryNow = cleanEducation.some(c => /\b(college|intermediate|a[- ]?level|o[- ]?level|fsc|matric|nixor|preparatory)\b/i.test(`${c.institution || ''} ${c.degree || ''}`));
+          if (!alreadyExists && !(isPrevSecondary && hasSecondaryNow)) {
             cleanEducation.push(prevEdu);
           }
         });
+      }
+    }
+
+    // Secondary Education Tier Deduplication & Consolidation Guardrail:
+    // A resume standardly contains at most ONE secondary education entry (Intermediate / A-Levels / College / High School).
+    // If cleanEducation contains multiple secondary entries (e.g. user-provided DJ Science/Beaconhouse AND placeholder Nixor College),
+    // purge the template/placeholder entry!
+    const isSecondaryEduEntry = (e: CvData['education'][number]) =>
+      /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?levels?|o[- ]?levels?|fsc|matric|nixor|premier)\b/i.test(
+        `${e.institution || ''} ${e.degree || ''}`
+      );
+    const isTemplateCollegeEntry = (e: CvData['education'][number]) =>
+      /\b(nixor\s+college|nixor|state\s+college\s+preparatory|your\s+college|college\s+name)\b/i.test(
+        `${e.institution || ''}`
+      );
+
+    const isNegationOfSecondary = /\b(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never|no|without)\s+(?:done\s+)?(?:a[- ]?levels?|intermediate|internmediate|college|fsc)\b/i.test(lastMsgLower);
+    if (isNegationOfSecondary) {
+      cleanEducation = cleanEducation.filter(e => {
+        if (/\ba[- ]?levels?\b/i.test(lastMsgLower) && /\ba[- ]?levels?\b/i.test(`${e.degree || ''} ${e.institution || ''}`)) return false;
+        if (/\bintermediate\b/i.test(lastMsgLower) && /\bintermediate\b/i.test(`${e.degree || ''} ${e.institution || ''}`)) return false;
+        if (isTemplateCollegeEntry(e)) return false;
+        return true;
+      });
+    } else {
+      const secondaryEntries = cleanEducation.filter(isSecondaryEduEntry);
+      if (secondaryEntries.length > 1) {
+        const hasRealCollege = secondaryEntries.some(e => !isTemplateCollegeEntry(e));
+        if (hasRealCollege) {
+          cleanEducation = cleanEducation.filter(e => !isTemplateCollegeEntry(e));
+        }
       }
     }
 
