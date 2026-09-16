@@ -96,51 +96,69 @@ export interface CvData {
   };
 }
 
-// The ported LMS samples store bold as "**markdown**". The Studio edits/renders
-// rich text as HTML, so convert those to <strong> once on load.
-const mdBoldToHtml = (s: string): string =>
-  (s || '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+// Strips leading bullet symbols (e.g. "•", "-", "*", "–", "—") and leading whitespace from a line.
+export const cleanSingleBulletLine = (line: string): string => {
+  if (!line) return '';
+  return line
+    .replace(/^(?:[\s\u2022\u2023\u2043\u25aa\u25b8\u25cf\u25cb\u25e6\u00b7\*\u2013\u2014]|-(?=\s|$))+/, '')
+    .trim();
+};
 
-// The bundled sample templates (resumeSamples.ts) still store projects and
-// workshops in the OLDER { title, technologies, description } / { title,
-// description } shape — merging their fields into `content` here, once on
-// load, means the sample data file itself never needs touching. Already-
-// merged data (a real `content` string) passes through unchanged.
+// Strips leading bullet symbols from multiline string bullet blocks.
+export const cleanBulletText = (text: string): string => {
+  if (!text) return '';
+  return text
+    .split('\n')
+    .map(cleanSingleBulletLine)
+    .join('\n');
+};
+
+// Converts markdown bold syntax ("**bold**" or "__bold__") to <strong> HTML.
+export const mdBoldToHtml = (s: string): string =>
+  (s || '')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+// Merges older project shapes into a single `content` field while converting markdown bold & stripping leading bullets.
 function mergeProjectShape(raw: any): string {
-  if (typeof raw?.content === 'string') return raw.content;
-  const title = mdBoldToHtml(raw?.title || '');
+  if (typeof raw?.content === 'string') {
+    return cleanSingleBulletLine(mdBoldToHtml(raw.content));
+  }
+  const title = mdBoldToHtml(cleanSingleBulletLine(raw?.title || ''));
   const tech = mdBoldToHtml(raw?.technologies || '');
-  const desc = mdBoldToHtml(raw?.description || '');
+  const desc = mdBoldToHtml(cleanSingleBulletLine(raw?.description || ''));
   let out = title ? `<strong>${title}</strong>` : '';
   if (tech) out += out ? ` (${tech})` : `(${tech})`;
   if (desc) out += out ? ` – ${desc}` : desc;
-  return out;
+  return cleanSingleBulletLine(out);
 }
 
 function mergeWorkshopShape(raw: any): string {
-  if (typeof raw?.content === 'string') return raw.content;
-  const title = mdBoldToHtml(raw?.title || '');
-  const desc = mdBoldToHtml(raw?.description || '');
+  if (typeof raw?.content === 'string') {
+    return cleanSingleBulletLine(mdBoldToHtml(raw.content));
+  }
+  const title = mdBoldToHtml(cleanSingleBulletLine(raw?.title || ''));
+  const desc = mdBoldToHtml(cleanSingleBulletLine(raw?.description || ''));
   let out = title ? `<strong>${title}</strong>` : '';
   if (desc) out += out ? `: ${desc}` : desc;
-  return out;
+  return cleanSingleBulletLine(out);
 }
 
 /** Converts a sample CV's "**bold**" markdown to <strong> HTML in the fields
- *  that use it (bullets, descriptions, skills/interests), and migrates
- *  older-shape projects/workshops into their single merged `content` field. */
+ *  that use it (bullets, descriptions, skills/interests), strips leading bullet symbols,
+ *  and migrates older-shape projects/workshops into their single merged `content` field. */
 export function cvMarkdownToHtml(cv: CvData): CvData {
   return {
     ...cv,
-    summary: cv.summary ? mdBoldToHtml(cv.summary) : undefined,
+    summary: cv.summary ? cleanBulletText(mdBoldToHtml(cv.summary)) : undefined,
     workExperience: (cv.workExperience || []).map((w) => ({
       ...w,
-      bullets: mdBoldToHtml(w.bullets || ''),
+      bullets: cleanBulletText(mdBoldToHtml(w.bullets || '')),
     })),
     projects: (cv.projects || []).map((p) => ({
       ...p,
       content: mergeProjectShape(p),
-      bullets: p.bullets ? mdBoldToHtml(p.bullets) : undefined,
+      bullets: p.bullets ? cleanBulletText(mdBoldToHtml(p.bullets)) : undefined,
     })),
     workshops: (cv.workshops || []).map((w) => ({
       ...w,

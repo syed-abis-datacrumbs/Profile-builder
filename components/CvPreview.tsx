@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CvData, CvPersonalInfo, CvProject } from '../lib/cvTypes';
+import { CvData, CvPersonalInfo, CvProject, cleanSingleBulletLine, cleanBulletText, mdBoldToHtml } from '../lib/cvTypes';
 
 function normalizeUrl(url: string): string {
   const trimmed = url.trim();
@@ -646,15 +646,18 @@ function CvPreviewBase({
               )}
               {lines.length > 0 && (
                 <div className="mt-0.5 space-y-0.5" data-bullet-group={`we-${i}`}>
-                  {lines.map((line, j) => (
-                    <Bullet key={j} marker={job.bulletStyle === 'number' ? `${j + 1}.` : defaultBulletMarker}>
-                      {editable ? (
-                        <RichText block html={line} placeholder="Bullet point" onCommit={(v) => setBulletLine(i, j, v)} bullet={keysFor(i, j)} />
-                      ) : (
-                        <Html html={line} />
-                      )}
-                    </Bullet>
-                  ))}
+                  {lines.map((rawLine, j) => {
+                    const line = cleanSingleBulletLine(mdBoldToHtml(rawLine));
+                    return (
+                      <Bullet key={j} marker={job.bulletStyle === 'number' ? `${j + 1}.` : defaultBulletMarker}>
+                        {editable ? (
+                          <RichText block html={line} placeholder="Bullet point" onCommit={(v) => setBulletLine(i, j, v)} bullet={keysFor(i, j)} />
+                        ) : (
+                          <Html html={line} />
+                        )}
+                      </Bullet>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -766,24 +769,27 @@ function CvPreviewBase({
                   </div>
                   {proj.bullets ? (
                     <div className="mt-0.5 space-y-0.5">
-                      {proj.bullets.split('\n').map((line, bj) => (
-                        <Bullet key={bj} marker={defaultBulletMarker}>
-                          {editable ? (
-                            <RichText
-                              block
-                              html={line}
-                              placeholder="Bullet point"
-                              onCommit={(v) => {
-                                const bLines = (proj.bullets || '').split('\n');
-                                bLines[bj] = v;
-                                setProj(i, { bullets: bLines.join('\n') });
-                              }}
-                            />
-                          ) : (
-                            <Html html={line} />
-                          )}
-                        </Bullet>
-                      ))}
+                      {proj.bullets.split('\n').map((rawLine, bj) => {
+                        const line = cleanSingleBulletLine(mdBoldToHtml(rawLine));
+                        return (
+                          <Bullet key={bj} marker={defaultBulletMarker}>
+                            {editable ? (
+                              <RichText
+                                block
+                                html={line}
+                                placeholder="Bullet point"
+                                onCommit={(v) => {
+                                  const bLines = (proj.bullets || '').split('\n');
+                                  bLines[bj] = cleanSingleBulletLine(mdBoldToHtml(v));
+                                  setProj(i, { bullets: bLines.join('\n') });
+                                }}
+                              />
+                            ) : (
+                              <Html html={line} />
+                            )}
+                          </Bullet>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="mt-0.5">
@@ -791,14 +797,14 @@ function CvPreviewBase({
                         {editable ? (
                           <RichText
                             block
-                            html={proj.content}
+                            html={cleanSingleBulletLine(mdBoldToHtml(proj.content))}
                             placeholder="Project description / bullet points"
                             onCommit={(v) => setProj(i, v)}
                             bullet={projKeysFor(i)}
                             onEmptyBackspace={() => projectEmptyBackspace(i)}
                           />
                         ) : (
-                          <Html html={proj.content} />
+                          <Html html={cleanSingleBulletLine(mdBoldToHtml(proj.content))} />
                         )}
                       </Bullet>
                     </div>
@@ -810,14 +816,14 @@ function CvPreviewBase({
                     {editable ? (
                       <RichText
                         block
-                        html={proj.content}
+                        html={cleanSingleBulletLine(mdBoldToHtml(proj.content))}
                         placeholder="Project Title (Technologies) – Description"
                         onCommit={(v) => setProj(i, v)}
                         bullet={projKeysFor(i)}
                         onEmptyBackspace={() => projectEmptyBackspace(i)}
                       />
                     ) : (
-                      <Html html={proj.content} />
+                      <Html html={cleanSingleBulletLine(mdBoldToHtml(proj.content))} />
                     )}
                   </div>
                 </Bullet>

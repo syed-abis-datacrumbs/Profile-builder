@@ -273,7 +273,8 @@ export function ResumeRoute() {
         onClose={() => setIsImportOpen(false)}
         onImportSuccess={(imported) => {
           if (imported.cvData) {
-            setStudioCv(imported.cvData);
+            const cleanCv = cvMarkdownToHtml(imported.cvData);
+            setStudioCv(cleanCv);
             setStudioLabel('Imported Resume');
             setResumeMode('studio');
 
@@ -282,15 +283,15 @@ export function ResumeRoute() {
               ...prev,
               personalInfo: {
                 ...prev.personalInfo,
-                fullName: imported.cvData.personalInfo?.fullName || prev.personalInfo.fullName,
-                email: imported.cvData.personalInfo?.email || prev.personalInfo.email,
-                phone: imported.cvData.personalInfo?.phone || prev.personalInfo.phone,
-                linkedin: imported.cvData.personalInfo?.linkedin || prev.personalInfo.linkedin,
-                github: imported.cvData.personalInfo?.github || prev.personalInfo.github,
-                bio: imported.cvData.summary || prev.personalInfo.bio,
+                fullName: cleanCv.personalInfo?.fullName || prev.personalInfo.fullName,
+                email: cleanCv.personalInfo?.email || prev.personalInfo.email,
+                phone: cleanCv.personalInfo?.phone || prev.personalInfo.phone,
+                linkedin: cleanCv.personalInfo?.linkedin || prev.personalInfo.linkedin,
+                github: cleanCv.personalInfo?.github || prev.personalInfo.github,
+                bio: cleanCv.summary || prev.personalInfo.bio,
               },
-              skills: imported.cvData.additional?.skills
-                ? imported.cvData.additional.skills.split(',').map((s) => s.trim()).filter(Boolean)
+              skills: cleanCv.additional?.skills
+                ? cleanCv.additional.skills.split(',').map((s) => s.trim()).filter(Boolean)
                 : prev.skills,
             }));
           }

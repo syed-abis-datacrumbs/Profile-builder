@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { CvData, CvProject } from '../../../lib/cvTypes';
+import { cvMarkdownToHtml, type CvData, type CvProject } from '../../../lib/cvTypes';
 import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
@@ -2442,10 +2442,11 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     }
 
     safeCv.projects = (safeCv.projects ?? []).map(syncProjectContent);
+    const finalCv = cvMarkdownToHtml(safeCv);
 
     return Response.json({
       reply,
-      cv: safeCv,
+      cv: finalCv,
       patches: Array.isArray(parsed?.patches) ? parsed.patches : undefined,
       usage: {
         promptTokens,
