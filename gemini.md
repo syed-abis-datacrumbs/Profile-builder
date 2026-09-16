@@ -268,6 +268,18 @@ MOMENTUM is an all-in-one career document builder with three main studio workflo
   1. `/api/payment/coupon` and `/api/payment/verify`: Preserve exact `{ status: 'APPROVED' | 'REJECTED', message: string }` contract as required domain logic that `PaymentModal.tsx` depends on.
   2. `/api/resume-chat`, `/api/github-chat`, and `/api/linkedin-rich-chat`: Excluded from standard `apiError` / `apiServerError` response helpers. These AI chat endpoints intentionally return HTTP 200 with `{ error: string }` or `{ reply: string }` so that `ResumeChatStudio`, `GithubChatStudio`, and `LinkedinChatStudio` render inline conversational warning/limit bubbles without triggering fetch rejections or treating the turn as an aborted network request.
 
+### ⏪ Studio Undo/Redo Standardization (`hooks/useUndoRedo.ts`)
+- **Convention:** Do NOT write duplicate `past`/`future` state arrays, `.slice(-99)` buffer logic, or `window.addEventListener('keydown')` inside studio components. Use `useUndoRedo<T>(state, onChange, options)` from `@/hooks/useUndoRedo`.
+- **Minimal API Surface:** Returns strictly `{ canUndo, canRedo, undo, redo, recordChange, clearHistory }`.
+- **Keyboard Shortcuts:** Encapsulates `Ctrl+Z` / `Cmd+Z` (Undo) and `Ctrl+Y` / `Cmd+Y` / `Ctrl+Shift+Z` (Redo). Excludes standard form inputs (`HTMLInputElement` / `HTMLTextAreaElement`) while allowing `contentEditable` preview fields to trigger custom state undo/redo. Always returns window listener cleanup on unmount.
+- **Studio Wrappers:**
+  - In `ResumeChatStudio`: `onUndo` and `onRedo` options invoke `setRevision((r) => r + 1)` so memoized `CvPreview` HTML blocks re-render upon state restore. Domain-specific side effects like `setAtsScore(null)` stay in the studio wrapper functions (`recordChange` for field blur without remount, `external` for structural/AI changes with remount).
+  - In `GithubChatStudio` and `LinkedinChatStudio`: Standard `useUndoRedo(state, onChange)` is sufficient with zero extra remount options needed.
+
+### 📄 Admin Panel Resume Preview Data Normalization (`lib/admin/previewNormalizers.ts`)
+- **Gotcha:** `normalizeCvData` sanitizes raw/legacy JSON snapshots for read-only preview in `LlmTurnInspector.tsx` and `TurnPreviewModal.tsx`. Because `CvPreview` hides the summary when `!editable && (!data.summary || isBlank(data.summary))`, any normalizer constructing a `CvData` object MUST preserve `summary` (checking `raw.summary`, `raw.personalInfo.summary`, `raw.professionalSummary`, or `raw.objective`).
+- **Fix:** `normalizeCvData` extracts and maps `summary`, `theme`, `resumeName`, and bullet styles (`projectsBulletStyle`, `workshopsBulletStyle`) into the reconstructed `CvData` object before running `cvMarkdownToHtml(cv)`. `LlmTurnInspector` also explicitly diffs the `Summary` field across conversation turns.
+
 ---
 
 ## 5. Verification Workflow

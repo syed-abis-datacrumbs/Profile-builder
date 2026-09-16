@@ -184,7 +184,22 @@ export function LlmTurnInspector({
         }
       }
 
-      // 3. Skills
+      // 3. Summary
+      const sumPrev = prevData.summary || prevData.personalInfo?.summary || '';
+      const sumCurr = currData.summary || currData.personalInfo?.summary || '';
+      if (sumPrev !== sumCurr) {
+        changes.push({
+          section: 'Summary',
+          type: !sumPrev ? 'added' : !sumCurr ? 'removed' : 'modified',
+          summary: 'Professional summary updated',
+          items: [
+            ...(sumPrev ? [`Was: "${sumPrev.slice(0, 100)}${sumPrev.length > 100 ? '…' : ''}"`] : []),
+            ...(sumCurr ? [`Now: "${sumCurr.slice(0, 100)}${sumCurr.length > 100 ? '…' : ''}"`] : []),
+          ],
+        });
+      }
+
+      // 4. Skills
       const sPrev = prevData.additional?.skills || '';
       const sCurr = currData.additional?.skills || '';
       if (sPrev !== sCurr) {

@@ -38,6 +38,7 @@ import {
   Copy,
 } from 'lucide-react';
 import toast from '@/lib/toast';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { LinkedinPremiumBadge } from './icons';
 import {
   LinkedinRichProfile,
@@ -374,60 +375,23 @@ export const LinkedinChatStudio: React.FC<{
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Undo / Redo history
-  const [past, setPast] = useState<LinkedinRichProfile[]>([]);
-  const [future, setFuture] = useState<LinkedinRichProfile[]>([]);
-
-  const handleUndo = useCallback(() => {
-    if (past.length === 0) return;
-    const prev = past[past.length - 1];
-    setPast((p) => p.slice(0, -1));
-    setFuture((f) => [profile, ...f]);
-    onChange(prev);
-  }, [past, profile, onChange]);
-
-  const handleRedo = useCallback(() => {
-    if (future.length === 0) return;
-    const next = future[0];
-    setFuture((f) => f.slice(1));
-    setPast((p) => [...p, profile]);
-    onChange(next);
-  }, [future, profile, onChange]);
-
-  // Keyboard shortcut listener (Ctrl+Z / Ctrl+Y / Cmd+Z)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
-      if (isInput) return;
-
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        if (e.shiftKey) {
-          e.preventDefault();
-          handleRedo();
-        } else {
-          e.preventDefault();
-          handleUndo();
-        }
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-        e.preventDefault();
-        handleRedo();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleUndo, handleRedo]);
+  // Undo/Redo history via useUndoRedo hook
+  const {
+    canUndo,
+    canRedo,
+    undo: handleUndo,
+    redo: handleRedo,
+    recordChange,
+  } = useUndoRedo(profile, onChange);
 
   const updateProfile = (next: LinkedinRichProfile) => {
-    setPast((p) => [...p.slice(-99), profile]);
-    setFuture([]);
     const resolvedNext = { ...next };
     const coverId = resolvedNext.coverTemplateId;
     const identityChanged =
       resolvedNext.fullName !== profile.fullName || resolvedNext.title !== profile.title || resolvedNext.currentCompany !== profile.currentCompany;
     const art = coverId ? COVER_ART[coverId] : undefined;
     if (!identityChanged || !art) {
-      onChange(resolvedNext);
+      recordChange(resolvedNext);
       return;
     }
     const resyncedCoverFieldValues = { ...resolvedNext.coverFieldValues };
@@ -436,7 +400,7 @@ export const LinkedinChatStudio: React.FC<{
       else if (field.defaultFrom === 'currentPosition') resyncedCoverFieldValues[field.id] = resolvedNext.title;
       else if (field.defaultFrom === 'currentCompany') resyncedCoverFieldValues[field.id] = resolvedNext.currentCompany;
     }
-    onChange({ ...resolvedNext, coverFieldValues: resyncedCoverFieldValues });
+    recordChange({ ...resolvedNext, coverFieldValues: resyncedCoverFieldValues });
   };
 
   const set = (patch: Partial<LinkedinRichProfile>) => updateProfile({ ...profile, ...patch });
@@ -1059,8 +1023,8 @@ export const LinkedinChatStudio: React.FC<{
                 type="button"
                 title="Undo (Ctrl+Z)"
                 onMouseDown={(e) => { e.preventDefault(); handleUndo(); }}
-                disabled={past.length === 0}
-                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${past.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+                disabled={!canUndo}
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${!canUndo ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
               >
                 <Undo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
@@ -1068,8 +1032,8 @@ export const LinkedinChatStudio: React.FC<{
                 type="button"
                 title="Redo (Ctrl+Y)"
                 onMouseDown={(e) => { e.preventDefault(); handleRedo(); }}
-                disabled={future.length === 0}
-                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${future.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+                disabled={!canRedo}
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${!canRedo ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
               >
                 <Redo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>

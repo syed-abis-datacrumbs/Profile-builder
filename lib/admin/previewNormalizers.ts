@@ -167,14 +167,32 @@ export function normalizeCvData(raw: any): CvData {
     skillsStr = raw.skills;
   }
 
+  let rawSummary: string | undefined;
+  if (typeof raw.summary === 'string' && raw.summary.trim()) {
+    rawSummary = raw.summary;
+  } else if (Array.isArray(raw.summary) && raw.summary.length > 0) {
+    rawSummary = raw.summary.map((s: any) => String(s || '')).filter(Boolean).join(' ');
+  } else if (typeof raw.personalInfo?.summary === 'string' && raw.personalInfo.summary.trim()) {
+    rawSummary = raw.personalInfo.summary;
+  } else if (typeof raw.professionalSummary === 'string' && raw.professionalSummary.trim()) {
+    rawSummary = raw.professionalSummary;
+  } else if (typeof raw.objective === 'string' && raw.objective.trim()) {
+    rawSummary = raw.objective;
+  }
+
   const cv: CvData = {
     cvType: raw.cvType === 'student' ? 'student' : 'professional',
+    theme: raw.theme,
+    resumeName: raw.resumeName ? String(raw.resumeName) : undefined,
+    summary: rawSummary,
     personalInfo,
     education,
     workExperience,
     projects,
+    projectsBulletStyle: raw.projectsBulletStyle === 'number' ? 'number' : raw.projectsBulletStyle === 'bullet' ? 'bullet' : undefined,
     certifications,
     workshops: workshops.length > 0 ? workshops : undefined,
+    workshopsBulletStyle: raw.workshopsBulletStyle === 'number' ? 'number' : raw.workshopsBulletStyle === 'bullet' ? 'bullet' : undefined,
     additional: {
       skills: skillsStr,
       interests: String(raw.additional?.interests || raw.interests || ''),

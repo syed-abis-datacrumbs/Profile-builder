@@ -35,6 +35,7 @@ import { PaymentModal } from './PaymentModal';
 import { MobileChatWidget } from './MobileChatWidget';
 import { ImportButton } from './ImportButton';
 import toast from '@/lib/toast';
+import { useUndoRedo } from '@/hooks/useUndoRedo';
 
 // Blank breathing room reserved at the BOTTOM of every page and the TOP of
 // every continuation page (page 2+), so content never runs flush to a page
@@ -225,48 +226,35 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  // Real undo/redo history of CvData snapshots. document.execCommand('undo')
-  // relies on the browser's native contentEditable edit history, which never
-  // sees these changes — fields commit via React state on blur
-  // (dangerouslySetInnerHTML), and structural changes (bullet style, AI
-  // edits, cvType) go through `external` directly, none of which registers
-  // as native browser input history. So Undo/Redo need their own stack.
-  const [past, setPast] = useState<CvData[]>([]);
-  const [future, setFuture] = useState<CvData[]>([]);
+  // Undo/Redo history via useUndoRedo hook
+  const {
+    canUndo,
+    canRedo,
+    undo: handleUndo,
+    redo: handleRedo,
+    recordChange: pushHistory,
+  } = useUndoRedo(cv, onChange, {
+    onUndo: () => setRevision((r) => r + 1),
+    onRedo: () => setRevision((r) => r + 1),
+  });
 
   // Ordinary field edits (typing commits on blur, bullet Enter/Backspace/
   // paste) — one history entry per commit, not per keystroke, since RichText
   // only calls onChange on blur. No remount: keeps whatever field the user
   // is still focused in from being ripped out mid-edit.
-  //
-  // Wrapped in useCallback (keyed on `cv`/`onChange`, not recreated on
-  // every render) so this stays referentially stable whenever `cv` itself
-  // hasn't changed. CvPreview is React.memo'd on its `data`/`onChange`
-  // props specifically so unrelated Studio re-renders (chat input, the
-  // page-break ResizeObserver, ATS popover, etc.) don't touch it — but a
-  // fresh `recordChange` function every render defeated that: React saw
-  // `onChange` as "changed" every time and re-rendered CvPreview anyway,
-  // which re-applies `dangerouslySetInnerHTML` and silently wipes out any
-  // direct DOM edit (like a manual text-selection delete) made in the
-  // brief window before that field's next blur/commit — proven live: a
-  // correct deletion was reverted ~13ms later by exactly this cascade.
   const recordChange = useCallback(
     (next: CvData) => {
-      setPast((p) => [...p.slice(-99), cv]);
-      setFuture([]);
-      onChange(next);
+      pushHistory(next);
       setAtsScore(null);
     },
-    [cv, onChange]
+    [pushHistory]
   );
 
   // Structural changes (toolbar toggles, AI-generated content, cvType
   // switch) — these replace content the currently-focused field doesn't
   // own, so force a remount to refresh every field's displayed HTML.
   const external = (next: CvData) => {
-    setPast((p) => [...p.slice(-99), cv]);
-    setFuture([]);
-    onChange(next);
+    pushHistory(next);
     setRevision((r) => r + 1);
     setAtsScore(null);
   };
@@ -292,47 +280,6 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     }
   };
 
-  const handleUndo = useCallback(() => {
-    if (past.length === 0) return;
-    const prev = past[past.length - 1];
-    setPast((p) => p.slice(0, -1));
-    setFuture((f) => [cv, ...f]);
-    onChange(prev);
-    setRevision((r) => r + 1);
-  }, [past, cv, onChange]);
-
-  const handleRedo = useCallback(() => {
-    if (future.length === 0) return;
-    const next = future[0];
-    setFuture((f) => f.slice(1));
-    setPast((p) => [...p, cv]);
-    onChange(next);
-    setRevision((r) => r + 1);
-  }, [future, cv, onChange]);
-
-  // Keyboard shortcut listener (Ctrl+Z / Ctrl+Y / Cmd+Z)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
-      if (isInput) return;
-
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        if (e.shiftKey) {
-          e.preventDefault();
-          handleRedo();
-        } else {
-          e.preventDefault();
-          handleUndo();
-        }
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-        e.preventDefault();
-        handleRedo();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleUndo, handleRedo]);
 
   const [fmt, setFmt] = useState({ bold: false, italic: false, underline: false, strikethrough: false });
   const refreshFmt = () => {
@@ -1386,8 +1333,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 type="button"
                 title="Undo (Ctrl+Z)"
                 onMouseDown={(e) => { e.preventDefault(); handleUndo(); }}
-                disabled={past.length === 0}
-                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${past.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+                disabled={!canUndo}
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${!canUndo ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
               >
                 <Undo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
@@ -1395,8 +1342,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 type="button"
                 title="Redo (Ctrl+Y)"
                 onMouseDown={(e) => { e.preventDefault(); handleRedo(); }}
-                disabled={future.length === 0}
-                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${future.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+                disabled={!canRedo}
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${!canRedo ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
               >
                 <Redo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
