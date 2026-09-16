@@ -387,6 +387,34 @@ export async function POST(request: Request) {
     const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content ?? '';
     const lastMsgLower = lastUserMessage.toLowerCase();
 
+    // Helper to reliably record fast-path turns with full structured snapshots in the database for the Admin Inspector
+    const logFastPathTurn = async (aiReply: string, updatedCv: CvData, interceptorModel = 'fast-path-interceptor') => {
+      if (sessionId === 'unknown') return;
+      try {
+        await db.profileBuilderChatLog.create({
+          data: {
+            sessionId,
+            builderType: 'resume',
+            userId: user?.id,
+            userMessage,
+            aiReply,
+            isAutoFit,
+            rawOutput: {
+              reply: aiReply,
+              cv: updatedCv,
+            } as unknown as Prisma.InputJsonValue,
+            rawText: aiReply,
+            parseSuccess: true,
+            model: interceptorModel,
+            tokens: 0,
+            latencyMs: 0,
+          },
+        });
+      } catch (logErr) {
+        console.error(`[ProfileBuilderChatLog ${interceptorModel} Error]:`, logErr);
+      }
+    };
+
     // ── Guidance / Informational Query Interceptor ────────────────────────
     // When the user asks what to provide, how to start, or asks for guidance,
     // NEVER overwrite placeholders or generate synthetic profiles. Return helpful advice with cv 100% UNCHANGED.
@@ -419,31 +447,7 @@ export async function POST(request: Request) {
 
 You can share your information all at once or tell me step-by-step (e.g., *"My name is Alex and I'm a Frontend Developer"* or *"Add my degree: BSCS from UC Berkeley, 2020-2024"*), and I will update your resume in real time!`;
 
-      if (sessionId !== 'unknown') {
-        try {
-          await db.profileBuilderChatLog.create({
-            data: {
-              sessionId,
-              builderType: 'resume',
-              userId: user?.id,
-              userMessage,
-              aiReply: guidanceReply,
-              isAutoFit,
-              rawOutput: {
-                reply: guidanceReply,
-                cv,
-              } as unknown as Prisma.InputJsonValue,
-              rawText: guidanceReply,
-              parseSuccess: true,
-              model: 'guidance-interceptor',
-              tokens: 0,
-              latencyMs: 0,
-            },
-          });
-        } catch (logErr) {
-          console.error('[ProfileBuilderChatLog Error]:', logErr);
-        }
-      }
+      await logFastPathTurn(guidanceReply, cv, 'guidance-interceptor');
 
       return Response.json({
         reply: guidanceReply,
@@ -552,21 +556,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             ...cv,
             certifications: currentCerts,
           };
+          const aiReply = `Done — updated your certifications to ${certName} from ${certOrg}.`;
 
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply: `Done — updated your certifications to ${certName} from ${certOrg}.`,
-                isAutoFit: false,
-              },
-            });
-          }
+          await logFastPathTurn(aiReply, updatedCv, 'certifications-interceptor');
 
           return Response.json({
-            reply: `Done — updated your certifications to ${certName} from ${certOrg}.`,
+            reply: aiReply,
             cv: updatedCv,
           });
         }
@@ -585,19 +580,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             ...cv,
             [cvField]: [],
           };
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply: `Done — removed the ${key} section from your resume.`,
-                isAutoFit: false,
-              },
-            });
-          }
+          const aiReply = `Done — removed the ${key} section from your resume.`;
+
+          await logFastPathTurn(aiReply, updatedCv, 'section-removal-interceptor');
+
           return Response.json({
-            reply: `Done — removed the ${key} section from your resume.`,
+            reply: aiReply,
             cv: updatedCv,
           });
         }
@@ -652,20 +640,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             const updatedEdu = cv.education.filter((_, i) => i !== matchIdx);
             const removedName = removedEdu.institution || 'education entry';
             const updatedCv: CvData = { ...cv, education: updatedEdu };
+            const aiReply = `Done — removed ${removedName} from your education section.`;
 
-            if (sessionId !== 'unknown') {
-              await db.profileBuilderChatLog.create({
-                data: {
-                  sessionId,
-                  userId: user?.id,
-                  userMessage,
-                  aiReply: `Done — removed ${removedName} from your education section.`,
-                  isAutoFit: false,
-                },
-              });
-            }
+            await logFastPathTurn(aiReply, updatedCv, 'named-removal-interceptor');
+
             return Response.json({
-              reply: `Done — removed ${removedName} from your education section.`,
+              reply: aiReply,
               cv: updatedCv,
             });
           }
@@ -677,20 +657,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           if (matchIdx !== -1) {
             const updatedProj = cv.projects.filter((_, i) => i !== matchIdx);
             const updatedCv: CvData = { ...cv, projects: updatedProj };
+            const aiReply = `Done — removed project from your resume.`;
 
-            if (sessionId !== 'unknown') {
-              await db.profileBuilderChatLog.create({
-                data: {
-                  sessionId,
-                  userId: user?.id,
-                  userMessage,
-                  aiReply: `Done — removed project from your resume.`,
-                  isAutoFit: false,
-                },
-              });
-            }
+            await logFastPathTurn(aiReply, updatedCv, 'named-removal-interceptor');
+
             return Response.json({
-              reply: `Done — removed project from your resume.`,
+              reply: aiReply,
               cv: updatedCv,
             });
           }
@@ -704,20 +676,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             const updatedCerts = cv.certifications.filter((_, i) => i !== matchIdx);
             const removedName = removedCert.name || 'certification';
             const updatedCv: CvData = { ...cv, certifications: updatedCerts };
+            const aiReply = `Done — removed ${removedName} from your certifications.`;
 
-            if (sessionId !== 'unknown') {
-              await db.profileBuilderChatLog.create({
-                data: {
-                  sessionId,
-                  userId: user?.id,
-                  userMessage,
-                  aiReply: `Done — removed ${removedName} from your certifications.`,
-                  isAutoFit: false,
-                },
-              });
-            }
+            await logFastPathTurn(aiReply, updatedCv, 'named-removal-interceptor');
+
             return Response.json({
-              reply: `Done — removed ${removedName} from your certifications.`,
+              reply: aiReply,
               cv: updatedCv,
             });
           }
@@ -731,20 +695,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             const updatedExp = cv.workExperience.filter((_, i) => i !== matchIdx);
             const removedName = removedExp.company || 'work experience';
             const updatedCv: CvData = { ...cv, workExperience: updatedExp };
+            const aiReply = `Done — removed ${removedName} from your work experience.`;
 
-            if (sessionId !== 'unknown') {
-              await db.profileBuilderChatLog.create({
-                data: {
-                  sessionId,
-                  userId: user?.id,
-                  userMessage,
-                  aiReply: `Done — removed ${removedName} from your work experience.`,
-                  isAutoFit: false,
-                },
-              });
-            }
+            await logFastPathTurn(aiReply, updatedCv, 'named-removal-interceptor');
+
             return Response.json({
-              reply: `Done — removed ${removedName} from your work experience.`,
+              reply: aiReply,
               cv: updatedCv,
             });
           }
@@ -791,20 +747,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         workExperience: updatedWorkExperience,
       };
 
-      if (sessionId !== 'unknown') {
-        await db.profileBuilderChatLog.create({
-          data: {
-            sessionId,
-            userId: user?.id,
-            userMessage,
-            aiReply: "I've removed all numbers and percentages from your work experience while keeping your bullet points strong and professional.",
-            isAutoFit: false,
-          },
-        });
-      }
+      const aiReply = "I've removed all numbers and percentages from your work experience while keeping your bullet points strong and professional.";
+
+      await logFastPathTurn(aiReply, updatedCv, 'numbers-removal-interceptor');
 
       return Response.json({
-        reply: "I've removed all numbers and percentages from your work experience while keeping your bullet points strong and professional.",
+        reply: aiReply,
         cv: updatedCv,
       });
     }
@@ -911,17 +859,8 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             const targetLabel = currentEdu[targetIdx].institution || (/\b(intermediate|internmediate)\b/i.test(lastMsgLower) ? 'intermediate' : 'education');
             const aiReply = `Done — updated your ${targetLabel} duration to ${formattedStart} – ${formattedEnd}.`;
 
-            if (sessionId !== 'unknown') {
-              await db.profileBuilderChatLog.create({
-                data: {
-                  sessionId,
-                  userId: user?.id,
-                  userMessage,
-                  aiReply,
-                  isAutoFit: false,
-                },
-              });
-            }
+            await logFastPathTurn(aiReply, updatedCv, 'date-tenure-interceptor');
+
             return Response.json({
               reply: aiReply,
               cv: updatedCv,
@@ -947,17 +886,8 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           const updatedCv: CvData = { ...cv, workExperience: currentExp };
           const aiReply = `Done — updated your experience dates to ${formattedStart} – ${formattedEnd}.`;
 
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply,
-                isAutoFit: false,
-              },
-            });
-          }
+          await logFastPathTurn(aiReply, updatedCv, 'date-tenure-interceptor');
+
           return Response.json({
             reply: aiReply,
             cv: updatedCv,
@@ -1100,17 +1030,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             ? `I've updated your education to reflect your ${extractedDegree} at ${newTargetName}.`
             : `I've updated your education to reflect your studies at ${newTargetName}.`;
 
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply,
-                isAutoFit: false,
-              },
-            });
-          }
+          await logFastPathTurn(aiReply, updatedCv, 'education-interceptor');
 
           return Response.json({
             reply: aiReply,
@@ -1151,17 +1071,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             ? `I've updated your education to reflect your ${extractedDegree} at ${newTargetName}.`
             : `I've updated your education to ${newTargetName}.`;
 
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply,
-                isAutoFit: false,
-              },
-            });
-          }
+          await logFastPathTurn(aiReply, updatedCv, 'education-interceptor');
 
           return Response.json({
             reply: aiReply,
@@ -1199,21 +1109,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           ...cv,
           personalInfo: updatedPersonal,
         };
+        const aiReply = `Done — removed ${removedLinks.join(' and ')} from your resume header.`;
 
-        if (sessionId !== 'unknown') {
-          await db.profileBuilderChatLog.create({
-            data: {
-              sessionId,
-              userId: user?.id,
-              userMessage,
-              aiReply: `Done — removed ${removedLinks.join(' and ')} from your resume header.`,
-              isAutoFit: false,
-            },
-          });
-        }
+        await logFastPathTurn(aiReply, updatedCv, 'links-interceptor');
 
         return Response.json({
-          reply: `Done — removed ${removedLinks.join(' and ')} from your resume header.`,
+          reply: aiReply,
           cv: updatedCv,
         });
       }
@@ -1254,21 +1155,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             ...cv,
             personalInfo: updatedPersonal,
           };
+          const aiReply = `Done — added ${platformName} link to the top header.`;
 
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply: `Done — added ${platformName} link to the top header.`,
-                isAutoFit: false,
-              },
-            });
-          }
+          await logFastPathTurn(aiReply, updatedCv, 'links-interceptor');
 
           return Response.json({
-            reply: `Done — added ${platformName} link to the top header.`,
+            reply: aiReply,
             cv: updatedCv,
           });
         }
@@ -1307,21 +1199,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         ...cv,
         personalInfo: updatedPersonal,
       };
+      const aiReply = `Done — updated your link to ${targetLabel}.`;
 
-      if (sessionId !== 'unknown') {
-        await db.profileBuilderChatLog.create({
-          data: {
-            sessionId,
-            userId: user?.id,
-            userMessage,
-            aiReply: `Done — updated your link to ${targetLabel}.`,
-            isAutoFit: false,
-          },
-        });
-      }
+      await logFastPathTurn(aiReply, updatedCv, 'links-interceptor');
 
       return Response.json({
-        reply: `Done — updated your link to ${targetLabel}.`,
+        reply: aiReply,
         cv: updatedCv,
       });
     }
@@ -1345,19 +1228,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         if (isClearAll) {
           updatedAdditional.interests = '';
           const updatedCv: CvData = { ...cv, additional: updatedAdditional };
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply: 'Done — cleared your interests.',
-                isAutoFit: false,
-              },
-            });
-          }
+          const aiReply = 'Done — cleared your interests.';
+
+          await logFastPathTurn(aiReply, updatedCv, 'skills-interests-interceptor');
+
           return Response.json({
-            reply: 'Done — cleared your interests.',
+            reply: aiReply,
             cv: updatedCv,
           });
         }
@@ -1395,21 +1271,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           }
 
           const updatedCv: CvData = { ...cv, additional: updatedAdditional };
+          const aiReply = `Done — updated your interests to "${updatedAdditional.interests}".`;
 
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply: `Done — updated your interests to "${updatedAdditional.interests}".`,
-                isAutoFit: false,
-              },
-            });
-          }
+          await logFastPathTurn(aiReply, updatedCv, 'skills-interests-interceptor');
 
           return Response.json({
-            reply: `Done — updated your interests to "${updatedAdditional.interests}".`,
+            reply: aiReply,
             cv: updatedCv,
           });
         }
@@ -1417,19 +1284,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         if (isClearAll) {
           updatedAdditional.skills = '';
           const updatedCv: CvData = { ...cv, additional: updatedAdditional };
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply: 'Done — cleared your technical skills.',
-                isAutoFit: false,
-              },
-            });
-          }
+          const aiReply = 'Done — cleared your technical skills.';
+
+          await logFastPathTurn(aiReply, updatedCv, 'skills-interests-interceptor');
+
           return Response.json({
-            reply: 'Done — cleared your technical skills.',
+            reply: aiReply,
             cv: updatedCv,
           });
         }
@@ -1468,21 +1328,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           }
 
           const updatedCv: CvData = { ...cv, additional: updatedAdditional };
+          const aiReply = `Done — updated your technical skills to "${updatedAdditional.skills}".`;
 
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply: `Done — updated your technical skills to "${updatedAdditional.skills}".`,
-                isAutoFit: false,
-              },
-            });
-          }
+          await logFastPathTurn(aiReply, updatedCv, 'skills-interests-interceptor');
 
           return Response.json({
-            reply: `Done — updated your technical skills to "${updatedAdditional.skills}".`,
+            reply: aiReply,
             cv: updatedCv,
           });
         }
@@ -1512,19 +1363,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           arr.splice(targetIdx, 1);
           const updatedCv: CvData = { ...cv, [cvKey]: arr };
           const label = secRaw === 'cert' || secRaw === 'certificate' || secRaw === 'certification' ? 'certification' : secRaw;
-          if (sessionId !== 'unknown') {
-            await db.profileBuilderChatLog.create({
-              data: {
-                sessionId,
-                userId: user?.id,
-                userMessage,
-                aiReply: `Done — removed the ${posRaw} ${label} from your resume.`,
-                isAutoFit: false,
-              },
-            });
-          }
+          const aiReply = `Done — removed the ${posRaw} ${label} from your resume.`;
+
+          await logFastPathTurn(aiReply, updatedCv, 'ordinal-removal-interceptor');
+
           return Response.json({
-            reply: `Done — removed the ${posRaw} ${label} from your resume.`,
+            reply: aiReply,
             cv: updatedCv,
           });
         }
@@ -1554,20 +1398,12 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         const updated = arr.slice(0, Math.min(targetLen, arr.length));
         const updatedCv: CvData = { ...cv, [cvKey]: updated };
         const label = sectionRaw === 'cert' || sectionRaw === 'certificate' || sectionRaw === 'certification' ? 'certification' : sectionRaw;
+        const aiReply = `Done — reduced your ${label}s to ${targetLen}.`;
 
-        if (sessionId !== 'unknown') {
-          await db.profileBuilderChatLog.create({
-            data: {
-              sessionId,
-              userId: user?.id,
-              userMessage,
-              aiReply: `Done — reduced your ${label}s to ${targetLen}.`,
-              isAutoFit: false,
-            },
-          });
-        }
+        await logFastPathTurn(aiReply, updatedCv, 'count-reduction-interceptor');
+
         return Response.json({
-          reply: `Done — reduced your ${label}s to ${targetLen}.`,
+          reply: aiReply,
           cv: updatedCv,
         });
       }
@@ -1600,17 +1436,8 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           ? `Done — removed all ${label}s from your resume.`
           : `Done — removed ${numToRemove} ${label}${plural} from your resume.`;
 
-        if (sessionId !== 'unknown') {
-          await db.profileBuilderChatLog.create({
-            data: {
-              sessionId,
-              userId: user?.id,
-              userMessage,
-              aiReply: replyText,
-              isAutoFit: false,
-            },
-          });
-        }
+        await logFastPathTurn(replyText, updatedCv, 'count-removal-interceptor');
+
         return Response.json({
           reply: replyText,
           cv: updatedCv,
@@ -1627,8 +1454,10 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           email: emailMatch[1],
         },
       };
+      const aiReply = `I've updated your email to ${emailMatch[1]}.`;
+      await logFastPathTurn(aiReply, updatedCv, 'contact-interceptor');
       return Response.json({
-        reply: `I've updated your email to ${emailMatch[1]}.`,
+        reply: aiReply,
         cv: updatedCv,
       });
     }
@@ -1642,8 +1471,10 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           phone: phoneMatch[1].trim(),
         },
       };
+      const aiReply = `I've updated your phone number to ${phoneMatch[1].trim()}.`;
+      await logFastPathTurn(aiReply, updatedCv, 'contact-interceptor');
       return Response.json({
-        reply: `I've updated your phone number to ${phoneMatch[1].trim()}.`,
+        reply: aiReply,
         cv: updatedCv,
       });
     }
