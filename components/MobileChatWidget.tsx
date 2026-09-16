@@ -27,6 +27,7 @@ interface MobileChatWidgetProps {
   onRequireAuth?: () => void;
   badgeAction?: React.ReactNode;
   onNewChat?: () => void;
+  onUpgradeToPro?: () => void;
 }
 
 function renderMessageText(text: string) {
@@ -69,11 +70,12 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
   suggestions = [],
   onBack,
   isLoggedIn = false,
-  unlocked = true,
+  unlocked = false,
   aiMessagesUsed = 0,
   onRequireAuth,
   badgeAction,
   onNewChat,
+  onUpgradeToPro,
 }) => {
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
@@ -236,44 +238,62 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
               {/* Bottom Action / Input Area */}
               <div className="shrink-0 p-3 bg-white border-t border-slate-200/80 flex flex-col gap-2">
                 {badgeAction && <div className="w-full flex items-center gap-1.5 flex-wrap">{badgeAction}</div>}
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
-                  <textarea
-                    ref={textareaRef}
-                    rows={1}
-                    value={input}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setInput(val);
-                      requestAnimationFrame(() => {
-                        const ta = textareaRef.current;
-                        if (ta) {
-                          ta.style.height = 'auto';
-                          ta.style.height = `${Math.min(ta.scrollHeight, 96)}px`;
-                        }
-                      });
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        onSend();
+                {aiMessagesUsed >= 5 && !unlocked ? (
+                  <button
+                    onClick={() => {
+                      if (onUpgradeToPro) {
+                        onUpgradeToPro();
+                      } else if (!isLoggedIn) {
+                        onRequireAuth?.();
                       }
                     }}
-                    placeholder={
-                      aiMessagesUsed >= 5 && !unlocked
-                        ? 'AI Limit Reached. Upgrade to Pro.'
-                        : 'Ask anything...'
-                    }
-                    disabled={aiMessagesUsed >= 5 && !unlocked}
-                    className="flex-1 min-w-0 bg-transparent text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal disabled:opacity-50 max-h-24 leading-snug py-0.5"
-                  />
-                  <button
-                    onClick={() => onSend()}
-                    disabled={!input.trim() || loading || (aiMessagesUsed >= 5 && !unlocked)}
-                    className="w-8 h-8 rounded-full bg-slate-900 text-white hover:bg-black flex items-center justify-center transition-colors disabled:opacity-30 shrink-0 shadow-xs cursor-pointer"
+                    className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 hover:border-blue-300 rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2 transition-all shadow-2xs group cursor-pointer text-left"
                   >
-                    <Send className="w-3.5 h-3.5" />
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Sparkles className="w-4 h-4 text-blue-600 shrink-0 animate-pulse" />
+                      <span className="text-xs sm:text-sm font-semibold text-slate-700 truncate">
+                        AI Limit Reached (5/5 Free Prompts Used)
+                      </span>
+                    </div>
+                    <span className="shrink-0 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-full shadow-xs transition-colors whitespace-nowrap">
+                      Upgrade to Pro →
+                    </span>
                   </button>
-                </div>
+                ) : (
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
+                    <textarea
+                      ref={textareaRef}
+                      rows={1}
+                      value={input}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setInput(val);
+                        requestAnimationFrame(() => {
+                          const ta = textareaRef.current;
+                          if (ta) {
+                            ta.style.height = 'auto';
+                            ta.style.height = `${Math.min(ta.scrollHeight, 96)}px`;
+                          }
+                        });
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          onSend();
+                        }
+                      }}
+                      placeholder="Ask anything..."
+                      className="flex-1 min-w-0 bg-transparent text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none resize-none font-normal max-h-24 leading-snug py-0.5"
+                    />
+                    <button
+                      onClick={() => onSend()}
+                      disabled={!input.trim() || loading}
+                      className="w-8 h-8 rounded-full bg-slate-900 text-white hover:bg-black flex items-center justify-center transition-colors disabled:opacity-30 shrink-0 shadow-xs cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

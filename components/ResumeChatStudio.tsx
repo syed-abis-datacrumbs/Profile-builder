@@ -1685,6 +1685,15 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         onBack={() => setIsMobileChatOpen(false)}
         isLoggedIn={isLoggedIn}
         onRequireAuth={onRequireAuth}
+        unlocked={unlocked === true}
+        aiMessagesUsed={aiMessagesUsed}
+        onUpgradeToPro={() => {
+          if (!isLoggedIn) {
+            onRequireAuth();
+            return;
+          }
+          setShowPaymentModal(true);
+        }}
         onNewChat={() => {
           sessionIdRef.current = crypto.randomUUID();
           setMessages([]);

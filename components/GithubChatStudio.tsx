@@ -1030,8 +1030,17 @@ export const GithubChatStudio: React.FC<{
           'Add a GitHub streak card',
         ]}
         onBack={() => setIsMobileChatOpen(false)}
+        isLoggedIn={isLoggedIn}
+        onRequireAuth={onRequireAuth}
         unlocked={unlocked === true}
         aiMessagesUsed={aiMessagesUsed}
+        onUpgradeToPro={() => {
+          if (!isLoggedIn) {
+            onRequireAuth();
+            return;
+          }
+          setShowPaymentModal(true);
+        }}
         onNewChat={() => {
           sessionIdRef.current = crypto.randomUUID();
           setMessages([]);

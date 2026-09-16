@@ -2446,6 +2446,13 @@ export const LinkedinChatStudio: React.FC<{
         aiMessagesUsed={aiMessagesUsed}
         isLoggedIn={isLoggedIn}
         onRequireAuth={onRequireAuth}
+        onUpgradeToPro={() => {
+          if (!isLoggedIn) {
+            onRequireAuth();
+            return;
+          }
+          setShowPaymentModal(true);
+        }}
         onNewChat={() => {
           sessionIdRef.current = crypto.randomUUID();
           setMessages([{ role: 'assistant', content: 'Started a new chat session. How can I optimize your LinkedIn profile?' }]);
