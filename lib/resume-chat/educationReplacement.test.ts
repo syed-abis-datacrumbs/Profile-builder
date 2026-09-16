@@ -20,7 +20,7 @@ function isNegationReq(msgLower: string): boolean {
   return /\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\b/i.test(msgLower);
 }
 
-import { parseEducationMessage } from './educationParser';
+import { parseEducationMessage, isSecondaryEducationEntry } from './educationParser';
 
 function applyEduReplacement(education: EduEntry[], message: string): EduEntry[] {
   const { oldTargetName, newTargetName, extractedDegree, isCollegeType } = parseEducationMessage(message);
@@ -35,19 +35,20 @@ function applyEduReplacement(education: EduEntry[], message: string): EduEntry[]
       );
     }
     if (targetIdx === -1) {
-      targetIdx = currentEdu.findIndex(e =>
-        /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|your college|nixor|premier|state college|a[- ]?level|o[- ]?level|fsc|matric)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
-      );
+      targetIdx = currentEdu.findIndex(isSecondaryEducationEntry);
       if (targetIdx === -1 && currentEdu.length > 1) {
         targetIdx = 1;
       }
     }
 
+    const existingDeg = targetIdx !== -1 ? currentEdu[targetIdx].degree : '';
+    const cleanDeg = extractedDegree || (existingDeg?.includes('/') ? 'Intermediate' : existingDeg) || 'Intermediate';
+
     if (targetIdx !== -1) {
       currentEdu[targetIdx] = {
         ...currentEdu[targetIdx],
         institution: newTargetName,
-        degree: extractedDegree || currentEdu[targetIdx].degree || 'Intermediate',
+        degree: cleanDeg,
       };
     } else {
       currentEdu.push({
@@ -200,6 +201,30 @@ describe('Resume Chat - Education & College Replacement', () => {
       expect(result[1].institution).toBe('Askari College');
       expect(result[1].degree).toBe('Intermediate');
       expect(result.some(e => e.institution === 'Nixor College')).toBe(false);
+    });
+
+    it('updates secondary tier "Your College" and preserves "Your University / Graduate School" when user says "add my college which name is DJ"', () => {
+      const templateEducation = [
+        {
+          end: '2024',
+          start: '2020',
+          degree: 'Degree Program / Major (e.g. Master / B.S. in Computer Science)',
+          institution: 'Your University / Graduate School',
+        },
+        {
+          end: '2020',
+          start: '2018',
+          degree: 'Intermediate / High School Diploma / Pre-Engineering',
+          institution: 'Your College / Pre-University Institution',
+        },
+      ];
+
+      const result = applyEduReplacement(templateEducation, 'add my college which name is DJ');
+      expect(result.length).toBe(2);
+      expect(result[0].institution).toBe('Your University / Graduate School');
+      expect(result[0].degree).toBe('Degree Program / Major (e.g. Master / B.S. in Computer Science)');
+      expect(result[1].institution).toBe('DJ');
+      expect(result[1].degree).toBe('Intermediate');
     });
   });
 

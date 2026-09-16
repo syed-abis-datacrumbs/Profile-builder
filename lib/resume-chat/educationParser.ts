@@ -229,3 +229,58 @@ export function parseEducationMessage(message: string): ParsedEducationResult {
 
   return { oldTargetName, newTargetName, extractedDegree, isCollegeType };
 }
+
+/**
+ * Checks whether an education entry represents a College / Secondary tier
+ * (Intermediate, High School, A-Levels, Pre-University, etc.)
+ */
+export function isSecondaryEducationEntry(e: { institution?: string; degree?: string }): boolean {
+  const inst = (e.institution || '').trim().toLowerCase();
+  const deg = (e.degree || '').trim().toLowerCase();
+  const combined = `${inst} ${deg}`;
+
+  // 1. Explicit secondary markers
+  if (
+    /\b(your college|intermediate|internmediate|fsc|hsc|a[- ]?levels?|o[- ]?levels?|matric|high\s+school|pre[- ]?engineering|pre[- ]?medical|secondary|diploma|pre[- ]university|nixor|beaconhouse|cedar|karachi grammar|dj science|adamjee|smi)\b/i.test(combined)
+  ) {
+    return true;
+  }
+
+  // 2. If it contains university / graduate school / bachelor / master markers, it is NOT secondary
+  if (
+    /\b(bachelor|master|phd|b\.?s\.?|b\.?e\.?|m\.?s\.?|mba|bba|degree\s+program|undergraduate|postgraduate)\b/i.test(deg) ||
+    /\b(graduate\s+school|your university)\b/i.test(inst) ||
+    (/(?<!pre[- ])\buniversity\b/i.test(inst) && !inst.includes('college'))
+  ) {
+    return false;
+  }
+
+  // 3. College / preparatory / high school keywords (excluding graduate/law/medical school)
+  if (/\b(college|collage|preparatory)\b/i.test(combined)) return true;
+  if (/\bschool\b/i.test(combined) && !/\b(graduate|business|law|medical)\s+school\b/i.test(combined)) return true;
+
+  return false;
+}
+
+/**
+ * Checks whether an education entry represents a University / Higher Education tier
+ * (Bachelors, Masters, PhD, University, Graduate School)
+ */
+export function isHigherEducationEntry(e: { institution?: string; degree?: string }): boolean {
+  const inst = (e.institution || '').trim().toLowerCase();
+  const deg = (e.degree || '').trim().toLowerCase();
+
+  if (isSecondaryEducationEntry(e)) return false;
+
+  if (
+    /\b(bachelor|master|phd|b\.?s\.?|b\.?e\.?|m\.?s\.?|mba|bba|degree\s+program|undergraduate|postgraduate)\b/i.test(deg) ||
+    /\b(graduate\s+school|your university)\b/i.test(inst) ||
+    /(?<!pre[- ])\buniversity\b/i.test(inst) ||
+    /\b(szabist|berkeley|harvard|stanford|mit|indus|fast|ned|nust|giki|iba|lums)\b/i.test(inst)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+

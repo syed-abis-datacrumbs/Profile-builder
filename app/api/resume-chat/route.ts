@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
 import { applyJsonPatches } from '@/lib/jsonPatch';
-import { parseEducationMessage } from '@/lib/resume-chat/educationParser';
+import { parseEducationMessage, isSecondaryEducationEntry, isHigherEducationEntry } from '@/lib/resume-chat/educationParser';
 
 export const runtime = 'nodejs';
 
@@ -949,24 +949,25 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             targetIdx = findBestMatchIndex(currentEdu, oldTargetName, e => `${e.institution} ${e.degree}`);
           }
           if (targetIdx === -1) {
-            targetIdx = currentEdu.findIndex(e =>
-              /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|your college|nixor|premier|state college|a[- ]?level|o[- ]?level|fsc|matric)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
-            );
+            targetIdx = currentEdu.findIndex(isSecondaryEducationEntry);
             if (targetIdx === -1 && currentEdu.length > 1) {
               targetIdx = 1;
             }
           }
 
+          const existingDeg = targetIdx !== -1 ? currentEdu[targetIdx].degree : '';
+          const cleanDeg = extractedDegree || (existingDeg?.includes('/') ? 'Intermediate' : existingDeg) || 'Intermediate';
+
           if (targetIdx !== -1) {
             currentEdu[targetIdx] = {
               ...currentEdu[targetIdx],
               institution: newTargetName,
-              degree: extractedDegree || currentEdu[targetIdx].degree || 'Intermediate',
+              degree: cleanDeg,
             };
           } else {
             currentEdu.push({
               institution: newTargetName,
-              degree: extractedDegree || (newTargetName.toLowerCase().includes('degree') ? 'Associate Degree in Commerce' : 'Intermediate'),
+              degree: cleanDeg,
               start: 'Jun 2018',
               end: 'Jun 2020',
             });
@@ -990,24 +991,25 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
             targetIdx = findBestMatchIndex(currentEdu, oldTargetName, e => `${e.institution} ${e.degree}`);
           }
           if (targetIdx === -1) {
-            targetIdx = currentEdu.findIndex(e =>
-              /\b(university|bachelor|master|degree|szabist|berkeley|harvard|indus|your university|fast|ned|nust|giki|iba)\b/i.test(`${e.institution || ''} ${e.degree || ''}`)
-            );
+            targetIdx = currentEdu.findIndex(isHigherEducationEntry);
             if (targetIdx === -1 && currentEdu.length > 0) {
               targetIdx = 0;
             }
           }
 
+          const existingDeg = targetIdx !== -1 ? currentEdu[targetIdx].degree : '';
+          const cleanDeg = extractedDegree || (existingDeg?.includes('/') ? 'Bachelor of Science' : existingDeg) || 'Bachelor of Science';
+
           if (targetIdx !== -1) {
             currentEdu[targetIdx] = {
               ...currentEdu[targetIdx],
               institution: newTargetName,
-              degree: extractedDegree || currentEdu[targetIdx].degree || 'Bachelor of Science',
+              degree: cleanDeg,
             };
           } else {
             currentEdu.unshift({
               institution: newTargetName,
-              degree: extractedDegree || 'Bachelor of Science',
+              degree: cleanDeg,
               start: 'Jun 2022',
               end: 'Jun 2026',
             });
