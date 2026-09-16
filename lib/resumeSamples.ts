@@ -307,6 +307,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "Full Stack Developer (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 302 3456789",
@@ -499,6 +500,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "Cyber Security (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 306 7890123",
@@ -595,6 +597,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "Data Engineer (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 308 9012345",
@@ -643,6 +646,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "DevOps Engineer (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 309 0123456",
@@ -883,6 +887,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "Backend Developer (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 314 5678901",
@@ -931,6 +936,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "Cloud Engineer (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 315 6789012",
@@ -979,6 +985,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "QA / Test Automation (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 316 7890123",
@@ -1027,6 +1034,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "Game Developer (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 317 8901234",
@@ -1075,6 +1083,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "MLOps Engineer (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 318 9012345",
@@ -1171,6 +1180,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "Computer Vision Engineer (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 320 1234567",
@@ -1219,6 +1229,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "Blockchain / Web3 Developer (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 321 2345678",
@@ -1267,6 +1278,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "Embedded / IoT Engineer (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 322 3456789",
@@ -1459,6 +1471,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "Network Engineer (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 326 7890123",
@@ -1507,6 +1520,7 @@ export const LMS_RESUME_SAMPLES: LmsResumeSample[] = [
   {
     label: "Database Administrator (1 page)",
     data: {
+      theme: "latex-ats",
       personalInfo: {
         fullName: "Zoya Siddiqui",
         phone: "+92 327 8901234",
