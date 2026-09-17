@@ -307,9 +307,8 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                   <button
                     onClick={async () => {
                       setIsSettingsOpen(false);
-                      clearWorkspaceSession();
-                      await signOut();
-                      window.location.href = '/';
+                      clearWorkspaceSession({ skipEvent: true });
+                      await signOut({ redirectUrl: '/' });
                     }}
                     className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors text-left cursor-pointer"
                   >

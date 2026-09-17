@@ -9,6 +9,8 @@ export const PAGE_HEIGHT_PX = 1123;
 // Blank breathing room at the BOTTOM of every page and TOP of every
 // continuation page. First page top-spacing comes from CvPreview's own padding.
 export const PAGE_MARGIN_PX = 48;
+// Small safety buffer (px) to prevent subpixel line-height/font anti-aliasing clipping
+export const PAGE_SAFETY_PX = 6;
 
 export interface CvPage {
   /** Content-pixel offset where this page's visible slice begins. */
@@ -55,7 +57,7 @@ export function paginateCvSmart(contentHeight: number, blocks: CvBlock[]): CvPag
       // Everything remaining fits on this page — it's the last page.
       breakAt = contentHeight;
     } else {
-      const pageEnd = sliceStart + (PAGE_HEIGHT_PX - topOffset - PAGE_MARGIN_PX);
+      const pageEnd = sliceStart + (PAGE_HEIGHT_PX - topOffset - PAGE_MARGIN_PX - PAGE_SAFETY_PX);
       // Find any block that straddles across the page bottom boundary
       const straddler = sorted.find(
         (b) => b.top >= sliceStart && b.top < pageEnd && b.bottom > pageEnd

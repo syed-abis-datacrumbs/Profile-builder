@@ -153,8 +153,10 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
     if (!isLoaded) return;
     if (!clientUser) {
       if (wasLoggedInRef.current) {
-        clearWorkspaceSession();
-        window.location.href = '/';
+        clearWorkspaceSession({ skipEvent: true });
+        if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+          router.push('/');
+        }
       }
       wasLoggedInRef.current = false;
       setIsAdmin(false);

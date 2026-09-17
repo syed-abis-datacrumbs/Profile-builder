@@ -173,7 +173,7 @@ function PaginatedCvPreviewBase({
           pointerEvents: 'none',
         }}
       >
-        {staticContent}
+        {onChange ? editableContent : staticContent}
       </div>
 
       {/* Hidden EXPORT copy — captured by Puppeteer PDF export */}

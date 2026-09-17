@@ -25,12 +25,11 @@ export function TestingPhaseModal({
   const handleSignOut = async () => {
     try {
       setIsSigningOut(true);
-      clearWorkspaceSession();
-      await signOut();
-      window.location.href = '/';
+      clearWorkspaceSession({ skipEvent: true });
+      await signOut({ redirectUrl: '/' });
     } catch (err) {
       console.error('[SignOut Error]:', err);
-      clearWorkspaceSession();
+      clearWorkspaceSession({ skipEvent: true });
       window.location.href = '/';
     }
   };

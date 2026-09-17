@@ -20,7 +20,7 @@ export const WORKSPACE_STORAGE_KEYS = [
   'cached_pro_user',
 ];
 
-export function clearWorkspaceSession(): void {
+export function clearWorkspaceSession(options?: { skipEvent?: boolean }): void {
   if (typeof window === 'undefined') return;
   try {
     for (const key of WORKSPACE_STORAGE_KEYS) {
@@ -35,7 +35,9 @@ export function clearWorkspaceSession(): void {
         localStorage.removeItem(k);
       }
     }
-    window.dispatchEvent(new CustomEvent('workspace_reset_landing'));
+    if (!options?.skipEvent) {
+      window.dispatchEvent(new CustomEvent('workspace_reset_landing'));
+    }
   } catch (e) {
     console.error('[Session cleanup error]:', e);
   }

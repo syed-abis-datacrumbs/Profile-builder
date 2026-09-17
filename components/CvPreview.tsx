@@ -84,8 +84,9 @@ function SectionHeading({ children, isLatex }: { children: React.ReactNode; isLa
 }
 
 /** Read-only rich text (renders stored HTML: <strong>/<em>/<u>). */
-function Html({ html, className }: { html: string; className?: string }) {
-  return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+function Html({ html, className, block }: { html: string; className?: string; block?: boolean }) {
+  const Tag = (block ? 'div' : 'span') as 'div';
+  return <Tag className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 interface BulletKeys {
@@ -564,102 +565,106 @@ function CvPreviewBase({
           const i = data.workExperience.indexOf(job);
           const lines = editable ? job.bullets.split('\n') : job.bullets.split('\n').filter((l) => l.trim());
           return (
-            <div key={i} data-cv-block className="mb-1.5">
-              {isLatex ? (
-                <>
+            <div key={i} className="mb-1.5">
+              <div data-cv-block>
+                {isLatex ? (
+                  <>
+                    <div className="flex justify-between items-baseline gap-3">
+                      <span className="font-bold text-slate-950 text-[14px]">
+                        {editable ? (
+                          <RichText
+                            html={job.company}
+                            placeholder="Company"
+                            onCommit={(v) => setWork(i, { company: v })}
+                            onEmptyBackspace={() => workEmptyBackspace(i)}
+                          />
+                        ) : (
+                          <Html html={job.company} />
+                        )}
+                      </span>
+                      <span className="text-slate-800 text-[13px] shrink-0 whitespace-nowrap">
+                        {editable ? (
+                          <RichText
+                            html={job.location || ''}
+                            placeholder="Location (e.g. San Francisco, CA)"
+                            onCommit={(v) => setWork(i, { location: v })}
+                          />
+                        ) : (
+                          <Html html={job.location || ''} />
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-baseline gap-3 text-[13px] text-slate-700 italic mb-0.5">
+                      <span>
+                        {editable ? (
+                          <RichText
+                            html={job.title}
+                            placeholder="Title"
+                            onCommit={(v) => setWork(i, { title: v })}
+                            onEmptyBackspace={() => workEmptyBackspace(i)}
+                          />
+                        ) : (
+                          <Html html={job.title} />
+                        )}
+                      </span>
+                      <span className="shrink-0 whitespace-nowrap not-italic text-slate-700">
+                        {editable ? (
+                          <>
+                            <RichText html={job.start} placeholder="Start" onCommit={(v) => setWork(i, { start: v })} />
+                            {' – '}
+                            <RichText html={job.end} placeholder="End" onCommit={(v) => setWork(i, { end: v })} />
+                          </>
+                        ) : (
+                          (job.start || job.end) && <>{job.start} – {job.end}</>
+                        )}
+                      </span>
+                    </div>
+                  </>
+                ) : (
                   <div className="flex justify-between items-baseline gap-3">
-                    <span className="font-bold text-slate-950 text-[14px]">
+                    <span className="font-bold">
                       {editable ? (
-                        <RichText
-                          html={job.company}
-                          placeholder="Company"
-                          onCommit={(v) => setWork(i, { company: v })}
-                          onEmptyBackspace={() => workEmptyBackspace(i)}
-                        />
+                        <>
+                          <RichText html={job.company} placeholder="Company" onCommit={(v) => setWork(i, { company: v })} onEmptyBackspace={() => workEmptyBackspace(i)} />
+                          {' – '}
+                          <RichText html={job.title} placeholder="Title" onCommit={(v) => setWork(i, { title: v })} onEmptyBackspace={() => workEmptyBackspace(i)} />
+                        </>
                       ) : (
-                        <Html html={job.company} />
+                        <>
+                          <Html html={job.company} />
+                          {job.company && job.title ? ' – ' : ''}
+                          <Html html={job.title} />
+                        </>
                       )}
                     </span>
-                    <span className="text-slate-800 text-[13px] shrink-0 whitespace-nowrap">
-                      {editable ? (
-                        <RichText
-                          html={job.location || ''}
-                          placeholder="Location (e.g. San Francisco, CA)"
-                          onCommit={(v) => setWork(i, { location: v })}
-                        />
-                      ) : (
-                        <Html html={job.location || ''} />
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-baseline gap-3 text-[13px] text-slate-700 italic mb-0.5">
-                    <span>
-                      {editable ? (
-                        <RichText
-                          html={job.title}
-                          placeholder="Title"
-                          onCommit={(v) => setWork(i, { title: v })}
-                          onEmptyBackspace={() => workEmptyBackspace(i)}
-                        />
-                      ) : (
-                        <Html html={job.title} />
-                      )}
-                    </span>
-                    <span className="shrink-0 whitespace-nowrap not-italic text-slate-700">
+                    <span className="text-slate-600 text-[16px] shrink-0 whitespace-nowrap">
                       {editable ? (
                         <>
                           <RichText html={job.start} placeholder="Start" onCommit={(v) => setWork(i, { start: v })} />
-                          {' – '}
+                          {'- '}
                           <RichText html={job.end} placeholder="End" onCommit={(v) => setWork(i, { end: v })} />
                         </>
                       ) : (
-                        (job.start || job.end) && <>{job.start} – {job.end}</>
+                        (job.start || job.end) && <>{job.start}- {job.end}</>
                       )}
                     </span>
                   </div>
-                </>
-              ) : (
-                <div className="flex justify-between items-baseline gap-3">
-                  <span className="font-bold">
-                    {editable ? (
-                      <>
-                        <RichText html={job.company} placeholder="Company" onCommit={(v) => setWork(i, { company: v })} onEmptyBackspace={() => workEmptyBackspace(i)} />
-                        {' – '}
-                        <RichText html={job.title} placeholder="Title" onCommit={(v) => setWork(i, { title: v })} onEmptyBackspace={() => workEmptyBackspace(i)} />
-                      </>
-                    ) : (
-                      <>
-                        <Html html={job.company} />
-                        {job.company && job.title ? ' – ' : ''}
-                        <Html html={job.title} />
-                      </>
-                    )}
-                  </span>
-                  <span className="text-slate-600 text-[16px] shrink-0 whitespace-nowrap">
-                    {editable ? (
-                      <>
-                        <RichText html={job.start} placeholder="Start" onCommit={(v) => setWork(i, { start: v })} />
-                        {'- '}
-                        <RichText html={job.end} placeholder="End" onCommit={(v) => setWork(i, { end: v })} />
-                      </>
-                    ) : (
-                      (job.start || job.end) && <>{job.start}- {job.end}</>
-                    )}
-                  </span>
-                </div>
-              )}
+                )}
+              </div>
               {lines.length > 0 && (
                 <div className="mt-0.5 space-y-0.5" data-bullet-group={`we-${i}`}>
                   {lines.map((rawLine, j) => {
                     const line = cleanSingleBulletLine(mdBoldToHtml(rawLine));
                     return (
-                      <Bullet key={j} marker={job.bulletStyle === 'number' ? `${j + 1}.` : defaultBulletMarker}>
-                        {editable ? (
-                          <RichText block html={line} placeholder="Bullet point" onCommit={(v) => setBulletLine(i, j, v)} bullet={keysFor(i, j)} />
-                        ) : (
-                          <Html html={line} />
-                        )}
-                      </Bullet>
+                      <div key={j} data-cv-block>
+                        <Bullet marker={job.bulletStyle === 'number' ? `${j + 1}.` : defaultBulletMarker}>
+                          {editable ? (
+                            <RichText block html={line} placeholder="Bullet point" onCommit={(v) => setBulletLine(i, j, v)} bullet={keysFor(i, j)} />
+                          ) : (
+                            <Html block html={line} />
+                          )}
+                        </Bullet>
+                      </div>
                     );
                   })}
                 </div>
