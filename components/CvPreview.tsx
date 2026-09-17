@@ -412,7 +412,7 @@ function CvPreviewBase({
   const p = data.personalInfo;
 
   const renderSummary = () => {
-    if (!editable && (!data.summary || isBlank(data.summary))) return null;
+    if (!data.summary || isBlank(data.summary)) return null;
     return (
       <section data-cv-block className="mb-1.5">
         <SectionHeading isLatex={isLatex}>Summary</SectionHeading>

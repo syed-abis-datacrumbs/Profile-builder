@@ -59,12 +59,13 @@ export function ResumeRoute() {
     return null;
   });
   const [studioLabel, setStudioLabel] = useState<string>(() => {
-    if (typeof window === 'undefined') return 'Professional Resume';
+    if (typeof window === 'undefined') return 'Your Resume';
     try {
+      const savedCv = localStorage.getItem('profile_builder_studio_cv');
       const savedLabel = localStorage.getItem('profile_builder_studio_label');
-      if (savedLabel) return savedLabel;
+      if (savedCv && savedLabel) return savedLabel;
     } catch {}
-    return 'Professional Resume';
+    return 'Your Resume';
   });
 
   const [isATSOpen, setIsATSOpen] = useState(false);
@@ -98,9 +99,13 @@ export function ResumeRoute() {
     try {
       if (studioCv) {
         localStorage.setItem('profile_builder_studio_cv', JSON.stringify(studioCv));
+      } else {
+        localStorage.removeItem('profile_builder_studio_cv');
       }
-      if (studioLabel) {
+      if (studioLabel && studioLabel !== 'Your Resume') {
         localStorage.setItem('profile_builder_studio_label', studioLabel);
+      } else {
+        localStorage.removeItem('profile_builder_studio_label');
       }
     } catch {}
   }, [studioCv, studioLabel, isLoggedIn]);
@@ -109,6 +114,16 @@ export function ResumeRoute() {
   useEffect(() => {
     const handleReset = () => {
       setResumeMode('landing');
+      setStudioLabel('Your Resume');
+      setStudioCv(null);
+      setAttachedResumeTemplate(null);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('profile_builder_studio_cv');
+          localStorage.removeItem('profile_builder_studio_label');
+          localStorage.removeItem('profile_builder_resume_chat');
+        } catch {}
+      }
       mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     };
     window.addEventListener('workspace_reset_landing', handleReset);
@@ -161,9 +176,11 @@ export function ResumeRoute() {
         >
           {resumeMode === 'studio' && studioCv ? (
             <ResumeChatStudio
+              key={studioLabel}
               cv={studioCv}
               onChange={(v) => setStudioCv(v)}
               fieldLabel={studioLabel}
+              onUpdateLabel={(lbl) => setStudioLabel(lbl)}
               onBack={() => setResumeMode('landing')}
               isLoggedIn={isLoggedIn}
               onRequireAuth={() => setIsAuthOpen(true)}
@@ -219,11 +236,8 @@ export function ResumeRoute() {
                   if (typeof window !== 'undefined') {
                     localStorage.removeItem('profile_builder_resume_chat');
                   }
-                } else if (studioCv) {
-                  // Existing session exists — keep the current CV and chat messages!
-                  setResumeMode('studio');
                 } else {
-                  // Entering resume chat for the first time — default to 'professional'
+                  // Entering resume chat for prompt submission — start a fresh prompt session
                   const isExplicitStudent = /\b(student\s+resume|student\s+cv|resume\s+for\s+student|cv\s+for\s+student|student\s+profile)\b/i.test(cleanPrompt);
                   const resolvedCvType: 'professional' | 'student' = isExplicitStudent ? 'student' : 'professional';
                   const baseCv: CvData = {
@@ -236,6 +250,13 @@ export function ResumeRoute() {
                       fullName: displayFullName || 'Your Name',
                     },
                   };
+                  if (typeof window !== 'undefined') {
+                    try {
+                      localStorage.removeItem('profile_builder_resume_chat');
+                      localStorage.removeItem('profile_builder_studio_cv');
+                      localStorage.removeItem('profile_builder_studio_label');
+                    } catch {}
+                  }
                   setStudioCv(cvMarkdownToHtml(baseCv));
                   setStudioLabel('Your Resume');
                   setResumeMode('studio');

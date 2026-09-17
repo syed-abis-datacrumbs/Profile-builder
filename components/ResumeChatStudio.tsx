@@ -99,6 +99,7 @@ interface ResumeChatStudioProps {
   cv: CvData;
   onChange: (cv: CvData) => void;
   fieldLabel?: string;
+  onUpdateLabel?: (label: string) => void;
   onBack: () => void;
   isLoggedIn: boolean;
   onRequireAuth: () => void;
@@ -118,6 +119,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   cv,
   onChange,
   fieldLabel,
+  onUpdateLabel,
   onBack,
   isLoggedIn,
   onRequireAuth,
@@ -281,9 +283,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         fullName: clerkName || cv.personalInfo?.fullName || 'Your Name',
       },
     };
+    onUpdateLabel?.('Your Resume');
     external(cvMarkdownToHtml(freshCv));
     showToast('Started fresh resume chat session');
-  }, [clerkName, cv.personalInfo?.fullName, showToast]);
+  }, [clerkName, cv.personalInfo?.fullName, onUpdateLabel, showToast]);
 
   const handleReportIssue = async () => {
     if (!issueText.trim()) return;
