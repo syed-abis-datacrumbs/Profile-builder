@@ -128,7 +128,11 @@ export function ResumeRoute() {
       setIsAuthOpen(true);
       return;
     }
-    setStudioCv(cvMarkdownToHtml(sample.data as CvData));
+    const cleanCv = cvMarkdownToHtml(sample.data as CvData);
+    if (!cleanCv.cvType) {
+      cleanCv.cvType = 'professional';
+    }
+    setStudioCv(cleanCv);
     setStudioLabel(sample.label);
     setResumeInitialPrompt(initialPromptText ?? '');
     setResumeMode('studio');
@@ -215,9 +219,18 @@ export function ResumeRoute() {
                   if (typeof window !== 'undefined') {
                     localStorage.removeItem('profile_builder_resume_chat');
                   }
+                } else if (studioCv) {
+                  // Existing session exists — keep the current CV and chat messages!
+                  setResumeMode('studio');
                 } else {
+                  // Entering resume chat for the first time — default to 'professional'
+                  const isExplicitStudent = /\b(student\s+resume|student\s+cv|resume\s+for\s+student|cv\s+for\s+student|student\s+profile)\b/i.test(cleanPrompt);
+                  const resolvedCvType: 'professional' | 'student' = isExplicitStudent ? 'student' : 'professional';
                   const baseCv: CvData = {
                     ...DEFAULT_PLACEHOLDER_CV,
+                    cvType: resolvedCvType,
+                    workExperience: resolvedCvType === 'student' ? [] : DEFAULT_PLACEHOLDER_CV.workExperience,
+                    workshops: resolvedCvType === 'student' ? [] : [],
                     personalInfo: {
                       ...DEFAULT_PLACEHOLDER_CV.personalInfo,
                       fullName: displayFullName || 'Your Name',
@@ -225,9 +238,6 @@ export function ResumeRoute() {
                   };
                   setStudioCv(cvMarkdownToHtml(baseCv));
                   setStudioLabel('Your Resume');
-                  if (typeof window !== 'undefined') {
-                    localStorage.removeItem('profile_builder_resume_chat');
-                  }
                   setResumeMode('studio');
                 }
                 setAttachedResumeTemplate(null);

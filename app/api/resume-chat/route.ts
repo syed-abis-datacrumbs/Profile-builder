@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { cvMarkdownToHtml, type CvData, type CvProject } from '../../../lib/cvTypes';
+import { cvMarkdownToHtml, type CvData, type CvProject, type CvWorkshop } from '../../../lib/cvTypes';
 import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
@@ -7,7 +7,46 @@ import { applyJsonPatches } from '@/lib/jsonPatch';
 
 export const runtime = 'nodejs';
 
-const SYSTEM_PROMPT = `You are an expert resume-writing assistant helping a student build their CV in a live editor. You are given their current resume as JSON plus a conversation. Apply the user's request, then reply.
+export function getSystemPrompt(cvType: 'professional' | 'student' = 'professional'): string {
+  const isStudent = cvType === 'student';
+  const schemaBlock = isStudent
+    ? `Resume JSON schema for STUDENT RESUME (keep this exact shape and keys — do NOT include a "cvType" key; the app controls that separately and will ignore it if you send one):
+{
+  "summary": "2-3 sentence impactful summary tailored to the target role",
+  "personalInfo": { "fullName": "", "phone": "", "email": "", "linkedin": "", "linkedinLabel": "Linkedin", "github": "", "githubLabel": "GitHub", "kaggle": "", "kaggleLabel": "Kaggle" },
+  "education": [ { "institution": "", "degree": "", "start": "", "end": "", "location": "City, State or Country" } ],
+  "workExperience": [],
+  "workshops": [
+    { "content": "<strong>Practical Workshop / Bootcamp 1</strong>: Comprehensive description of practical tools, hands-on lab work, and real-world skills learned." },
+    { "content": "<strong>Practical Workshop / Bootcamp 2</strong>: Comprehensive description of practical tools, hands-on lab work, and real-world skills learned." }
+  ],
+  "projects": [ { "title": "Project Title", "technologies": "Technologies used", "date": "Month Year", "bullets": "one bullet per line\\nseparated by newlines", "content": "<strong>Project Title</strong> (Technologies used) – Description with impact." } ],
+  "certifications": [ { "name": "", "organization": "" } ],
+  "additional": { "skills": "", "interests": "" }
+}
+
+🚨 CRITICAL MANDATORY INSTRUCTIONS FOR STUDENT RESUMES:
+1. THIS RESUME IS FOR A STUDENT.
+2. "workExperience" MUST ALWAYS BE AN EMPTY ARRAY: [] (zero items). Under NO circumstances should you generate or return work experience entries for a student resume!
+3. "workshops" MUST ALWAYS BE POPULATED WITH 2 TO 3 HIGH-IMPACT, FIELD-SPECIFIC WORKSHOPS, BOOTCAMPS, OR PRACTICAL TRAININGS tailored to the target field (e.g. for Digital Marketing: Performance Marketing & Paid Ads, SEO & Content Strategy, Marketing Analytics; for AI: LLM Fine-Tuning & RAG, AI Agent Automation; for Software: Cloud & Microservices, Modern React Architecture).
+4. NEVER return an empty "workshops" array ([]) for a student resume!`
+    : `Resume JSON schema for PROFESSIONAL RESUME (keep this exact shape and keys — do NOT include a "cvType" key; the app controls that separately and will ignore it if you send one):
+{
+  "summary": "2-3 sentence impactful professional summary tailored to the target role",
+  "personalInfo": { "fullName": "", "phone": "", "email": "", "linkedin": "", "linkedinLabel": "Linkedin", "github": "", "githubLabel": "GitHub", "kaggle": "", "kaggleLabel": "Kaggle" },
+  "education": [ { "institution": "", "degree": "", "start": "", "end": "", "location": "City, State or Country" } ],
+  "workExperience": [ { "company": "", "title": "", "start": "", "end": "", "location": "City, State or Country", "bullets": "one bullet per line\\nseparated by newlines" } ],
+  "workshops": [],
+  "projects": [ { "title": "Project Title", "technologies": "Technologies used", "date": "Month Year", "bullets": "one bullet per line\\nseparated by newlines", "content": "<strong>Project Title</strong> (Technologies used) – Description with impact." } ],
+  "certifications": [ { "name": "", "organization": "" } ],
+  "additional": { "skills": "", "interests": "" }
+}
+
+RULES FOR PROFESSIONAL RESUMES:
+1. "workExperience" MUST be populated with role-aligned experience and 4 rich bullet points.
+2. "workshops" MUST BE AN EMPTY ARRAY: [].`;
+
+  return `You are an expert resume-writing assistant helping a student build their CV in a live editor. You are given their current resume as JSON plus a conversation. Apply the user's request, then reply.
 
 Respond with ONLY a JSON object (no markdown fences, no prose outside it):
 
@@ -108,17 +147,7 @@ When the user explicitly asks to build a completely new resume from scratch or t
   "cv": <the FULL updated resume JSON, in the EXACT schema below>
 }
 
-Resume JSON schema (keep this exact shape and keys — do NOT include a "cvType" key; the app controls that separately and will ignore it if you send one):
-{
-  "summary": "2-3 sentence impactful professional summary tailored to the target role",
-  "personalInfo": { "fullName": "", "phone": "", "email": "", "linkedin": "", "linkedinLabel": "Linkedin", "github": "", "githubLabel": "GitHub", "kaggle": "", "kaggleLabel": "Kaggle" },
-  "education": [ { "institution": "", "degree": "", "start": "", "end": "", "location": "City, State or Country" } ],
-  "workExperience": [ { "company": "", "title": "", "start": "", "end": "", "location": "City, State or Country", "bullets": "one bullet per line\nseparated by newlines" } ],
-  "workshops": [ { "content": "<strong>Workshop Title</strong>: One or two descriptive sentences." } ],
-  "projects": [ { "title": "Project Title", "technologies": "Technologies used", "date": "Month Year", "bullets": "one bullet per line\nseparated by newlines", "content": "<strong>Project Title</strong> (Technologies used) – Description with impact." } ],
-  "certifications": [ { "name": "", "organization": "" } ],
-  "additional": { "skills": "", "interests": "" }
-}
+${schemaBlock}
 
 You'll be told the CURRENT resume type (professional or student) as separate context on every turn — that's fixed for this conversation. If the user asks to switch it, tell them in "reply" to use the Professional/Student toggle above the chat, and keep filling the sections for the CURRENT type this turn — don't guess ahead.
 
@@ -220,7 +249,29 @@ Rules:
   1. YOU MUST DYNAMICALLY REWRITE AND ALIGN 100% OF ALL SECTIONS TO MATCH THAT SPECIFIC TARGET ROLE WITH FULL, HIGH-DENSITY CONTENT THAT FILLS PAGE 1 TOP-TO-BOTTOM!
   2. NEVER preserve outdated or mismatched text from previous roles or generic placeholder text. Replace all companies, job titles, universities, degrees, projects, and certifications with real names in that industry.
   3. "education": Update degree, university, relevant coursework, or honors to align with the target field.
-  4. "workExperience": Set title and company name to real industry equivalents (e.g. for VP of Sales: title "Vice President of Enterprise Sales", company "Apex Enterprise Cloud"). Generate 4 RICH, COMPREHENSIVE BULLET POINTS featuring industry-standard practices, tools, methodologies, and bolded quantified metrics (percentages or numbers). For executive roles, highlight team leadership and multi-million ARR growth; for marketing/sales, highlight campaign ROI and conversion rates; for entry-level/new grad, highlight strong internship/academic execution.
+  4. "workExperience" vs "workshops" (ACCORDING TO CURRENT RESUME TYPE):
+     - IF PROFESSIONAL RESUME: Set title and company name to real industry equivalents (e.g. for VP of Sales: title "Vice President of Enterprise Sales", company "Apex Enterprise Cloud"). Generate 4 RICH, COMPREHENSIVE BULLET POINTS featuring industry-standard practices, tools, methodologies, and bolded quantified metrics (percentages or numbers). For executive roles, highlight team leadership and multi-million ARR growth; for marketing/sales, highlight campaign ROI and conversion rates; for entry-level/new grad, highlight strong internship/academic execution. Leave "workshops" as [].
+     - IF STUDENT RESUME (CRITICAL — MANDATORY WORKSHOPS GENERATION):
+       Set "workExperience" to [].
+       YOU MUST ALWAYS GENERATE EXACTLY 2-3 FIELD-ALIGNED INDUSTRY WORKSHOPS/BOOTCAMPS in the "workshops" array!
+       Format each workshop as: { "content": "<strong>Workshop Title</strong>: One or two descriptive sentences explaining practical tools, hands-on lab work, and real-world skills gained." }
+       Examples by domain:
+       * AI & Machine Learning:
+         - { "content": "<strong>AI Chatbots & Intelligent Automation</strong>: Hands-on training in building and deploying AI-driven agents using LangChain, OpenAI APIs, and vector databases." }
+         - { "content": "<strong>Prompt Engineering & LLM Fine-Tuning</strong>: Practical training in RAG architectures, parameter-efficient fine-tuning (LoRA), and embedding pipelines." }
+       * Software Engineering & Web Development:
+         - { "content": "<strong>Full-Stack Cloud & Microservices</strong>: Intensive training in building scalable RESTful APIs with Node.js, containerizing with Docker, and deploying to AWS." }
+         - { "content": "<strong>Modern Frontend & State Architecture</strong>: Practical workshop building production React/Next.js web applications with TypeScript and Tailwind CSS." }
+       * Data Science & Analytics:
+         - { "content": "<strong>Advanced SQL & Data Warehousing</strong>: Hands-on experience writing complex window functions, ETL pipelines, and designing star schemas in PostgreSQL." }
+         - { "content": "<strong>Applied Data Visualization & BI</strong>: Built interactive executive dashboards using Tableau and Python (Seaborn, Plotly) to uncover actionable insights." }
+       * Cybersecurity:
+         - { "content": "<strong>Ethical Hacking & Network Penetration Testing</strong>: Practiced vulnerability scanning, threat simulation, and packet inspection using Wireshark and Metasploit." }
+         - { "content": "<strong>Threat Intelligence & Incident Response</strong>: Hands-on SIEM log analysis, intrusion detection, and incident handling protocols." }
+       * Marketing / Business / Product:
+         - { "content": "<strong>Performance Marketing & Paid Ads</strong>: Hands-on campaign planning and optimization across Meta and Google Ads, focusing on audience targeting, budgets, and ROAS." }
+         - { "content": "<strong>Growth Product Management & A/B Testing</strong>: Designed funnel optimization experiments, user cohort retention tracking, and conversion rate optimization." }
+       CRITICAL: NEVER RETURN AN EMPTY "workshops" ARRAY ([]) FOR A STUDENT RESUME WHEN CREATING, GENERATING, OR TRANSFORMING A CV FOR ANY FIELD!
   5. "projects": REPLACE ALL outdated or mismatched projects with 3 detailed, high-impact role-aligned projects describing technical execution, tools/frameworks, and quantifiable business outcomes. Each project description MUST be rich and detailed (140-160 characters) so that each project occupies 2 full visual lines.
   6. "certifications": REPLACE outdated certifications with 4 industry-recognized credentials for that specific field in a 2x2 grid.
   7. "additional": Update both 'skills' (8-10 technical skills) and 'interests' (5-6 professional interests) tailored specifically to the target role.
@@ -260,6 +311,9 @@ Rules:
   2. NEVER emit patches modifying other companies in workExperience (such as /workExperience/0/bullets).
   3. Every other company in workExperience MUST REMAIN 100% UNTOUCHED with its existing bullet points preserved verbatim.
 - Output valid JSON only.`;
+}
+
+const SYSTEM_PROMPT = getSystemPrompt('professional');
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -268,8 +322,8 @@ interface ChatMessage {
 
 function typeContextLine(cvType: 'professional' | 'student'): string {
   return cvType === 'student'
-    ? 'RESUME TYPE (fixed for this conversation): STUDENT — sections are Education, Projects, Workshops, Professional Certifications, Additional. Leave "workExperience" as [] and use "workshops" instead (title + one short descriptive sentence, no company/dates/bullets). If the user describes a job or internship, phrase it as a workshop entry, or as a project if that fits better — never create a workExperience entry.'
-    : 'RESUME TYPE (fixed for this conversation): PROFESSIONAL — sections are Education, Work Experience, Projects, Professional Certifications, Additional. Fill "workExperience"; leave "workshops" as [].';
+    ? '🚨🚨🚨 CRITICAL RESUME TYPE: STUDENT RESUME 🚨🚨🚨\nACTIVE SECTIONS: Education, Projects, Workshops, Professional Certifications, Additional.\nINACTIVE SECTION: Work Experience is DISABLED for students ("workExperience": []).\nMANDATORY RULES FOR STUDENT RESUMES:\n1. "workExperience" MUST ALWAYS BE [] (empty array with zero entries). Do NOT create work experience entries for students!\n2. YOU MUST ALWAYS POPULATE "workshops" with 2 to 3 relevant, high-impact industry workshops, bootcamps, or technical trainings tailored to the target field (e.g. for Digital Marketer: Paid Ads & Performance Marketing, Funnel Optimization & Analytics; for Software: Full-Stack Cloud, Modern React/Next.js; for AI: LLM Fine-Tuning & RAG, AI Automation). Format each workshop as: { "content": "<strong>Workshop Title</strong>: One or two descriptive sentences explaining practical tools and concepts learned." }.\n3. NEVER return an empty "workshops" array ([]) for a student resume when asked to create or update a CV! If the user mentions any job or internship, phrase it as a workshop or project entry — NEVER create a workExperience entry.'
+    : 'CRITICAL RESUME TYPE: PROFESSIONAL RESUME — active sections are Education, Work Experience, Projects, Professional Certifications, Additional. Fill "workExperience" with 4 rich bullets; leave "workshops" as [].';
 }
 
 function isPlaceholderToken(str?: string): boolean {
@@ -373,6 +427,56 @@ function trimBulletsByRank(bulletsText: string, max: number): string {
   return ranked.map((r) => r.b).join('\n');
 }
 
+export function getDefaultStudentWorkshops(context: string): CvWorkshop[] {
+  const l = context.toLowerCase();
+  if (/\b(ai|artificial\s+intelligence|machine\s+learning|ml|deep\s+learning|nlp|data\s+science|data\s+analyst|data\s+engineer|python)\b/i.test(l)) {
+    return [
+      { content: '<strong>AI Chatbots & Intelligent Automation</strong>: Hands-on training in building and deploying AI-driven agents using LangChain, OpenAI APIs, and vector databases.' },
+      { content: '<strong>Prompt Engineering & LLM Fine-Tuning</strong>: Practical training in RAG architectures, parameter-efficient fine-tuning (LoRA), and embedding pipelines.' },
+    ];
+  }
+  if (/\b(web|frontend|front-end|backend|back-end|full[- ]?stack|software|react|node|javascript|typescript|next\.?js|html|css)\b/i.test(l)) {
+    return [
+      { content: '<strong>Full-Stack Cloud & Microservices</strong>: Intensive hands-on training in containerizing applications with Docker and deploying RESTful APIs to AWS.' },
+      { content: '<strong>Modern Frontend & State Architecture</strong>: Practical workshop building production React/Next.js web applications with TypeScript and Tailwind CSS.' },
+    ];
+  }
+  if (/\b(cyber|security|soc|penetration|pentest|ethical\s+hack|network)\b/i.test(l)) {
+    return [
+      { content: '<strong>Applied Network Security & Ethical Hacking</strong>: Hands-on vulnerability assessment, penetration testing, and traffic packet analysis using Wireshark and Metasploit.' },
+      { content: '<strong>Threat Intelligence & Incident Response</strong>: Practiced SIEM log analysis, intrusion detection, and active incident mitigation protocols.' },
+    ];
+  }
+  if (/\b(marketing|market|marketer|seo|growth|ads|social\s+media|content|campaign|conversion|ppc|sem|digital)\b/i.test(l)) {
+    return [
+      { content: '<strong>Performance Marketing & Paid Acquisition</strong>: Hands-on campaign planning and ROAS optimization across Meta Ads Manager, Google Ads, and TikTok Ads.' },
+      { content: '<strong>SEO, Content Strategy & Growth Analytics</strong>: Practical workshop on technical SEO audits, keyword gap analysis, and conversion funnel tracking using GA4 and Semrush.' },
+    ];
+  }
+  if (/\b(ui|ux|design|figma|graphic|product\s+design)\b/i.test(l)) {
+    return [
+      { content: '<strong>Design Systems & Figma Prototyping</strong>: Created reusable component libraries, interactive high-fidelity wireframes, and design tokens.' },
+      { content: '<strong>User Research & Usability Testing</strong>: Conducted user interviews, synthesized empathy maps, and performed heuristic usability audits.' },
+    ];
+  }
+  if (/\b(finance|accounting|audit|financial|investment|fintech)\b/i.test(l)) {
+    return [
+      { content: '<strong>Financial Modeling & Valuation Analysis</strong>: Hands-on discounted cash flow (DCF) modeling, sensitivity tables, and scenario analysis in Excel.' },
+      { content: '<strong>Corporate Financial Reporting & Audit Standards</strong>: Practical training in IFRS compliance, variance analysis, and audit trail reconciliation.' },
+    ];
+  }
+  if (/\b(sales|business\s+dev|b2b|account\s+exec)\b/i.test(l)) {
+    return [
+      { content: '<strong>B2B Consultative Selling & Pipeline Mastery</strong>: Intensive training in outbound prospecting, objection handling, and CRM pipeline hygiene in Salesforce.' },
+      { content: '<strong>Enterprise Deal Negotiation & Closing</strong>: Practical workshops in value-based pricing, stakeholder discovery, and closing frameworks.' },
+    ];
+  }
+  return [
+    { content: '<strong>Industry Best Practices & Modern Tools</strong>: Comprehensive hands-on training in modern workflow automation, collaborative tooling, and project execution.' },
+    { content: '<strong>Applied Technical Workshop & Case Studies</strong>: Practical problem-solving and implementation of real-world industry case studies.' },
+  ];
+}
+
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -402,7 +506,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const body = (await request.json()) as { messages?: ChatMessage[]; cv?: CvData; targetJob?: string; sessionId?: string; isAutoFit?: boolean };
+    const body = (await request.json()) as { messages?: ChatMessage[]; cv?: CvData; targetJob?: string; sessionId?: string; isAutoFit?: boolean; cvType?: 'professional' | 'student' };
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const cv: CvData = body.cv || {
       personalInfo: { fullName: '', phone: '', email: '', linkedin: '', linkedinLabel: 'Linkedin', github: '', githubLabel: 'GitHub', kaggle: '', kaggleLabel: 'Kaggle' },
@@ -416,20 +520,37 @@ export async function POST(request: Request) {
     const sessionId = (body.sessionId && body.sessionId !== 'unknown') ? body.sessionId : crypto.randomUUID();
     const isAutoFit = body.isAutoFit || false;
     const userMessage = messages[messages.length - 1]?.content || '';
-    // Resume type is owned by the app's Professional/Student toggle, never
-    // by the model — locked here from the pre-call draft and restated as
-    // explicit context every turn, so a chat turn can't silently flip (or
-    // drift on) the type mid-conversation the way trusting the model's own
-    // "cvType" output allowed.
-    const cvType: 'professional' | 'student' = cv.cvType === 'student' ? 'student' : 'professional';
+    const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content ?? '';
+    const lastMsgLower = lastUserMessage.toLowerCase();
+
+    // Resume type resolution:
+    // 1. Explicit body.cvType from client toggle
+    // 2. Draft cv.cvType
+    // 3. User message explicit student/fresher cues
+    const isExplicitStudentPrompt = /\b(student|fresher|intern|internship|undergrad|undergraduate|fresh\s+graduate|entry[- ]level)\b/i.test(lastMsgLower);
+    const cvType: 'professional' | 'student' =
+      body.cvType === 'student' || cv.cvType === 'student' || (!body.cvType && !cv.cvType && isExplicitStudentPrompt)
+        ? 'student'
+        : (body.cvType === 'professional' ? 'professional' : (cv.cvType === 'professional' ? 'professional' : 'professional'));
+
     const currentDateStr = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
     const systemMessages: { role: 'system', content: string }[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: getSystemPrompt(cvType) },
       { role: 'system', content: `CURRENT REAL-WORLD DATE: ${currentDateStr}. When calculating relative durations (e.g. "working for 6 months", "been working 6 months"), calculate the start date by subtracting the specified duration from ${currentDateStr}.` },
       { role: 'system', content: typeContextLine(cvType) },
       { role: 'system', content: `The student's CURRENT resume as JSON:\n${JSON.stringify(cv)}` }
     ];
+
+    if (cvType === 'student') {
+      systemMessages.push({
+        role: 'system',
+        content: `🚨 MANDATORY DIRECTIVE FOR THIS TURN (STUDENT RESUME):
+1. "workExperience" MUST BE []. Under NO circumstances should you return any work experience entries!
+2. "workshops" MUST BE POPULATED with 2 to 3 field-aligned practical workshops or bootcamps tailored to the user's field. NEVER return an empty "workshops" array!
+3. Format each workshop as: { "content": "<strong>Workshop Title</strong>: Description of practical tools and skills learned." }`
+      });
+    }
 
     if (body.targetJob && body.targetJob.trim().length > 0) {
       systemMessages.push({
@@ -439,8 +560,6 @@ export async function POST(request: Request) {
     }
 
     // ── Universal Array Slicing & Targeted Removal Engine ─────────────────
-    const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content ?? '';
-    const lastMsgLower = lastUserMessage.toLowerCase();
 
     // Helper to reliably record fast-path turns with full structured snapshots in the database for the Admin Inspector
     const logFastPathTurn = async (aiReply: string, updatedCv: CvData, interceptorModel = 'fast-path-interceptor') => {
@@ -734,10 +853,39 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       summary: (nextCv.summary && nextCv.summary.trim()) ? nextCv.summary : (cv.summary || ''),
       personalInfo: nextCv.personalInfo ?? cv.personalInfo ?? defaultPersonalInfo,
       education: cleanEducation,
-      workExperience: (cvType === 'student' ? cv.workExperience ?? [] : nextCv.workExperience ?? []).filter(
+      workExperience: cvType === 'student' ? [] : (nextCv.workExperience ?? cv.workExperience ?? []).filter(
         (w) => w.company || w.title || w.bullets
       ),
-      workshops: (cvType === 'student' ? nextCv.workshops ?? [] : cv.workshops ?? []).filter((w) => (w.content || '').trim()),
+      workshops: (() => {
+        if (cvType !== 'student') return [];
+        const isWorkshopRemoval = /\b(remove|delete|drop|clear|no)\b.*?\b(workshop|workshops)\b/i.test(lastMsgLower);
+        if (isWorkshopRemoval) return [];
+        const candidate = (nextCv.workshops ?? []).filter((w) => (w.content || '').trim());
+        if (candidate.length > 0) return candidate;
+
+        // Auto-Recovery: If the model generated workExperience instead of workshops for student, convert it into practical workshops!
+        if (Array.isArray(nextCv.workExperience) && nextCv.workExperience.length > 0) {
+          const converted = nextCv.workExperience
+            .filter((we) => (we.title || we.company || we.bullets))
+            .map((we) => {
+              const title = we.title || we.company || 'Professional Workshop';
+              const firstBullet = (we.bullets || '').split('\n').filter(Boolean)[0] || '';
+              const desc = firstBullet
+                ? `Practiced hands-on industry techniques: ${firstBullet.replace(/<[^>]+>/g, '').trim()}`
+                : `Comprehensive practical training in ${title}.`;
+              return { content: `<strong>${title} Practical Bootcamp</strong>: ${desc}` };
+            })
+            .slice(0, 3);
+          if (converted.length > 0) return converted;
+        }
+
+        const prevCandidate = (cv.workshops ?? []).filter((w) => (w.content || '').trim());
+        if (prevCandidate.length > 0 && !/\b(create|build|generate|make|transform|rewrite)\b/i.test(lastMsgLower)) {
+          return prevCandidate;
+        }
+        const context = `${lastUserMessage} ${nextCv.summary || cv.summary || ''} ${(nextCv.projects || cv.projects || []).map((p) => p.content || p.title || '').join(' ')}`;
+        return getDefaultStudentWorkshops(context);
+      })(),
       projects: (nextCv.projects ?? []).filter((p) => (p.content || '').trim() || (p.title || '').trim()).map((p) => {
         return syncProjectContent(p);
       }),
@@ -904,7 +1052,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       if (!isCertEdit && cv.certifications) {
         safeCv.certifications = cv.certifications;
       }
-      if (!isWorkEdit && cv.workExperience) {
+      if (!isWorkEdit && cv.workExperience && cvType !== 'student') {
         safeCv.workExperience = cv.workExperience;
       }
       if (!isEduEdit && cv.education) {
@@ -1322,22 +1470,30 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
     // Auto-fix: Universal Role Transformation Content Density & Page 1 Full Fill Engine
     // Ensures ANY role transformation (Sizing Specialist in Textile, Email Marketer, Software Engineer, Upwork Bidder, etc.) fills Page 1 100% top-to-bottom
     if (isRoleTransform && !isProjEdit) {
-      safeCv.workExperience = (safeCv.workExperience ?? []).slice(0, 1).map((w) => {
-        const bulletLines = (w.bullets || '').split('\n').filter((b) => b.trim().length > 0);
-        const enriched = bulletLines.map((b) => {
-          if (b.length < 135 && !b.toLowerCase().includes('optimizing') && !b.toLowerCase().includes('ensuring')) {
-            return b.replace(/\.$/, '') + ', optimizing workflow efficiency and operational performance.';
-          }
-          return b;
-        });
+      if (cvType !== 'student') {
+        safeCv.workExperience = (safeCv.workExperience ?? []).slice(0, 1).map((w) => {
+          const bulletLines = (w.bullets || '').split('\n').filter((b) => b.trim().length > 0);
+          const enriched = bulletLines.map((b) => {
+            if (b.length < 135 && !b.toLowerCase().includes('optimizing') && !b.toLowerCase().includes('ensuring')) {
+              return b.replace(/\.$/, '') + ', optimizing workflow efficiency and operational performance.';
+            }
+            return b;
+          });
 
-        if (enriched.length < 4) {
-          enriched.push(
-            'Collaborated with cross-functional teams to implement quality assurance protocols, <strong>increasing operational efficiency by 25%</strong> and reducing waste.'
-          );
+          if (enriched.length < 4) {
+            enriched.push(
+              'Collaborated with cross-functional teams to implement quality assurance protocols, <strong>increasing operational efficiency by 25%</strong> and reducing waste.'
+            );
+          }
+          return { ...w, bullets: enriched.join('\n') };
+        });
+      } else {
+        safeCv.workExperience = [];
+        if (!safeCv.workshops || safeCv.workshops.length < 2) {
+          const context = `${lastUserMessage} ${safeCv.summary || ''} ${(safeCv.projects || []).map((p) => p.content || '').join(' ')}`;
+          safeCv.workshops = getDefaultStudentWorkshops(context);
         }
-        return { ...w, bullets: enriched.join('\n') };
-      });
+      }
 
       safeCv.projects = (safeCv.projects ?? []).slice(0, 3).map((p) => {
         if (p.content.length < 140 && !p.content.includes('delivering') && !p.content.includes('achieving')) {
@@ -1356,7 +1512,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
 
     // Auto-fix: Ensure every single bullet line in workExperience contains a percentage (%) or number
     // ONLY during full role transformation or when explicitly editing work experience bullets
-    if (isRoleTransform || isWorkEdit) {
+    if ((isRoleTransform || isWorkEdit) && cvType !== 'student') {
       safeCv.workExperience = (safeCv.workExperience ?? []).map((w) => {
         const bulletLines = (w.bullets || '').split('\n');
         const enrichedLines = bulletLines.map((line, idx) => {
@@ -1420,7 +1576,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         }
       }
 
-      if (safeCv.workExperience) {
+      if (safeCv.workExperience && cvType !== 'student') {
         safeCv.workExperience = safeCv.workExperience.map((exp) => ({
           ...exp,
           company: isPlaceholderToken(exp.company) ? (msgLower.includes('sales') ? 'Apex Enterprise Solutions' : msgLower.includes('marketing') ? 'Vanguard Growth Media' : msgLower.includes('product') ? 'Nexus Tech Innovations' : 'CloudScale Technologies') : exp.company,
@@ -1558,6 +1714,16 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
         } catch (fallbackErr) {
           console.error('[ProfileBuilderChatLog Fallback Error]:', fallbackErr);
         }
+      }
+    }
+
+    if (cvType === 'student') {
+      safeCv.cvType = 'student';
+      safeCv.workExperience = [];
+      const isWorkshopRemoval = /\b(remove|delete|drop|clear|no)\b.*?\b(workshop|workshops)\b/i.test(lastMsgLower);
+      if (!isWorkshopRemoval && (!safeCv.workshops || safeCv.workshops.length === 0)) {
+        const context = `${lastUserMessage} ${safeCv.summary || ''} ${(safeCv.projects || []).map((p) => p.content || '').join(' ')}`;
+        safeCv.workshops = getDefaultStudentWorkshops(context);
       }
     }
 

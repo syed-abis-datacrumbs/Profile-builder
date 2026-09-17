@@ -167,6 +167,7 @@ export const DEFAULT_PLACEHOLDER_CV = {
       bullets: 'Lead development of key initiatives, collaborating across teams to deliver high-quality outcomes.\nQuantified impact with measurable results (e.g., <strong>improved efficiency by 35%</strong> and reduced operating costs).\nDesigned, built, and deployed scalable solutions following modern industry best practices.',
     },
   ],
+  workshops: [] as { content: string }[],
   projects: [
     {
       content: '<strong>Primary Project Title</strong> (Technologies, Tools, Frameworks) – Comprehensive overview of problem solved, technical implementation details, and business outcome.',

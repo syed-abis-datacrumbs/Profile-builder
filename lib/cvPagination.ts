@@ -56,19 +56,27 @@ export function paginateCvSmart(contentHeight: number, blocks: CvBlock[]): CvPag
       breakAt = contentHeight;
     } else {
       const pageEnd = sliceStart + (PAGE_HEIGHT_PX - topOffset - PAGE_MARGIN_PX);
-      let lastFittingBottom = 0;
-      for (const b of sorted) {
-        if (b.top >= sliceStart - 1 && b.bottom <= pageEnd && b.bottom > lastFittingBottom) {
-          lastFittingBottom = b.bottom;
-        }
-      }
-      if (lastFittingBottom > sliceStart) {
-        breakAt = lastFittingBottom;
+      // Find any block that straddles across the page bottom boundary
+      const straddler = sorted.find(
+        (b) => b.top >= sliceStart && b.top < pageEnd && b.bottom > pageEnd
+      );
+
+      if (straddler && straddler.top > sliceStart) {
+        // Shift the entire straddling block to the next page!
+        breakAt = straddler.top;
       } else {
-        const straddler = sorted.find(
-          (b) => b.top > sliceStart + 1 && b.top < pageEnd && b.bottom > pageEnd
-        );
-        breakAt = straddler ? straddler.top : pageEnd;
+        // Otherwise fit as many full blocks as possible
+        let lastFittingBottom = 0;
+        for (const b of sorted) {
+          if (b.top >= sliceStart - 1 && b.bottom <= pageEnd && b.bottom > lastFittingBottom) {
+            lastFittingBottom = b.bottom;
+          }
+        }
+        if (lastFittingBottom > sliceStart) {
+          breakAt = lastFittingBottom;
+        } else {
+          breakAt = pageEnd;
+        }
       }
     }
 

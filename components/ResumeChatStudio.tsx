@@ -26,6 +26,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
+import { DEFAULT_PLACEHOLDER_CV } from '../lib/defaultData';
 import { getResumeAccentColor } from '../lib/resumeHelpers';
 import { LMS_RESUME_SAMPLES } from '../lib/resumeSamples';
 import { CvPreview } from './CvPreview';
@@ -132,27 +133,26 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   // consistent everywhere without threading a colour prop around.
   const accent = getResumeAccentColor(fieldLabel ? { label: fieldLabel } : null);
 
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const hasLoadedFromStorage = useRef(false);
-
-  useEffect(() => {
+  const [messages, setMessages] = useState<Msg[]>(() => {
+    if (typeof window === 'undefined') return [];
     try {
       const saved = localStorage.getItem('profile_builder_resume_chat');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(
-            parsed.map((m: any) => ({
-              id: m.id || crypto.randomUUID(),
-              role: m.role,
-              content: m.content,
-            }))
-          );
+          return parsed.map((m: any) => ({
+            id: m.id || crypto.randomUUID(),
+            role: m.role,
+            content: m.content,
+          }));
         }
       }
     } catch {}
-    hasLoadedFromStorage.current = true;
-  }, []);
+    return [];
+  });
+  const hasLoadedFromStorage = useRef(true);
+
+
 
   const pendingMessagesRef = useRef<Msg[] | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -226,6 +226,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
+
+
   // Undo/Redo history via useUndoRedo hook
   const {
     canUndo,
@@ -258,6 +260,30 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
     setRevision((r) => r + 1);
     setAtsScore(null);
   };
+
+  const handleNewChat = useCallback(() => {
+    sessionIdRef.current = crypto.randomUUID();
+    setMessages([]);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('profile_builder_resume_chat');
+        localStorage.removeItem('profile_builder_studio_cv');
+        localStorage.removeItem('profile_builder_studio_label');
+      } catch {}
+    }
+    const freshCv: CvData = {
+      ...DEFAULT_PLACEHOLDER_CV,
+      cvType: 'professional',
+      workExperience: DEFAULT_PLACEHOLDER_CV.workExperience,
+      workshops: [],
+      personalInfo: {
+        ...DEFAULT_PLACEHOLDER_CV.personalInfo,
+        fullName: clerkName || cv.personalInfo?.fullName || 'Your Name',
+      },
+    };
+    external(cvMarkdownToHtml(freshCv));
+    showToast('Started fresh resume chat session');
+  }, [clerkName, cv.personalInfo?.fullName, showToast]);
 
   const handleReportIssue = async () => {
     if (!issueText.trim()) return;
@@ -840,6 +866,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         body: JSON.stringify({ 
           messages: nextMessages, 
           cv, 
+          cvType: cv.cvType || 'professional',
           targetJob,
           sessionId: sessionIdRef.current,
           isAutoFit: overrideText !== undefined 
@@ -852,6 +879,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
         if (data.cv) {
           const updatedCv: CvData = {
             ...(data.cv as CvData),
+            cvType: (data.cv as CvData).cvType || cv.cvType || 'professional',
             theme: (data.cv as CvData).theme || cv.theme,
           };
           external(cvMarkdownToHtml(updatedCv));
@@ -900,10 +928,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <button
-              onClick={() => {
-                sessionIdRef.current = crypto.randomUUID();
-                setMessages([]);
-              }}
+              onClick={handleNewChat}
               className="px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors shrink-0 cursor-pointer"
               title="Start a new chat session"
             >
@@ -1393,8 +1418,8 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 >
                   {t === 'professional' ? (
                     <>
-                      <span className="hidden 2xl:inline">Professional</span>
-                      <span className="2xl:hidden">Pro</span>
+                      <span className="hidden sm:inline">Professional</span>
+                      <span className="sm:hidden">Pro</span>
                     </>
                   ) : (
                     <>
@@ -1694,10 +1719,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           }
           setShowPaymentModal(true);
         }}
-        onNewChat={() => {
-          sessionIdRef.current = crypto.randomUUID();
-          setMessages([]);
-        }}
+        onNewChat={handleNewChat}
         badgeAction={
           <div className="flex items-center gap-1.5 flex-wrap">
             <button
