@@ -255,6 +255,59 @@ function applySingleOp(doc: unknown, operation: JsonPatchOperation): void {
 }
 
 /**
+ * Normalizes an array of patch operations so that multiple removals on the same
+ * array path are executed in descending index order. This prevents index shifting
+ * from causing out-of-bounds errors when an LLM emits removals in ascending order
+ * (e.g. [/certifications/2, /certifications/3] -> [/certifications/3, /certifications/2]).
+ */
+function normalizePatchesForArrayRemovals(patches: unknown[]): unknown[] {
+  const normalized: unknown[] = [];
+  let i = 0;
+  while (i < patches.length) {
+    const rawOp = patches[i];
+    if (
+      rawOp &&
+      typeof rawOp === 'object' &&
+      'op' in rawOp &&
+      (rawOp as JsonPatchOperation).op?.toLowerCase() === 'remove' &&
+      typeof (rawOp as JsonPatchOperation).path === 'string'
+    ) {
+      const match = (rawOp as JsonPatchOperation).path.match(/^(.+)\/(\d+)$/);
+      if (match) {
+        const parentPath = match[1];
+        const group: { op: unknown; idx: number }[] = [];
+        while (i < patches.length) {
+          const curr = patches[i];
+          if (
+            curr &&
+            typeof curr === 'object' &&
+            'op' in curr &&
+            (curr as JsonPatchOperation).op?.toLowerCase() === 'remove' &&
+            typeof (curr as JsonPatchOperation).path === 'string'
+          ) {
+            const currMatch = (curr as JsonPatchOperation).path.match(/^(.+)\/(\d+)$/);
+            if (currMatch && currMatch[1] === parentPath) {
+              group.push({ op: curr, idx: parseInt(currMatch[2], 10) });
+              i++;
+              continue;
+            }
+          }
+          break;
+        }
+        group.sort((a, b) => b.idx - a.idx);
+        for (const item of group) {
+          normalized.push(item.op);
+        }
+        continue;
+      }
+    }
+    normalized.push(rawOp);
+    i++;
+  }
+  return normalized;
+}
+
+/**
  * Applies an array of JSON patch operations to a document.
  * Returns a new cloned document if successful, or preserves the original state with errors reported.
  */
@@ -281,6 +334,8 @@ export function applyJsonPatches<T>(
     };
   }
 
+  const effectivePatches = normalizePatchesForArrayRemovals(patches);
+
   let docClone: T;
   try {
     docClone = structuredClone(sourceDocument);
@@ -291,8 +346,8 @@ export function applyJsonPatches<T>(
   const errors: string[] = [];
   let appliedCount = 0;
 
-  for (let i = 0; i < patches.length; i++) {
-    const rawOp = patches[i];
+  for (let i = 0; i < effectivePatches.length; i++) {
+    const rawOp = effectivePatches[i];
     if (!rawOp || typeof rawOp !== 'object' || !('op' in rawOp) || !('path' in rawOp)) {
       errors.push(`Patch #${i} is missing required fields (op, path)`);
       if (!options.allowPartial) {

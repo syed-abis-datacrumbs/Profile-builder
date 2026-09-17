@@ -949,7 +949,7 @@ function CvPreviewBase({
                     );
                   })
               )}
-              {(editable || data.additional.interests) && (
+              {Boolean(data.additional.interests && data.additional.interests.trim()) && (
                 <div className="pt-0.5">
                   <span className="font-bold text-slate-950">Interests: </span>
                   {editable ? (
@@ -966,12 +966,14 @@ function CvPreviewBase({
             </div>
           ) : (
             <div className="space-y-0.5">
-              <Bullet marker={data.additional.bulletStyle === 'number' ? '1.' : '•'}>
-                <span className="font-bold">Technical Skills:</span>{' '}
-                {editable ? <RichText html={data.additional.skills} placeholder="Skills…" onCommit={(v) => setAdditional({ skills: v })} /> : <Html html={data.additional.skills} />}
-              </Bullet>
-              {(editable || data.additional.interests) && (
-                <Bullet marker={data.additional.bulletStyle === 'number' ? '2.' : '•'}>
+              {Boolean(data.additional.skills && data.additional.skills.trim()) && (
+                <Bullet marker={data.additional.bulletStyle === 'number' ? '1.' : '•'}>
+                  <span className="font-bold">Technical Skills:</span>{' '}
+                  {editable ? <RichText html={data.additional.skills} placeholder="Skills…" onCommit={(v) => setAdditional({ skills: v })} /> : <Html html={data.additional.skills} />}
+                </Bullet>
+              )}
+              {Boolean(data.additional.interests && data.additional.interests.trim()) && (
+                <Bullet marker={data.additional.bulletStyle === 'number' ? (Boolean(data.additional.skills && data.additional.skills.trim()) ? '2.' : '1.') : '•'}>
                   <span className="font-bold">Interests:</span>{' '}
                   {editable ? <RichText html={data.additional.interests} placeholder="Interests…" onCommit={(v) => setAdditional({ interests: v })} /> : <Html html={data.additional.interests} />}
                 </Bullet>

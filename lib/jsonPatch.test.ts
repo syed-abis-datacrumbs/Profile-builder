@@ -144,4 +144,20 @@ describe('applyJsonPatches - Resilient JSON Patch Engine', () => {
     const resRep = applyJsonPatches(doc, [{ op: 'replace', path: '/items/0', value: 'z' }]);
     expect(resRep.document.items).toEqual(['z', 'b', 'c']);
   });
+
+  it('handles multiple array removals in ascending or descending index order without index shift errors', () => {
+    const doc = {
+      certifications: ['AWS', 'Azure', 'K8s', 'GCP'],
+    };
+
+    // Removing indices 2 and 3 emitted in ascending order
+    const patches = [
+      { op: 'remove', path: '/certifications/2' },
+      { op: 'remove', path: '/certifications/3' },
+    ];
+
+    const res = applyJsonPatches(doc, patches, { allowPartial: true });
+    expect(res.success).toBe(true);
+    expect(res.document.certifications).toEqual(['AWS', 'Azure']);
+  });
 });

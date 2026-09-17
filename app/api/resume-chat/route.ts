@@ -54,29 +54,47 @@ JSON Patch Path Guide & Examples:
      ALWAYS use "op": "replace" with the final desired remaining bullet lines:
      { "op": "replace", "path": "/workExperience/0/bullets", "value": "Bullet 1\nBullet 2" }
      NEVER use "op": "remove" on string properties (e.g. "/workExperience/0/bullets", "/additional/skills")! "remove" deletes the entire property!
-  3. REMOVING MULTIPLE BULLETS / EXACT COUNT ARITHMETIC ("remove 2 points from experience", "remove 3 bullets", "remove 4 points from devlaunch studio"):
-     YOU MUST CALCULATE THE EXACT LINE COUNT FOR THE SPECIFIC TARGETED ROLE:
-     Match the company name to its exact array index in "workExperience" (e.g. "DevLaunch Studio" -> /workExperience/1/bullets).
-     Count the existing lines in THAT TARGET company's "bullets".
-     - If current bullets = 6 and user says "remove 5 points", remaining count = 6 - 5 = EXACTLY 1 line. NEVER keep 2 bullets when the math requires 1!
-     - If current bullets = 4 and user says "remove 3 points", remaining count = 4 - 3 = 1 line.
-     - If user says "keep only 1 point", remaining count = 1 line.
-     - If user says "remove 2 points", remaining count = 4 - 2 = 2 lines.
-     - If requested removal count >= existing bullets (e.g. company has 6 bullets and user says "delete 6 points", "remove 6 bullets", or "remove all points"):
-       Delete all bullets from that company by setting value to "":
-       { "op": "replace", "path": "/workExperience/<index>/bullets", "value": "" }
-       ALL 6 points are deleted from that company!
-       CRITICAL: NEVER spill over, borrow, or carry over removals to any other company! The deletion stops strictly at that company.
-     CRITICAL — STRICT ISOLATION / ZERO CROSS-JOB SPILLOVER:
-     When the user targets a specific company (e.g. "from DevLaunch Studio"), YOU MUST ONLY EMIT A PATCH FOR THAT TARGET COMPANY (e.g. /workExperience/1/bullets)!
-     NEVER emit a patch for any other company (such as /workExperience/0/bullets)!
-     NEVER borrow, transfer, or deduct bullets from Company A to fulfill a removal count requested on Company B!
-     All non-targeted companies MUST remain 100% UNTOUCHED!
-     The "value" string MUST contain EXACTLY that number of remaining newline-separated bullet lines.
-     CRITICAL: When the user explicitly requests to remove a specific count of bullets, this explicit user request STRICTLY OVERRIDES any general guideline about retaining 2-3 bullets!
+  3. REMOVING MULTIPLE BULLETS / EXACT COUNT ARITHMETIC ("remove 3 points from experience", "remove 2 points from experience", "remove 4 points from devlaunch studio", "delete 3 points"):
+       CRITICAL — DYNAMIC SUBTRACTION FROM ACTUAL BULLET COUNT (NEVER ASSUME 4 BULLETS):
+       Step 1: COUNT the actual newline-separated bullets currently in that targeted role (e.g. role may have 3 bullets, 4 bullets, 6 bullets, etc.).
+       Step 2: SUBTRACT the requested removal count N from existing count C (C - N).
+       
+       - CASE 1: When C > N (Remaining count > 0):
+         Output exactly (C - N) remaining bullets.
+         - If role has 4 bullets and user says "remove 3 points": 4 - 3 = EXACTLY 1 REMAINING BULLET!
+           Output: { "op": "replace", "path": "/workExperience/<index>/bullets", "value": "<Single Best Bullet>" }
+         - If role has 4 bullets and user says "remove 2 points": 4 - 2 = EXACTLY 2 REMAINING BULLETS!
+         - If role has 3 bullets and user says "remove 2 points": 3 - 2 = EXACTLY 1 REMAINING BULLET!
+       
+       - CASE 2: When N >= C (USER ASKS TO REMOVE ALL BULLETS OR EQUAL/GREATER COUNT):
+         - If role has 3 bullets, and user says "remove 3 points from experience" (or "delete 3 bullets", "remove all points"):
+           MATH: 3 existing - 3 to remove = 0 BULLETS REMAINING!
+           Output: { "op": "replace", "path": "/workExperience/<index>/bullets", "value": "" }
+           CRITICAL: DO NOT KEEP 1 BULLET! DO NOT SAY "keeping the most impactful bullet"!
+           Outputting 1 bullet when the user asked to remove 3 out of 3 bullets is a critical failure. All 3 bullets must be removed by setting value to "".
+         - If role has 6 bullets, and user says "delete 6 points" or "remove 6 bullets":
+           MATH: 6 existing - 6 to remove = 0 BULLETS REMAINING!
+           Output: { "op": "replace", "path": "/workExperience/<index>/bullets", "value": "" }
+       
+       CRITICAL — NEVER CONFUSE "REMOVE N" WITH "KEEP N":
+       "remove 3 points" DOES NOT MEAN "keep 3 points"!
+       
+       CRITICAL — STRICT ISOLATION / ZERO CROSS-JOB SPILLOVER:
+       When the user targets a specific company (e.g. "from DevLaunch Studio"), YOU MUST ONLY EMIT A PATCH FOR THAT TARGET COMPANY (e.g. /workExperience/1/bullets)!
+       NEVER emit a patch for any other company (such as /workExperience/0/bullets)!
+       NEVER borrow, transfer, or deduct bullets from Company A to fulfill a removal count requested on Company B!
+       All non-targeted companies MUST remain 100% UNTOUCHED!
+       CRITICAL: When the user explicitly requests to remove a specific count of bullets, this explicit user request STRICTLY OVERRIDES any general guideline about retaining 2-3 bullets!
   4. ADDING SKILLS OR INTERESTS:
      ALWAYS use "op": "replace" with all existing skills plus the new skill:
      { "op": "replace", "path": "/additional/skills", "value": "Existing Skill 1, Existing Skill 2, New Skill 3" }
+  5. REMOVING SKILLS OR INTERESTS:
+     When the user asks to remove interests or skills (e.g. "remove interest from additional", "remove interests", "delete skills", "remove interest", "delete interest"):
+     ALWAYS emit a replace patch setting the target field to an empty string "":
+     { "op": "replace", "path": "/additional/interests", "value": "" }
+     (or path "/additional/skills" if skills removal). NEVER omit the patch or return 0 patches!
+  6. MULTIPLE ARRAY REMOVALS:
+     When removing multiple items from an array (e.g. certifications or projects), ALWAYS list removal patches in descending index order (e.g. /certifications/3 then /certifications/2) so array index shifts do not cause errors.
 - CRITICAL FOR 1-PAGE CONDENSING ("make it in one page please", "fit on 1 page", "condense to 1 page"):
   1. ONLY when the user asks to fit/condense to 1 page (and has NOT asked to remove specific bullets), retain 2 to 3 punchy, high-impact bullet points per job. If the user explicitly asks to remove bullets or points, the user's requested count strictly controls!
   2. Condense bullets to 1-2 tight lines by cutting filler words while preserving quantified metrics and action verbs.
@@ -116,23 +134,29 @@ Rules:
   8. NEVER ACCIDENTALLY DELETE WHEN ADDING (CRITICAL): When the user asks to "add" an experience, project, education, or certification (e.g. "add full stack engineer at datacrumbs as experience"), YOU MUST ONLY EMIT AN "add" PATCH OPERATION. NEVER pair an "add" with a "remove" operation! All existing experiences, projects, and education MUST REMAIN INTACT in the array. If replacing an empty/generic placeholder (e.g. "Company / Organization Name"), use a single { "op": "replace", "path": "/workExperience/0", "value": ... } patch. EXCEPTION: Replacing a secondary education / college entry (e.g. replacing Nixor College / A-Levels when the user mentions their Intermediate or College) MUST use "replace", NEVER "add"! Never emit a "remove" patch unless the user specifically and explicitly requested to delete/remove an item!
 
 - CRITICAL — SECONDARY EDUCATION / COLLEGE REPLACEMENT RULE:
-  Resumes standardly contain at most ONE secondary education tier (Intermediate, A-Levels, FSc, High School, College). When the user provides their college or intermediate education (e.g. "i have done intermediate from DJ Science", "i did intermediate from Beaconhouse", "my college is Askari College", "intermediate from DJ Science", "add intermediate from Beaconhouse"):
+  Resumes standardly contain at most ONE secondary education tier (Intermediate, A-Levels, FSc, High School, College). When the user provides their college or intermediate education (e.g. "add college SRE Majeed", "i have done intermediate from DJ Science", "my college is Askari College", "intermediate from DJ Science", "add intermediate from Beaconhouse"):
   1. If the resume ALREADY contains a secondary education / college / A-Levels entry (such as "Nixor College", "A-Levels", "State College Preparatory", or any entry at /education/1 with degree or institution matching College, A-Levels, Intermediate, or High School):
      YOU MUST REPLACE that secondary education entry!
-     Prefer targeted field replacement so you do not overwrite existing dates or fabricate new ones:
+     Targeted field replacement:
      { "op": "replace", "path": "/education/1/institution", "value": "<College Name>" }
-     (and if degree is also mentioned: { "op": "replace", "path": "/education/1/degree", "value": "<Degree / Intermediate>" })
+     - If the user ALSO specified their qualification/degree (e.g. "intermediate in pre-engineering", "ICS", "A-Levels"):
+       Update degree as well: { "op": "replace", "path": "/education/1/degree", "value": "<Degree / Intermediate>" }
+     - If replacing a template/sample college entry (like Nixor College) and the user did NOT provide dates, set start and end to empty strings ("") so the UI shows the editable "Start" and "End" placeholders:
+       { "op": "replace", "path": "/education/1/start", "value": "" },
+       { "op": "replace", "path": "/education/1/end", "value": "" }
+     - CRITICAL FOLLOW-UP QUESTION IN CHAT REPLY:
+       Whenever the user gives ONLY the college name without specifying their degree and duration, YOU MUST PROACTIVELY ASK in your chat reply:
+       "I've added <College Name> to your education. What program or degree did you study there (e.g., Intermediate in Pre-Engineering, Pre-Medical, ICS, A-Levels) and what years did you attend?"
   2. NEVER emit an "add" patch that adds a second college/intermediate entry on top of the existing college/A-levels entry! A candidate has only one college/intermediate qualification.
-  3. If the current resume only has 1 education entry (University), you may add the secondary education entry at /education/1. If the user did NOT specify dates, leave "start": "" and "end": "" (empty strings) so the UI shows the editable "Start" and "End" placeholders! NEVER invent dates!
+  3. If the current resume only has 1 education entry (University), you may add the secondary education entry at /education/1 with "start": "" and "end": "" (empty strings). In your chat reply, ask for their program and dates.
 
 - CRITICAL — NEVER INVENT OR FABRICATE DATES (LEAVE AS PLACEHOLDERS):
   Dates (start date, end date, graduation year, employment tenure) are sensitive personal facts.
-  1. NEVER INVENT, FABRICATE, OR GUESS RANDOM DATES when the user adds or updates an education, work experience, or project entry without providing dates (e.g. "add my college dj science", "add experience at Google", "add project TaskFlow")!
+  1. NEVER INVENT, FABRICATE, OR GUESS RANDOM DATES when the user adds or updates an education, work experience, or project entry without providing dates (e.g. "add my college SRE Majeed", "add experience at Google", "add project TaskFlow")!
   2. If the user did NOT specify start or end dates in their message:
-     - For new entries: Set "start": "" and "end": "" (empty strings). In CvPreview, empty start/end automatically renders the clean editable "Start" and "End" placeholders in grey, allowing the user to click and type their actual dates or provide them in chat.
-     - For existing entries: PRESERVE the existing "start" and "end" values (or placeholders) verbatim! Only update the fields the user requested (such as "institution" or "company").
-  3. In your friendly chat "reply", ask the user for their dates (e.g. "I've added DJ Science to your education. What years did you attend?").
-  4. ONLY set concrete dates when:
+     - For new entries or when replacing template/sample entries: Set "start": "" and "end": "" (empty strings). In CvPreview, empty start/end automatically renders the clean editable "Start" and "End" placeholders in grey, allowing the user to click and type their actual dates or provide them in chat.
+     - In your friendly chat "reply", ALWAYS proactively ask the user for their dates and what they studied (e.g. "I've added SRE Majeed to your education. What did you study and what years did you attend?").
+  3. ONLY set concrete dates when:
      - The user explicitly mentions them in the conversation (e.g. "2020 to 2024", "graduated 2023", "started intermediate in 2018", "working for 6 months").
      - The user explicitly requests a full synthetic sample resume generation from scratch (e.g. "create sample resume for Software Engineer").
 
@@ -170,7 +194,7 @@ Rules:
 - If the user asks to remove/delete an entry (a certification, education entry, project, work experience, workshop, etc.), remove that WHOLE object from its array. Never leave it in place with its fields blanked out — an empty entry left behind still shows up in the resume as an empty placeholder slot, which looks broken. IMPORTANT: When you remove entries, you MUST actually produce a shorter array in the JSON — if the current array has 4 items and the user says remove 2, the output array MUST have exactly 2 items. Do NOT claim you removed something while keeping the array length the same. That is a critical failure.
 - CRITICAL — Unambiguous quantity removals (remove first/last N): Phrases like "remove the last 2 projects", "remove the first 3 certifications", "delete the last project", "remove 3 points from experience" are CLEAR and unambiguous. Act on them immediately without asking.
   - For arrays (projects, certifications): Take array length minus N.
-  - For string bullets ("bullets"): Split by newline, count lines, subtract N, and output exactly the remaining lines. If 4 bullets exist and user asks to remove 3, output EXACTLY 1 bullet. Always verify your output line count is correct before responding.
+  - For string bullets ("bullets"): Split by newline, count existing lines C, subtract N (C - N). If C - N > 0 (e.g. 4 exist and remove 3), output exactly that number of remaining lines (1 bullet). If N >= C (e.g. 3 exist and user asks to remove 3 points), output EXACTLY 0 bullets by setting value: "". Never retain a bullet when user asks to remove all of them! Always verify your output line count is correct before responding.
 - CRITICAL — Ambiguous removal requests: The ONLY ambiguous case is when the user writes a bare number with no positional word, e.g. "remove 2 projects" or "delete 3 certifications" — this is ambiguous because "2" could mean the 2nd item (ordinal) OR two items (quantity). In this case ONLY, you MUST ask for clarification before making any deletion. Return the cv completely unchanged and in your "reply" ask: "Do you mean remove the 2nd project specifically, or remove two projects from the list? If you want to remove specific ones, which ones?" Do NOT ask for clarification when the user says "last 2", "first 2", "last one", "all", or names a specific entry — those are clear.
 - CRITICAL — Courses vs Education: A "course", "certification", or "certificate" is NEVER an education entry. It must ALWAYS be added to the "certifications" array as { "name": "<course/certificate name>", "organization": "<provider name>" }. The "education" array is strictly for formal academic degrees (e.g. Bachelor's, Master's, Matric, Intermediate). If the user says "I did a course in X from Y" or "add certificate X from Y", put it in "certifications", not "education". If you have already (incorrectly) placed a course inside "education", remove it from "education" and add it to "certifications" instead.
 - CRITICAL — Date & Period Updates: When the user requests date or timeline adjustments (e.g., "working for 6 months", "started BSCS in Jan 2022 and ended in Feb 2026", "change dates of X to Y", "update experience dates"):
@@ -179,10 +203,14 @@ Rules:
   3. For relative duration requests (e.g., "working from 6 months now" or "6 months experience"), set end: "Present" (if current role) and set start to 6 months prior (e.g., start: "Sep 2025", end: "Present").
   4. For explicit date ranges (e.g., "started bscs in jan 2022 and ended in feb 2026"), set start: "Jan 2022" and end: "Feb 2026" on that education item.
 - CRITICAL — Skills & Interests (additional section):
-  1. The "additional" object MUST ALWAYS contain non-empty "skills" and "interests" strings.
+  1. In general resume generation, "additional" contains comma-separated "skills" and "interests" strings.
   2. "skills" MUST be a comma-separated list of relevant technical skills, programming languages, frameworks, and tools inferred from the user's projects, education, and work experience (e.g., "JavaScript, Node.js, React, Python, C++, HTML/CSS, Git, REST APIs, Arduino, dlib").
   3. "interests" MUST be a short comma-separated list of professional/tech interests inferred from their projects and field (e.g., "Web Development, Artificial Intelligence, Open Source, System Architecture, Mobile App Development").
-  4. If the user asks to "add skills", "fill skills", "add content to skills/interests", or if "skills" or "interests" are empty/blank, YOU MUST IMMEDIATELY POPULATE BOTH FIELDS with relevant, concrete technical content inferred from their resume items! NEVER return empty strings or blank placeholders for "skills" or "interests".
+  4. If the user asks to "add skills", "fill skills", "add content to skills/interests", or during initial full resume generation, populate both fields with relevant, concrete technical content.
+  5. EXPLICIT REMOVAL: When the user explicitly requests to remove interests or skills (e.g. "remove interest from additional", "remove interests", "delete skills", "remove interest", "no interests", "remove technical skills"):
+     YOU MUST EMIT A PATCH SETTING THE VALUE TO EMPTY STRING:
+     { "op": "replace", "path": "/additional/interests", "value": "" } (or "/additional/skills").
+     NEVER omit the patch, NEVER claim you removed it without emitting the patch, and NEVER refuse to remove it!
 - CRITICAL — PLACEHOLDER OVERWRITE RULE (Role Generation & Explicit Profile Content ONLY):
   When the user explicitly requests to create, build, generate, rewrite, or transform the CV for a target role (e.g. "Create CV for Software Engineer", "Build ATS resume for Data Analyst") OR provides their personal background and career details to populate the resume, and the resume contains placeholder text (such as "Your University", "College Name", "Degree Program", "Field of Study", "Company / Organization Name", "Company Name", "Job Title / Position", "Your Job Title", "Key Project Title", "Secondary Project Title", "Project Title", "Industry Certification", "Credential Name", "Issuing Organization", or similar generic templates):
   1. Overwrite and replace those placeholders with realistic, domain-specific, professional entities tailored to the requested role or user's provided details.
@@ -489,15 +517,38 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
 
     const startTime = Date.now();
     const openai = new OpenAI({ apiKey });
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0.4,
+    const modelToUse = process.env.RESUME_CHAT_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const isFixedTemperatureModel =
+      modelToUse.toLowerCase().includes('luna') ||
+      modelToUse.toLowerCase().includes('o1') ||
+      modelToUse.toLowerCase().includes('o3') ||
+      modelToUse.toLowerCase().includes('gpt-5');
+
+    const requestPayload: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+      model: modelToUse,
       response_format: { type: 'json_object' },
       messages: [
         ...systemMessages,
         ...messages.map((m) => ({ role: m.role, content: m.content }) as { role: 'user' | 'assistant', content: string }),
       ],
-    });
+    };
+
+    if (!isFixedTemperatureModel) {
+      requestPayload.temperature = 0.4;
+    }
+
+    let completion: OpenAI.Chat.Completions.ChatCompletion;
+    try {
+      completion = await openai.chat.completions.create(requestPayload);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes('temperature') && 'temperature' in requestPayload) {
+        delete requestPayload.temperature;
+        completion = await openai.chat.completions.create(requestPayload);
+      } else {
+        throw err;
+      }
+    }
 
     const latencyMs = Date.now() - startTime;
     const tokens = completion.usage?.total_tokens ?? null;
