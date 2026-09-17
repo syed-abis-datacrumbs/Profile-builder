@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'bun:test';
+import { applyJsonPatches } from '../jsonPatch';
+import type { CvData } from '../cvTypes';
 
 interface EduEntry {
   institution: string;
@@ -7,60 +9,7 @@ interface EduEntry {
   end?: string;
 }
 
-// ── Helpers mirroring route.ts logic for isolated unit testing ───────────────
-
-function isConversationalEdu(msgLower: string): boolean {
-  return (
-    /\b(?:i\s+)?(?:have\s+|haev\s+|had\s+|did\s+)?(?:done|completed|studied|attended)?\s*(?:my\s+)?(?:intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|college|collage|matric|high\s*school)\b/i.test(msgLower) ||
-    /\b(?:intermediate|internmediate|fsc|a[- ]?levels?|college|collage)\s+(?:in\s+[^,]+?\s+)?(?:from|at|in)\s+/i.test(msgLower)
-  );
-}
-
-function isNegationReq(msgLower: string): boolean {
-  return /\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\b/i.test(msgLower);
-}
-
-import { parseEducationMessage, isSecondaryEducationEntry } from './educationParser';
-
-function applyEduReplacement(education: EduEntry[], message: string): EduEntry[] {
-  const { oldTargetName, newTargetName, extractedDegree, isCollegeType } = parseEducationMessage(message);
-  const currentEdu = [...education];
-
-  if (isCollegeType) {
-    let targetIdx = -1;
-    if (oldTargetName) {
-      targetIdx = currentEdu.findIndex(e =>
-        e.institution.toLowerCase().includes(oldTargetName.toLowerCase()) ||
-        oldTargetName.toLowerCase().includes(e.institution.toLowerCase())
-      );
-    }
-    if (targetIdx === -1) {
-      targetIdx = currentEdu.findIndex(isSecondaryEducationEntry);
-      if (targetIdx === -1 && currentEdu.length > 1) {
-        targetIdx = 1;
-      }
-    }
-
-    const existingDeg = targetIdx !== -1 ? currentEdu[targetIdx].degree : '';
-    const cleanDeg = extractedDegree || (existingDeg?.includes('/') ? 'Intermediate' : existingDeg) || 'Intermediate';
-
-    if (targetIdx !== -1) {
-      currentEdu[targetIdx] = {
-        ...currentEdu[targetIdx],
-        institution: newTargetName,
-        degree: cleanDeg,
-      };
-    } else {
-      currentEdu.push({
-        institution: newTargetName,
-        degree: extractedDegree || 'Intermediate',
-        start: 'Jun 2018',
-        end: 'Jun 2020',
-      });
-    }
-  }
-  return currentEdu;
-}
+// ── Post-processing guardrails mirroring route.ts logic ───────────────────────
 
 function applyNegationRemoval(education: EduEntry[], message: string): EduEntry[] {
   const targetQuery = message
@@ -117,127 +66,104 @@ function consolidateSecondaryTier(education: EduEntry[], userMsg: string): EduEn
 
 // ── Test Suite ───────────────────────────────────────────────────────────────
 
-describe('Resume Chat - Education & College Replacement', () => {
-  const initialEducation: EduEntry[] = [
-    { institution: 'Indus University', degree: 'Bachelor of Science in Artificial Intelligence', start: 'Jul 2022', end: 'Jun 2026' },
-    { institution: 'Nixor College', degree: 'A-Levels', start: 'Jun 2020', end: 'Jun 2022' },
-  ];
+describe('Resume Chat - Education & College Replacement (JSON Patch & Guardrails)', () => {
+  const initialCv: CvData = {
+    summary: 'Software Engineer',
+    personalInfo: { fullName: 'Ali Khan', email: 'ali@example.com', phone: '123' },
+    education: [
+      { institution: 'Indus University', degree: 'Bachelor of Science in Artificial Intelligence', start: 'Jul 2022', end: 'Jun 2026' },
+      { institution: 'Nixor College', degree: 'A-Levels', start: 'Jun 2020', end: 'Jun 2022' },
+    ],
+    workExperience: [],
+    workshops: [],
+    projects: [],
+    certifications: [],
+    additional: { skills: 'TypeScript', interests: 'AI' },
+  };
 
-  describe('Conversational & Typo Intent Matching', () => {
-    it('recognizes "i haev done intermediate in engineering from DJ Science"', () => {
-      expect(isConversationalEdu('i haev done intermediate in engineering from dj science')).toBe(true);
+  describe('RFC 6902 JSON Patch Education Operations', () => {
+    it('replaces secondary education institution cleanly via patch (e.g. DJ not SMI)', () => {
+      const patches = [
+        { op: 'replace', path: '/education/1/institution', value: 'DJ' },
+      ];
+      const result = applyJsonPatches(initialCv, patches);
+      expect(result.success).toBe(true);
+      const updated = result.document as CvData;
+      expect(updated.education[1].institution).toBe('DJ');
+      expect(updated.education[1].degree).toBe('A-Levels');
+      expect(updated.education[0].institution).toBe('Indus University');
     });
 
-    it('recognizes "i have done intermediate from Beaconhouse"', () => {
-      expect(isConversationalEdu('i have done intermediate from beaconhouse')).toBe(true);
-    });
-
-    it('recognizes "i have done intermediate from askari college"', () => {
-      expect(isConversationalEdu('i have done intermediate from askari college')).toBe(true);
-    });
-
-    it('recognizes "i have done internmediate from DJ Science"', () => {
-      expect(isConversationalEdu('i have done internmediate from dj science')).toBe(true);
-    });
-
-    it('recognizes negation "i have not done a-levels"', () => {
-      expect(isNegationReq('i have not done a-levels')).toBe(true);
-    });
-
-    it('recognizes negation "i haven\'t done a levels"', () => {
-      expect(isNegationReq("i haven't done a levels")).toBe(true);
-    });
-
-    it('recognizes negation "no a-levels"', () => {
-      expect(isNegationReq('no a-levels')).toBe(true);
-    });
-  });
-
-  describe('Parsing & Secondary Tier Replacement', () => {
-    it('parses institution and degree from "i haev done intermediate in engineering from DJ Science"', () => {
-      const parsed = parseEducationMessage('i haev done intermediate in engineering from DJ Science');
-      expect(parsed.newTargetName).toBe('DJ Science');
-      expect(parsed.extractedDegree).toBe('Intermediate in Engineering');
-      expect(parsed.isCollegeType).toBe(true);
-    });
-
-    it('parses institution and degree from "i have done intermediate from Beaconhouse"', () => {
-      const parsed = parseEducationMessage('i have done intermediate from Beaconhouse');
-      expect(parsed.newTargetName).toBe('Beaconhouse');
-      expect(parsed.extractedDegree).toBe('Intermediate');
-      expect(parsed.isCollegeType).toBe(true);
-    });
-
-    it('parses institution and degree from "i have done intermediate from askari college"', () => {
-      const parsed = parseEducationMessage('i have done intermediate from askari college');
-      expect(parsed.newTargetName).toBe('Askari College');
-      expect(parsed.extractedDegree).toBe('Intermediate');
-      expect(parsed.isCollegeType).toBe(true);
-    });
-
-    it('replaces Nixor College with DJ Science without adding extra entry', () => {
-      const result = applyEduReplacement(initialEducation, 'i haev done intermediate in engineering from DJ Science');
-      expect(result.length).toBe(2);
-      expect(result[0].institution).toBe('Indus University');
-      expect(result[0].degree).toBe('Bachelor of Science in Artificial Intelligence');
-      expect(result[1].institution).toBe('DJ Science');
-      expect(result[1].degree).toBe('Intermediate in Engineering');
-      expect(result.some(e => e.institution === 'Nixor College')).toBe(false);
-    });
-
-    it('replaces Nixor College with Beaconhouse without adding extra entry', () => {
-      const result = applyEduReplacement(initialEducation, 'i have done intermediate from Beaconhouse');
-      expect(result.length).toBe(2);
-      expect(result[0].institution).toBe('Indus University');
-      expect(result[1].institution).toBe('Beaconhouse');
-      expect(result[1].degree).toBe('Intermediate');
-      expect(result.some(e => e.institution === 'Nixor College')).toBe(false);
-    });
-
-    it('replaces Nixor College with Askari College without adding extra entry', () => {
-      const result = applyEduReplacement(initialEducation, 'i have done intermediate from askari college');
-      expect(result.length).toBe(2);
-      expect(result[0].institution).toBe('Indus University');
-      expect(result[1].institution).toBe('Askari College');
-      expect(result[1].degree).toBe('Intermediate');
-      expect(result.some(e => e.institution === 'Nixor College')).toBe(false);
-    });
-
-    it('updates secondary tier "Your College" and preserves "Your University / Graduate School" when user says "add my college which name is DJ"', () => {
-      const templateEducation = [
+    it('replaces entire secondary education tier via patch with new institution and degree', () => {
+      const patches = [
         {
-          end: '2024',
-          start: '2020',
-          degree: 'Degree Program / Major (e.g. Master / B.S. in Computer Science)',
-          institution: 'Your University / Graduate School',
-        },
-        {
-          end: '2020',
-          start: '2018',
-          degree: 'Intermediate / High School Diploma / Pre-Engineering',
-          institution: 'Your College / Pre-University Institution',
+          op: 'replace',
+          path: '/education/1',
+          value: {
+            institution: 'DJ Science',
+            degree: 'Intermediate in Engineering',
+            start: 'Jun 2018',
+            end: 'Jun 2020',
+            location: 'Karachi, Pakistan',
+          },
         },
       ];
+      const result = applyJsonPatches(initialCv, patches);
+      expect(result.success).toBe(true);
+      const updated = result.document as CvData;
+      expect(updated.education.length).toBe(2);
+      expect(updated.education[1].institution).toBe('DJ Science');
+      expect(updated.education[1].degree).toBe('Intermediate in Engineering');
+      expect(updated.education[0].institution).toBe('Indus University');
+    });
 
-      const result = applyEduReplacement(templateEducation, 'add my college which name is DJ');
-      expect(result.length).toBe(2);
-      expect(result[0].institution).toBe('Your University / Graduate School');
-      expect(result[0].degree).toBe('Degree Program / Major (e.g. Master / B.S. in Computer Science)');
-      expect(result[1].institution).toBe('DJ');
-      expect(result[1].degree).toBe('Intermediate');
+    it('removes secondary education entry cleanly via patch on negation (no a-levels)', () => {
+      const patches = [
+        { op: 'remove', path: '/education/1' },
+      ];
+      const result = applyJsonPatches(initialCv, patches);
+      expect(result.success).toBe(true);
+      const updated = result.document as CvData;
+      expect(updated.education.length).toBe(1);
+      expect(updated.education[0].institution).toBe('Indus University');
+    });
+
+    it('adds a university education at index 0 without clobbering college at index 1', () => {
+      const cvWithCollegeOnly: CvData = {
+        ...initialCv,
+        education: [{ institution: 'DJ Science', degree: 'Intermediate', start: '2018', end: '2020' }],
+      };
+      const patches = [
+        {
+          op: 'add',
+          path: '/education/0',
+          value: {
+            institution: 'NED University',
+            degree: 'B.E. in Computer Science',
+            start: '2020',
+            end: '2024',
+          },
+        },
+      ];
+      const result = applyJsonPatches(cvWithCollegeOnly, patches);
+      expect(result.success).toBe(true);
+      const updated = result.document as CvData;
+      expect(updated.education.length).toBe(2);
+      expect(updated.education[0].institution).toBe('NED University');
+      expect(updated.education[1].institution).toBe('DJ Science');
     });
   });
 
   describe('Negation & Removal Handling', () => {
     it('removes Nixor College when user says "i have not done a-levels"', () => {
-      const result = applyNegationRemoval(initialEducation, 'i have not done a-levels');
+      const result = applyNegationRemoval(initialCv.education, 'i have not done a-levels');
       expect(result.length).toBe(1);
       expect(result[0].institution).toBe('Indus University');
       expect(result.some(e => e.institution === 'Nixor College')).toBe(false);
     });
 
     it('removes Nixor College when user says "no a-levels"', () => {
-      const result = applyNegationRemoval(initialEducation, 'no a-levels');
+      const result = applyNegationRemoval(initialCv.education, 'no a-levels');
       expect(result.length).toBe(1);
       expect(result[0].institution).toBe('Indus University');
       expect(result.some(e => e.institution === 'Nixor College')).toBe(false);
@@ -272,7 +198,7 @@ describe('Resume Chat - Education & College Replacement', () => {
     });
 
     it('removes secondary entries on post-processing negation prompt "i have not done a-levels"', () => {
-      const consolidated = consolidateSecondaryTier(initialEducation, 'i have not done a-levels');
+      const consolidated = consolidateSecondaryTier(initialCv.education, 'i have not done a-levels');
       expect(consolidated.length).toBe(1);
       expect(consolidated[0].institution).toBe('Indus University');
       expect(consolidated.some(e => e.institution === 'Nixor College')).toBe(false);
@@ -397,76 +323,6 @@ describe('Resume Chat - Education & College Replacement', () => {
       expect(result[1].end).toBe('Jun 2022');
       expect(result[1].institution.includes('2022')).toBe(false);
       expect(result[1].institution.includes('Started')).toBe(false);
-    });
-  });
-
-  describe('Negation & Name Replacement ("DJ not SMI change it")', () => {
-    it('parses "my college name is DJ not SMI change it" into newTargetName "DJ" and oldTargetName "SMI"', () => {
-      const { newTargetName, oldTargetName, isCollegeType } = parseEducationMessage('my college name is DJ not SMI change it');
-      expect(newTargetName).toBe('DJ');
-      expect(oldTargetName).toBe('SMI');
-      expect(isCollegeType).toBe(true);
-    });
-
-    it('parses \'my college name is "DJ" not "SMI" please change it\' without quotes or action verbs', () => {
-      const { newTargetName, oldTargetName, isCollegeType } = parseEducationMessage('my college name is "DJ" not "SMI" please change it');
-      expect(newTargetName).toBe('DJ');
-      expect(oldTargetName).toBe('SMI');
-      expect(isCollegeType).toBe(true);
-    });
-
-    it('parses "my college is DJ change it" without trailing command', () => {
-      const { newTargetName, isCollegeType } = parseEducationMessage('my college is DJ change it');
-      expect(newTargetName).toBe('DJ');
-      expect(isCollegeType).toBe(true);
-    });
-
-    it('parses "change SMI to DJ" and "replace SMI with DJ"', () => {
-      const res1 = parseEducationMessage('change SMI to DJ');
-      expect(res1.newTargetName).toBe('DJ');
-      expect(res1.oldTargetName).toBe('SMI');
-
-      const res2 = parseEducationMessage('replace SMI with DJ');
-      expect(res2.newTargetName).toBe('DJ');
-      expect(res2.oldTargetName).toBe('SMI');
-    });
-
-    it('parses "DJ instead of SMI" and "not SMI but DJ"', () => {
-      const res1 = parseEducationMessage('DJ instead of SMI');
-      expect(res1.newTargetName).toBe('DJ');
-      expect(res1.oldTargetName).toBe('SMI');
-
-      const res2 = parseEducationMessage('not SMI but DJ');
-      expect(res2.newTargetName).toBe('DJ');
-      expect(res2.oldTargetName).toBe('SMI');
-    });
-
-    it('replaces SMI with DJ when user says "my college name is DJ not SMI change it"', () => {
-      const eduWithSMI: EduEntry[] = [
-        { institution: 'NED University', degree: 'B.S. in Computer Science', start: '2020', end: '2024' },
-        { institution: 'SMI', degree: 'Intermediate', start: '2020', end: '2022' },
-      ];
-
-      const result = applyEduReplacement(eduWithSMI, 'my college name is DJ not SMI change it');
-      expect(result.length).toBe(2);
-      expect(result[1].institution).toBe('DJ');
-      expect(result[1].degree).toBe('Intermediate');
-      expect(result[1].institution.includes('Not SMI')).toBe(false);
-      expect(result[1].institution.includes('Change It')).toBe(false);
-    });
-
-    it('replaces SMI with DJ when user says \'my college name is "DJ" not "SMI" please change it\'', () => {
-      const eduWithSMI: EduEntry[] = [
-        { institution: 'NED University', degree: 'B.S. in Computer Science', start: '2020', end: '2024' },
-        { institution: 'SMI', degree: 'Intermediate', start: '2020', end: '2022' },
-      ];
-
-      const result = applyEduReplacement(eduWithSMI, 'my college name is "DJ" not "SMI" please change it');
-      expect(result.length).toBe(2);
-      expect(result[1].institution).toBe('DJ');
-      expect(result[1].degree).toBe('Intermediate');
-      expect(result[1].institution.includes('"')).toBe(false);
-      expect(result[1].institution.includes('Please Change It')).toBe(false);
     });
   });
 });

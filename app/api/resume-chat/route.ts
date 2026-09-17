@@ -4,7 +4,6 @@ import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { currentUser } from '@clerk/nextjs/server';
 import { applyJsonPatches } from '@/lib/jsonPatch';
-import { parseEducationMessage, isSecondaryEducationEntry, isHigherEducationEntry } from '@/lib/resume-chat/educationParser';
 
 export const runtime = 'nodejs';
 
@@ -103,6 +102,18 @@ Rules:
      Use: { "op": "replace", "path": "/education/1", "value": { "institution": "<College Name>", "degree": "<Intermediate / Degree>", "start": "Jun 2018", "end": "Jun 2020", "location": "Karachi, Pakistan" } } (or replace the individual "institution" and "degree" fields).
   2. NEVER emit an "add" patch that adds a second college/intermediate entry on top of the existing college/A-levels entry! A candidate has only one college/intermediate qualification.
   3. If the current resume only has 1 education entry (University), you may add the secondary education entry at /education/1.
+
+- CRITICAL — NATURAL LANGUAGE CORRECTIONS & ENTITY REPLACEMENTS:
+  When the user makes conversational corrections or replacements such as:
+  - "my college name is DJ not SMI change it"
+  - 'my college name is "DJ" not "SMI" please change it'
+  - "change SMI to DJ" or "replace SMI with DJ"
+  - "not SMI but DJ" or "DJ instead of SMI"
+  - "i have done intermediate from DJ Science"
+  You MUST identify the authentic intended new entity (e.g. "DJ" or "DJ Science") and the old/incorrect target entity to replace (e.g. "SMI").
+  Target ONLY that education entry:
+  { "op": "replace", "path": "/education/<index>/institution", "value": "DJ" }
+  NEVER include conversational commands, trailing instructions ("change it", "please change it"), negations ("not SMI"), or surrounding quotation marks in the CV value! Only output the clean, properly capitalized institution name.
 
 - CRITICAL — NEGATION AS EXPLICIT REMOVAL:
   Statements like "i have not done a-levels", "i haven't done a-levels", "i didn't do a levels", "i don't have a-levels", "no a-levels", "remove college", "i have no certifications", "i haven't done any projects" ARE UNAMBIGUOUS EXPLICIT REMOVAL REQUESTS.
@@ -896,131 +907,6 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           const aiReply = `Done — updated your experience dates to ${formattedStart} – ${formattedEnd}.`;
 
           await logFastPathTurn(aiReply, updatedCv, 'date-tenure-interceptor');
-
-          return Response.json({
-            reply: aiReply,
-            cv: updatedCv,
-          });
-        }
-      }
-    }
-
-    // 2d. Add or Update Education Entry Handler
-    const isConversationalEdu =
-      /\b(?:i\s+)?(?:have\s+|haev\s+|had\s+|did\s+)?(?:done|completed|studied|attended)?\s*(?:my\s+)?(?:intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|college|collage|matric|high\s*school)\b/i.test(lastMsgLower) ||
-      /\b(?:intermediate|internmediate|fsc|a[- ]?levels?|college|collage)\s+(?:in\s+[^,]+?\s+)?(?:from|at|in)\s+/i.test(lastMsgLower);
-
-    const isEduAction = (
-      /\b(add|change|update|set|replace|put|insert|switch|rename)\b.*?\b(college|collage|university|uni|intermediate|internmediate|school|degree|education|bachelor|master|phd)\b/i.test(lastMsgLower) ||
-      /\b(?:my\s+)?(college|collage|university|uni|intermediate|internmediate)\s*(?:name)?\b.*?\b(change|update|replace|set|fix)\b/i.test(lastMsgLower) ||
-      /\b(?:my\s+)?(college|collage|university|uni|intermediate|internmediate)\s*(?:name\s+)?(?:is|was|to|:|=)\s*(.+?)$/i.test(lastMsgLower) ||
-      (/\bfrom\s+.+?\s+(?:to|with)\s+.+?\b/i.test(lastMsgLower) && /\b(college|collage|university|uni|intermediate|internmediate|school|degree|education)\b/i.test(lastMsgLower)) ||
-      (/\bnot\s+["'“`]?\w+["'”`]?\b/i.test(lastMsgLower) && /\b(college|university|intermediate)\b/i.test(lastMsgLower)) ||
-      isConversationalEdu
-    ) &&
-      !isDateTenureUpdate &&
-      !isNamedRemovalReq &&
-      !isFullSectionRemoval &&
-      !/\b(duration|dates?|tenure|timeline|period|years?)\b/i.test(lastMsgLower) &&
-      !/\b(transition|pivot|pivoting|career|switch\s+to|switch\s+from)\b/i.test(lastMsgLower) &&
-      !/\b(?:started|completed|ended|graduated|passed)\b.*?\b\d{4}\b/i.test(lastMsgLower) &&
-      !/\b\d{4}\b.*?\b(?:started|completed|ended|graduated|passed)\b/i.test(lastMsgLower) &&
-      !/\b\d{4}\s*(?:-|–|—|to)\s*(?:\d{4}|present|current)\b/i.test(lastMsgLower);
-
-    if (isEduAction) {
-      const { oldTargetName, newTargetName, extractedDegree, isCollegeType } = parseEducationMessage(lastUserMessage);
-
-      // Sanity check: newTargetName MUST NOT be dates, years, or action verbs!
-      const isInvalidInstitutionName =
-        !newTargetName ||
-        /^(?:i\s+)?(?:intermediate|internmediate|college|university|education|degree)?\s*(?:on|in|from|at)?\s*\d{4}/i.test(newTargetName) ||
-        /\b(started|completed|ended|graduated|passed)\b/i.test(newTargetName) ||
-        /^\d+$/.test(newTargetName.replace(/\s+/g, ''));
-
-      if (newTargetName.length > 0 && !isInvalidInstitutionName && !/\b(course|cert|certification|project|experience|skills|interests|bullet|point)\b/i.test(newTargetName)) {
-
-        const currentEdu = cv.education ? [...cv.education] : [];
-
-        if (isCollegeType) {
-          // A candidate standardly has at most ONE secondary education tier (Intermediate / A-Levels / College / High School).
-          // Always replace the existing secondary education entry if one exists, rather than adding a second one on top!
-          let targetIdx = -1;
-          if (oldTargetName) {
-            targetIdx = findBestMatchIndex(currentEdu, oldTargetName, e => `${e.institution} ${e.degree}`);
-          }
-          if (targetIdx === -1) {
-            targetIdx = currentEdu.findIndex(isSecondaryEducationEntry);
-            if (targetIdx === -1 && currentEdu.length > 1) {
-              targetIdx = 1;
-            }
-          }
-
-          const existingDeg = targetIdx !== -1 ? currentEdu[targetIdx].degree : '';
-          const cleanDeg = extractedDegree || (existingDeg?.includes('/') ? 'Intermediate' : existingDeg) || 'Intermediate';
-
-          if (targetIdx !== -1) {
-            currentEdu[targetIdx] = {
-              ...currentEdu[targetIdx],
-              institution: newTargetName,
-              degree: cleanDeg,
-            };
-          } else {
-            currentEdu.push({
-              institution: newTargetName,
-              degree: cleanDeg,
-              start: 'Jun 2018',
-              end: 'Jun 2020',
-            });
-          }
-
-          const updatedCv: CvData = { ...cv, education: currentEdu };
-          const aiReply = extractedDegree
-            ? `I've updated your education to reflect your ${extractedDegree} at ${newTargetName}.`
-            : `I've updated your education to reflect your studies at ${newTargetName}.`;
-
-          await logFastPathTurn(aiReply, updatedCv, 'education-interceptor');
-
-          return Response.json({
-            reply: aiReply,
-            cv: updatedCv,
-          });
-        } else {
-          // University / Higher education entry
-          let targetIdx = -1;
-          if (oldTargetName) {
-            targetIdx = findBestMatchIndex(currentEdu, oldTargetName, e => `${e.institution} ${e.degree}`);
-          }
-          if (targetIdx === -1) {
-            targetIdx = currentEdu.findIndex(isHigherEducationEntry);
-            if (targetIdx === -1 && currentEdu.length > 0) {
-              targetIdx = 0;
-            }
-          }
-
-          const existingDeg = targetIdx !== -1 ? currentEdu[targetIdx].degree : '';
-          const cleanDeg = extractedDegree || (existingDeg?.includes('/') ? 'Bachelor of Science' : existingDeg) || 'Bachelor of Science';
-
-          if (targetIdx !== -1) {
-            currentEdu[targetIdx] = {
-              ...currentEdu[targetIdx],
-              institution: newTargetName,
-              degree: cleanDeg,
-            };
-          } else {
-            currentEdu.unshift({
-              institution: newTargetName,
-              degree: cleanDeg,
-              start: 'Jun 2022',
-              end: 'Jun 2026',
-            });
-          }
-
-          const updatedCv: CvData = { ...cv, education: currentEdu };
-          const aiReply = extractedDegree
-            ? `I've updated your education to reflect your ${extractedDegree} at ${newTargetName}.`
-            : `I've updated your education to ${newTargetName}.`;
-
-          await logFastPathTurn(aiReply, updatedCv, 'education-interceptor');
 
           return Response.json({
             reply: aiReply,
