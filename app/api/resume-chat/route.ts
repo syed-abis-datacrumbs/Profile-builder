@@ -54,11 +54,31 @@ JSON Patch Path Guide & Examples:
      ALWAYS use "op": "replace" with the final desired remaining bullet lines:
      { "op": "replace", "path": "/workExperience/0/bullets", "value": "Bullet 1\nBullet 2" }
      NEVER use "op": "remove" on string properties (e.g. "/workExperience/0/bullets", "/additional/skills")! "remove" deletes the entire property!
-  3. ADDING SKILLS OR INTERESTS:
+  3. REMOVING MULTIPLE BULLETS / EXACT COUNT ARITHMETIC ("remove 2 points from experience", "remove 3 bullets", "remove 4 points from devlaunch studio"):
+     YOU MUST CALCULATE THE EXACT LINE COUNT FOR THE SPECIFIC TARGETED ROLE:
+     Match the company name to its exact array index in "workExperience" (e.g. "DevLaunch Studio" -> /workExperience/1/bullets).
+     Count the existing lines in THAT TARGET company's "bullets".
+     - If current bullets = 6 and user says "remove 5 points", remaining count = 6 - 5 = EXACTLY 1 line. NEVER keep 2 bullets when the math requires 1!
+     - If current bullets = 4 and user says "remove 3 points", remaining count = 4 - 3 = 1 line.
+     - If user says "keep only 1 point", remaining count = 1 line.
+     - If user says "remove 2 points", remaining count = 4 - 2 = 2 lines.
+     - If requested removal count >= existing bullets (e.g. company has 6 bullets and user says "delete 6 points", "remove 6 bullets", or "remove all points"):
+       Delete all bullets from that company by setting value to "":
+       { "op": "replace", "path": "/workExperience/<index>/bullets", "value": "" }
+       ALL 6 points are deleted from that company!
+       CRITICAL: NEVER spill over, borrow, or carry over removals to any other company! The deletion stops strictly at that company.
+     CRITICAL — STRICT ISOLATION / ZERO CROSS-JOB SPILLOVER:
+     When the user targets a specific company (e.g. "from DevLaunch Studio"), YOU MUST ONLY EMIT A PATCH FOR THAT TARGET COMPANY (e.g. /workExperience/1/bullets)!
+     NEVER emit a patch for any other company (such as /workExperience/0/bullets)!
+     NEVER borrow, transfer, or deduct bullets from Company A to fulfill a removal count requested on Company B!
+     All non-targeted companies MUST remain 100% UNTOUCHED!
+     The "value" string MUST contain EXACTLY that number of remaining newline-separated bullet lines.
+     CRITICAL: When the user explicitly requests to remove a specific count of bullets, this explicit user request STRICTLY OVERRIDES any general guideline about retaining 2-3 bullets!
+  4. ADDING SKILLS OR INTERESTS:
      ALWAYS use "op": "replace" with all existing skills plus the new skill:
      { "op": "replace", "path": "/additional/skills", "value": "Existing Skill 1, Existing Skill 2, New Skill 3" }
 - CRITICAL FOR 1-PAGE CONDENSING ("make it in one page please", "fit on 1 page", "condense to 1 page"):
-  1. NEVER delete work experience bullets completely! Every job MUST retain 2 to 3 punchy, high-impact bullet points.
+  1. ONLY when the user asks to fit/condense to 1 page (and has NOT asked to remove specific bullets), retain 2 to 3 punchy, high-impact bullet points per job. If the user explicitly asks to remove bullets or points, the user's requested count strictly controls!
   2. Condense bullets to 1-2 tight lines by cutting filler words while preserving quantified metrics and action verbs.
   3. Keep at most 2 projects with 1-2 punchy bullets each.
   4. Always use "op": "replace" with the condensed bullets string. NEVER use "op": "remove" on bullets!
@@ -99,21 +119,36 @@ Rules:
   Resumes standardly contain at most ONE secondary education tier (Intermediate, A-Levels, FSc, High School, College). When the user provides their college or intermediate education (e.g. "i have done intermediate from DJ Science", "i did intermediate from Beaconhouse", "my college is Askari College", "intermediate from DJ Science", "add intermediate from Beaconhouse"):
   1. If the resume ALREADY contains a secondary education / college / A-Levels entry (such as "Nixor College", "A-Levels", "State College Preparatory", or any entry at /education/1 with degree or institution matching College, A-Levels, Intermediate, or High School):
      YOU MUST REPLACE that secondary education entry!
-     Use: { "op": "replace", "path": "/education/1", "value": { "institution": "<College Name>", "degree": "<Intermediate / Degree>", "start": "Jun 2018", "end": "Jun 2020", "location": "Karachi, Pakistan" } } (or replace the individual "institution" and "degree" fields).
+     Prefer targeted field replacement so you do not overwrite existing dates or fabricate new ones:
+     { "op": "replace", "path": "/education/1/institution", "value": "<College Name>" }
+     (and if degree is also mentioned: { "op": "replace", "path": "/education/1/degree", "value": "<Degree / Intermediate>" })
   2. NEVER emit an "add" patch that adds a second college/intermediate entry on top of the existing college/A-levels entry! A candidate has only one college/intermediate qualification.
-  3. If the current resume only has 1 education entry (University), you may add the secondary education entry at /education/1.
+  3. If the current resume only has 1 education entry (University), you may add the secondary education entry at /education/1. If the user did NOT specify dates, leave "start": "" and "end": "" (empty strings) so the UI shows the editable "Start" and "End" placeholders! NEVER invent dates!
 
-- CRITICAL — NATURAL LANGUAGE CORRECTIONS & ENTITY REPLACEMENTS:
-  When the user makes conversational corrections or replacements such as:
-  - "my college name is DJ not SMI change it"
-  - 'my college name is "DJ" not "SMI" please change it'
-  - "change SMI to DJ" or "replace SMI with DJ"
-  - "not SMI but DJ" or "DJ instead of SMI"
-  - "i have done intermediate from DJ Science"
-  You MUST identify the authentic intended new entity (e.g. "DJ" or "DJ Science") and the old/incorrect target entity to replace (e.g. "SMI").
-  Target ONLY that education entry:
-  { "op": "replace", "path": "/education/<index>/institution", "value": "DJ" }
-  NEVER include conversational commands, trailing instructions ("change it", "please change it"), negations ("not SMI"), or surrounding quotation marks in the CV value! Only output the clean, properly capitalized institution name.
+- CRITICAL — NEVER INVENT OR FABRICATE DATES (LEAVE AS PLACEHOLDERS):
+  Dates (start date, end date, graduation year, employment tenure) are sensitive personal facts.
+  1. NEVER INVENT, FABRICATE, OR GUESS RANDOM DATES when the user adds or updates an education, work experience, or project entry without providing dates (e.g. "add my college dj science", "add experience at Google", "add project TaskFlow")!
+  2. If the user did NOT specify start or end dates in their message:
+     - For new entries: Set "start": "" and "end": "" (empty strings). In CvPreview, empty start/end automatically renders the clean editable "Start" and "End" placeholders in grey, allowing the user to click and type their actual dates or provide them in chat.
+     - For existing entries: PRESERVE the existing "start" and "end" values (or placeholders) verbatim! Only update the fields the user requested (such as "institution" or "company").
+  3. In your friendly chat "reply", ask the user for their dates (e.g. "I've added DJ Science to your education. What years did you attend?").
+  4. ONLY set concrete dates when:
+     - The user explicitly mentions them in the conversation (e.g. "2020 to 2024", "graduated 2023", "started intermediate in 2018", "working for 6 months").
+     - The user explicitly requests a full synthetic sample resume generation from scratch (e.g. "create sample resume for Software Engineer").
+
+- CRITICAL — UNIVERSAL NATURAL LANGUAGE CORRECTIONS & ENTITY REPLACEMENTS (ALL SECTIONS):
+  When the user makes conversational corrections or replacements across ANY section of the resume, such as:
+  - Education: "my college name is DJ not SMI change it", 'my college is "DJ" not "SMI"', "change SMI to DJ", "degree is BSCS not BS IT"
+  - Work Experience: "my company is Google not Meta change it", "my title was Tech Lead instead of Software Engineer", "replace Acme with Stripe"
+  - Projects: "my project is TaskFlow not ShopPulse", "replace weather app with portfolio", "project tech stack is Vue not React"
+  - Skills / Additional: "replace Java with Python in skills", "chess instead of gaming in interests"
+  - Personal Info: "my name is Alex not John change it", "phone is 0300... not 0321..."
+  
+  RULES FOR ALL ENTITY REPLACEMENTS:
+  1. Identify the authentic intended NEW entity value and the old/incorrect target entity to replace.
+  2. Locate the EXACT target property path in the CV (e.g. /education/[index]/institution, /workExperience/[index]/company, /workExperience/[index]/title, /projects/[index]/content, /additional/skills, /personalInfo/fullName).
+  3. Emit a precise RFC 6902 replace patch: { "op": "replace", "path": "<exact-target-path>", "value": "<Clean Value>" }.
+  4. CRITICAL SANITIZATION: NEVER include conversational commands, trailing instructions ("change it", "please change it"), negations ("not SMI", "instead of Meta"), or surrounding quotation marks in the CV value! Output ONLY the clean, authentic, properly capitalized entity name.
 
 - CRITICAL — NEGATION AS EXPLICIT REMOVAL:
   Statements like "i have not done a-levels", "i haven't done a-levels", "i didn't do a levels", "i don't have a-levels", "no a-levels", "remove college", "i have no certifications", "i haven't done any projects" ARE UNAMBIGUOUS EXPLICIT REMOVAL REQUESTS.
@@ -126,14 +161,16 @@ Rules:
   1. Ambiguous removal request (see the Ambiguous removal rule below) — in that case returning unchanged + asking is correct and required.
   2. Informational questions, guidance, advice, or general conversation (e.g. "what do I need to provide?", "what to provide for my resume", "how does this work?", "what information is required?", "how do I get started?", "give me tips"): In this case, DO NOT generate fake synthetic profiles or overwrite placeholders! Answer their question helpfully and conversationally in "reply", and return the "cv" object 100% UNCHANGED exactly as provided in the input!
 - Whenever a section is missing or empty and the user hasn't given you real content for it, fill it yourself with complete, plausible, professional example content appropriate to their stated (or inferable) target role/field — education, work experience or workshops, projects, certifications, skills, and interests should never be left blank or as raw placeholder text. Base it on whatever real details the user DID give you (name, target role, field, experience level); invent sensible specifics (a school, a past role, a couple of projects with quantified bullets) the same way a filled-out sample resume would, so the student has something concrete to react to and edit rather than a blank form.
-- Exception: contact fields (phone, email, linkedin, github, kaggle) are the one place NOT to invent realistic-looking specifics, since those are personal to the student and could be mistaken for real. If the user hasn't given you their own, use obviously-generic placeholder values — phone "+92 3XX XXXXXXX", email "your.email@example.com", and leave linkedin/github/kaggle as empty strings ("") rather than guessing a URL from their name. Never build a name-based or otherwise plausible-looking fake phone number, email, or profile URL.
+- Exceptions: Contact fields (phone, email, linkedin, github, kaggle) and timeline dates (start, end) are the two places NOT to invent realistic-looking specifics. If the user hasn't provided dates, leave them as empty strings ("") so the UI displays the editable "Start" / "End" placeholders, and ask the user for their dates in your chat reply. Never invent fake graduation years or employment dates.
 - Write concise, quantified, professional resume content. For emphasis inside bullets/descriptions use inline HTML tags — <strong>…</strong> for bold, <em>…</em> for italic, <u>…</u> for underline. Do NOT use markdown "**".
 - "workExperience" bullets: one bullet per line, newline-separated (no leading "-" or "•").
 - "projects"/"workshops" entries are ONE combined "content" field each (title, technologies if any, and description all together as shown in the schema) — not separate fields. Bold the title with <strong>.
 - CRITICAL — Chronological Order: ALWAYS sort array items in reverse-chronological order (newest first, oldest last). When adding a new "workExperience", "education", or "project", insert it at the correct index (index 0 for current/most recent) so that the most recent item is the first item in the array.
 - For targeted edits/additions/deletions, ALWAYS return "patches" (RFC 6902) to modify only the needed paths. If generating a full "cv" (Mode 2), preserve existing fields unless the user specifically asks to edit, remove, or add to them. If the user asks to add new projects, experiences, or education, YOU MUST place them in the correct reverse-chronological order with realistic content!
 - If the user asks to remove/delete an entry (a certification, education entry, project, work experience, workshop, etc.), remove that WHOLE object from its array. Never leave it in place with its fields blanked out — an empty entry left behind still shows up in the resume as an empty placeholder slot, which looks broken. IMPORTANT: When you remove entries, you MUST actually produce a shorter array in the JSON — if the current array has 4 items and the user says remove 2, the output array MUST have exactly 2 items. Do NOT claim you removed something while keeping the array length the same. That is a critical failure.
-- CRITICAL — Unambiguous quantity removals (remove first/last N): Phrases like "remove the last 2 projects", "remove the first 3 certifications", "delete the last project" are CLEAR and unambiguous. Act on them immediately without asking. To remove the LAST N items from an array, take the array, count its length, and slice off the last N entries — the output array length must equal original length minus N. To remove the FIRST N items, drop the first N entries. Always verify your output array length is correct before responding.
+- CRITICAL — Unambiguous quantity removals (remove first/last N): Phrases like "remove the last 2 projects", "remove the first 3 certifications", "delete the last project", "remove 3 points from experience" are CLEAR and unambiguous. Act on them immediately without asking.
+  - For arrays (projects, certifications): Take array length minus N.
+  - For string bullets ("bullets"): Split by newline, count lines, subtract N, and output exactly the remaining lines. If 4 bullets exist and user asks to remove 3, output EXACTLY 1 bullet. Always verify your output line count is correct before responding.
 - CRITICAL — Ambiguous removal requests: The ONLY ambiguous case is when the user writes a bare number with no positional word, e.g. "remove 2 projects" or "delete 3 certifications" — this is ambiguous because "2" could mean the 2nd item (ordinal) OR two items (quantity). In this case ONLY, you MUST ask for clarification before making any deletion. Return the cv completely unchanged and in your "reply" ask: "Do you mean remove the 2nd project specifically, or remove two projects from the list? If you want to remove specific ones, which ones?" Do NOT ask for clarification when the user says "last 2", "first 2", "last one", "all", or names a specific entry — those are clear.
 - CRITICAL — Courses vs Education: A "course", "certification", or "certificate" is NEVER an education entry. It must ALWAYS be added to the "certifications" array as { "name": "<course/certificate name>", "organization": "<provider name>" }. The "education" array is strictly for formal academic degrees (e.g. Bachelor's, Master's, Matric, Intermediate). If the user says "I did a course in X from Y" or "add certificate X from Y", put it in "certifications", not "education". If you have already (incorrectly) placed a course inside "education", remove it from "education" and add it to "certifications" instead.
 - CRITICAL — Date & Period Updates: When the user requests date or timeline adjustments (e.g., "working for 6 months", "started BSCS in Jan 2022 and ended in Feb 2026", "change dates of X to Y", "update experience dates"):
@@ -189,6 +226,11 @@ Rules:
   1. ONLY modify the requested target field.
   2. PRESERVE the EXACT state of all other sections from 'CURRENT resume as JSON' verbatim!
   3. NEVER resurrect, re-add, or generate previously deleted items (such as deleted education/college entries, deleted projects, or deleted certifications)! If 'education' in the current resume has only 1 entry, KEEP ONLY THAT 1 ENTRY.
+- CRITICAL — STRICT TARGETED COMPANY ISOLATION (ZERO CROSS-JOB SPILLOVER):
+  When the user targets a specific company or role (e.g. "remove 4 points from DevLaunch Studio", "add bullet to CloudScale"):
+  1. Emit patches ONLY for that targeted company's path (e.g. /workExperience/1/bullets).
+  2. NEVER emit patches modifying other companies in workExperience (such as /workExperience/0/bullets).
+  3. Every other company in workExperience MUST REMAIN 100% UNTOUCHED with its existing bullet points preserved verbatim.
 - Output valid JSON only.`;
 
 interface ChatMessage {
@@ -301,41 +343,6 @@ function trimBulletsByRank(bulletsText: string, max: number): string {
     .slice(0, max)
     .sort((a, c) => a.i - c.i);
   return ranked.map((r) => r.b).join('\n');
-}
-
-function findBestMatchIndex<T>(items: T[], query: string, getText: (item: T) => string): number {
-  if (!items || items.length === 0 || !query.trim()) return -1;
-  const cleanTokens = query
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter(t => t.length > 2 && !['the', 'and', 'from', 'for', 'with', 'section', 'item', 'entry', 'please', 'resume', 'my'].includes(t));
-
-  if (cleanTokens.length === 0) return -1;
-
-  let bestIdx = -1;
-  let maxScore = 0;
-
-  items.forEach((item, idx) => {
-    const text = getText(item).toLowerCase();
-    let score = 0;
-    for (const token of cleanTokens) {
-      if (text.includes(token)) {
-        score += 10;
-      } else {
-        const prefix = token.slice(0, Math.min(4, token.length));
-        if (prefix.length >= 3 && text.includes(prefix)) {
-          score += 5;
-        }
-      }
-    }
-    if (score > maxScore) {
-      maxScore = score;
-      bestIdx = idx;
-    }
-  });
-
-  return maxScore > 0 ? bestIdx : -1;
 }
 
 export async function POST(request: Request) {
@@ -475,845 +482,9 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       });
     }
 
-    // Multi-Sentence / Comprehensive Background / Story / Full Transformation Check
-    // When user provides multiple details or explicitly requests a full resume rewrite,
-    // ALL fast single-field interceptors MUST be bypassed and forwarded directly to the AI engine!
-    const isSingleEduStatement =
-      lastUserMessage.length < 120 &&
-      !lastUserMessage.includes('\n') &&
-      !/\b(and\s+my\s+name|and\s+i\s+worked|and\s+my\s+skills|projects?|work\s*experience|certifications?)\b/i.test(lastMsgLower) &&
-      (/\b(?:i\s+)?(?:have\s+|haev\s+|had\s+|did\s+)?(?:done|completed|studied|attended)?\s*(?:my\s+)?(?:intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|college|collage|matric|high\s*school)\b/i.test(lastMsgLower) ||
-       /\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\s+(?:a[- ]?levels?|o[- ]?levels?|intermediate|internmediate|college|collage|fsc|matric)\b/i.test(lastMsgLower));
-
-    const isMultiSentenceOrStory =
-      !isSingleEduStatement && (
-        lastUserMessage.length > 120 ||
-        /\b(my name is|i am an?|i have been working|i worked|i have created|i graduated|transform\s+(?:the|this|my)?\s*(?:whole)?\s*resume|build\s+(?:me\s+)?(?:a\s+)?resume|create\s+(?:a\s+)?resume|craft\s+(?:a\s+)?(?:transition\s+)?resume|transition\s+resume|pivoting\s+from|pivot\s+from|career\s+switch|career\s+transition|switch\s+to|as per the information|just\s+keep\s+what\s+information|remove\s+what\s+was\s+already\s+written|only\s+what\s+i\s+(?:have\s+)?given|keep\s+only\s+what)\b/i.test(lastMsgLower) ||
-        (/\bi have done\b/i.test(lastMsgLower) && !/\b(intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|college|collage|matric|bachelor|master|bscs|be|bs)\b/i.test(lastMsgLower))
-      );
-
-    if (!isMultiSentenceOrStory) {
-      const WORD_NUMS: Record<string, number> = {
-        one: 1, two: 2, three: 3, four: 4, five: 5,
-        six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
-        first: 1, '1st': 1,
-        second: 2, '2nd': 2,
-        third: 3, '3rd': 3,
-        fourth: 4, '4th': 4,
-        fifth: 5, '5th': 5,
-      };
-
-      const parseCountVal = (s: string | undefined): number | undefined => {
-        if (!s) return undefined;
-        const n = parseInt(s, 10);
-        if (!isNaN(n)) return n;
-        return WORD_NUMS[s.toLowerCase()];
-      };
-
-      const SECTION_KEY: Record<string, keyof CvData> = {
-        project: 'projects',
-        projects: 'projects',
-        certification: 'certifications',
-        certifications: 'certifications',
-        cert: 'certifications',
-        certs: 'certifications',
-        certificate: 'certifications',
-        certificates: 'certifications',
-        education: 'education',
-        educaton: 'education',
-        experience: 'workExperience',
-        experiences: 'workExperience',
-        workshop: 'workshops',
-        workshops: 'workshops',
-        job: 'workExperience',
-        jobs: 'workExperience',
-      };
-
-      // 0. Certifications Add / Reset / Replace Handler
-      // e.g. "remove the all certifications, and add only one : Web & App Development Course from Saylani Mass IT", "add certification AWS Cloud from Amazon", "replace all certifications with X from Y"
-      const isCertAction = /\b(cert|certification|certs|certificates)\b/i.test(lastMsgLower) &&
-        /\b(add|insert|set|replace|only|keep|from|by)\b/i.test(lastMsgLower);
-
-      if (isCertAction) {
-        const isReplaceAll = /\b(remove\s+(?:the\s+)?all|delete\s+(?:the\s+)?all|clear\s+(?:the\s+)?all|replace\s+(?:the\s+)?all|add\s+only|only\s+add|keep\s+only|only\s+keep|and\s+add\s+only|and\s+only\s+add)\b/i.test(lastMsgLower);
-
-        // Extract the cert info
-        let certText = lastUserMessage;
-        const afterColonOrAs = lastUserMessage.match(/\b(?:add\s+only\s+one|only\s+one|only\s+add|add\s+only|and\s+add|add|replace\s+with|set\s+to|:|;|=)\s*[:=]?\s*(.+?)$/i);
-        if (afterColonOrAs && afterColonOrAs[1]) {
-          certText = afterColonOrAs[1].trim();
-        }
-
-        // Clean up leading/trailing punctuation or filler words
-        certText = certText
-          .replace(/^(?:one\s*:|a\s+cert\s*:|certification\s*:|certificate\s*:)\s*/i, '')
-          .replace(/[,;.]+$/, '')
-          .trim();
-
-        let certName = certText;
-        let certOrg = 'Saylani Mass IT';
-
-        // Check if "from <Org>" or "by <Org>" is present
-        const fromOrgMatch = certText.match(/^(.+?)\s+(?:from|by|at|via)\s+(.+?)$/i);
-        if (fromOrgMatch) {
-          certName = fromOrgMatch[1].trim();
-          certOrg = fromOrgMatch[2].trim();
-        } else {
-          if (/saylani/i.test(certText)) {
-            certName = certText.replace(/\b(?:from|by|at|via)?\s*saylani\s*(?:mass\s*it)?\b/gi, '').trim() || 'Web & App Development Course';
-            certOrg = 'Saylani Mass IT';
-          }
-        }
-
-        if (certName.length > 0) {
-          const newCert = {
-            name: certName,
-            organization: certOrg || 'Certified Authority',
-          };
-
-          const currentCerts = isReplaceAll ? [newCert] : [...(cv.certifications || []), newCert];
-          const updatedCv: CvData = {
-            ...cv,
-            certifications: currentCerts,
-          };
-          const aiReply = `Done — updated your certifications to ${certName} from ${certOrg}.`;
-
-          await logFastPathTurn(aiReply, updatedCv, 'certifications-interceptor');
-
-          return Response.json({
-            reply: aiReply,
-            cv: updatedCv,
-          });
-        }
-      }
-
-      // 1. Full Section Removals (e.g. "remove the project section", "remove all projects", "remove projects section", "delete certifications")
-      const isFullSectionRemoval = /\b(remove|delete|drop|clear)\b.*?\b(all\s+)?(project|certification|cert|certificate|education|educaton|experience|workshop|job)s?(\s+section|\s+entirely|\s+all)?\b/i.test(lastMsgLower) &&
-        !/\b(last|first|1st|2nd|3rd|second|third|one|two|three|1|2|3)\b/i.test(lastMsgLower) &&
-        !/\b(university|college)\b/i.test(lastMsgLower) &&
-        !/\b(and\s+add|and\s+only\s+add|only\s+add|add\s+only|replace\s+with)\b/i.test(lastMsgLower);
-
-    if (isFullSectionRemoval) {
-      for (const [key, cvField] of Object.entries(SECTION_KEY)) {
-        if (new RegExp(`\\b${key}\\b`, 'i').test(lastMsgLower)) {
-          const updatedCv: CvData = {
-            ...cv,
-            [cvField]: [],
-          };
-          const aiReply = `Done — removed the ${key} section from your resume.`;
-
-          await logFastPathTurn(aiReply, updatedCv, 'section-removal-interceptor');
-
-          return Response.json({
-            reply: aiReply,
-            cv: updatedCv,
-          });
-        }
-      }
-    }
-
-    // 2. Specific Item Removal by Exact Name / Keyword Match across all sections
-    const isNamedRemovalReq = (
-      /\b(?:please\s+)?(?:remove|delete|drop|clear|strip|hide|eliminate)\b/i.test(lastMsgLower) ||
-      /\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\b/i.test(lastMsgLower)
-    ) &&
-      !isFullSectionRemoval &&
-      !/\b(percent|percentages|percentage|numbers|number|metrics|numeric|stats)\b/i.test(lastMsgLower) &&
-      !/\b(github|kaggle|linkedin|portfolio|website|all\s+links)\b/i.test(lastMsgLower) &&
-      !/\b(interest|interests|skill|skills|extracurricular|hobbies|hobby|additional)\b/i.test(lastMsgLower) &&
-      !/\b(and\s+add|and\s+only\s+add|only\s+add|add\s+only|replace\s+with)\b/i.test(lastMsgLower) &&
-      !/\b(what\s+was|already\s+written|before\s+this|previous\s+content|template|dummy|information\s+i\s+(?:have\s+)?given|only\s+what\s+i\s+gave|just\s+keep\s+what|keep\s+only\s+what)\b/i.test(lastMsgLower) &&
-      !/\b(?:the\s+)?(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th|last)\s+(?:project|certification|cert|certificate|education|educaton|experience|workshop|job)\b/i.test(lastMsgLower);
-
-    if (isNamedRemovalReq) {
-      const targetQuery = lastUserMessage
-        .replace(/\b(?:please\s+)?(?:remove|delete|drop|clear|strip|hide|take\s+out|eliminate)\s+(?:the\s+)?/i, '')
-        .replace(/\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\s+(?:the\s+)?/i, '')
-        .replace(/\b(?:from\s+my\s+resume|from\s+resume|from\s+education|from\s+projects|from\s+experience|from\s+certifications|section|entirely|completely|entry|item)\b/gi, '')
-        .trim();
-
-      if (targetQuery.length > 0) {
-        // A. Match Education
-        if (cv.education && cv.education.length > 0) {
-          let matchIdx = findBestMatchIndex(cv.education, targetQuery, e => `${e.institution} ${e.degree}`);
-          if (matchIdx === -1) {
-            // Category-level fallback matching (e.g. "remove college", "delete university", "remove school", "i have not done a-levels")
-            if (/\b(college|collage|intermediate|internmediate|preparatory|school|a[- ]?levels?|o[- ]?levels?|diploma|matric|fsc)\b/i.test(targetQuery)) {
-              matchIdx = cv.education.findIndex(e =>
-                /\b(college|collage|intermediate|internmediate|preparatory|school|diploma|a[- ]?level|o[- ]?level|hsc|ssc|matric|fsc|nixor)\b/i.test(`${e.institution} ${e.degree}`)
-              );
-              if (matchIdx === -1 && cv.education.length > 1) {
-                matchIdx = 1;
-              }
-            } else if (/\b(university|uni|grad\s+school|bachelor|master|degree|phd|undergrad)\b/i.test(targetQuery)) {
-              matchIdx = cv.education.findIndex(e =>
-                /\b(university|uni|bachelor|master|degree|phd|bs|ba|ms|mba|bba|be)\b/i.test(`${e.institution} ${e.degree}`)
-              );
-              if (matchIdx === -1 && cv.education.length > 0) {
-                matchIdx = 0;
-              }
-            }
-          }
-
-          if (matchIdx !== -1) {
-            const removedEdu = cv.education[matchIdx];
-            const updatedEdu = cv.education.filter((_, i) => i !== matchIdx);
-            const removedName = removedEdu.institution || 'education entry';
-            const updatedCv: CvData = { ...cv, education: updatedEdu };
-            const aiReply = `Done — removed ${removedName} from your education section.`;
-
-            await logFastPathTurn(aiReply, updatedCv, 'named-removal-interceptor');
-
-            return Response.json({
-              reply: aiReply,
-              cv: updatedCv,
-            });
-          }
-        }
-
-        // B. Match Projects
-        if (cv.projects && cv.projects.length > 0) {
-          const matchIdx = findBestMatchIndex(cv.projects, targetQuery, p => p.content);
-          if (matchIdx !== -1) {
-            const updatedProj = cv.projects.filter((_, i) => i !== matchIdx);
-            const updatedCv: CvData = { ...cv, projects: updatedProj };
-            const aiReply = `Done — removed project from your resume.`;
-
-            await logFastPathTurn(aiReply, updatedCv, 'named-removal-interceptor');
-
-            return Response.json({
-              reply: aiReply,
-              cv: updatedCv,
-            });
-          }
-        }
-
-        // C. Match Certifications
-        if (cv.certifications && cv.certifications.length > 0) {
-          const matchIdx = findBestMatchIndex(cv.certifications, targetQuery, c => `${c.name} ${c.organization}`);
-          if (matchIdx !== -1) {
-            const removedCert = cv.certifications[matchIdx];
-            const updatedCerts = cv.certifications.filter((_, i) => i !== matchIdx);
-            const removedName = removedCert.name || 'certification';
-            const updatedCv: CvData = { ...cv, certifications: updatedCerts };
-            const aiReply = `Done — removed ${removedName} from your certifications.`;
-
-            await logFastPathTurn(aiReply, updatedCv, 'named-removal-interceptor');
-
-            return Response.json({
-              reply: aiReply,
-              cv: updatedCv,
-            });
-          }
-        }
-
-        // D. Match Work Experience
-        if (cv.workExperience && cv.workExperience.length > 0) {
-          const matchIdx = findBestMatchIndex(cv.workExperience, targetQuery, w => `${w.company} ${w.title}`);
-          if (matchIdx !== -1) {
-            const removedExp = cv.workExperience[matchIdx];
-            const updatedExp = cv.workExperience.filter((_, i) => i !== matchIdx);
-            const removedName = removedExp.company || 'work experience';
-            const updatedCv: CvData = { ...cv, workExperience: updatedExp };
-            const aiReply = `Done — removed ${removedName} from your work experience.`;
-
-            await logFastPathTurn(aiReply, updatedCv, 'named-removal-interceptor');
-
-            return Response.json({
-              reply: aiReply,
-              cv: updatedCv,
-            });
-          }
-        }
-      }
-    }
-
-    // 2b. Remove Numbers & Percentages from Work Experience / Resume
-    const isRemoveMetricsReq =
-      /\b(remove|delete|drop|clear|strip|eliminate|take\s*out|without|no)\b.*?\b(percent|percentages|percentage|numbers|number|metrics|numeric|stats)\b/i.test(lastMsgLower) ||
-      /\b(percent|percentages|percentage|numbers|number|metrics)\b.*?\b(remove|delete|drop|clear|strip|eliminate|take\s*out)\b/i.test(lastMsgLower);
-
-    if (isRemoveMetricsReq && Array.isArray(cv.workExperience) && cv.workExperience.length > 0) {
-      const cleanBullets = (text: string) => {
-        return text
-          .split('\n')
-          .map(line => {
-            const cleaned = line
-              // Replace "by 50%" or "by 35%" with "significantly"
-              .replace(/\bby\s+\d+(?:\.\d+)?%\b/gi, 'significantly')
-              // Replace "100+ " with "numerous "
-              .replace(/\b\d{2,}\+\s*/g, 'numerous ')
-              // Replace "$12M" with "substantial revenue"
-              .replace(/\$\d+(?:\.\d+)?\s*(?:M|K|B|million|billion|thousand)?\b/gi, 'substantial revenue')
-              // Replace remaining "50%" or "25%" with "measurable"
-              .replace(/\b\d+(?:\.\d+)?%\b/g, 'measurable')
-              // Clean empty bold tags like <strong></strong> or <strong> </strong>
-              .replace(/<strong>\s*<\/strong>/gi, '')
-              // Clean repeated spaces
-              .replace(/\s{2,}/g, ' ')
-              .trim();
-            return cleaned;
-          })
-          .join('\n');
-      };
-
-      const updatedWorkExperience = cv.workExperience.map(exp => ({
-        ...exp,
-        bullets: cleanBullets(exp.bullets || ''),
-      }));
-
-      const updatedCv: CvData = {
-        ...cv,
-        workExperience: updatedWorkExperience,
-      };
-
-      const aiReply = "I've removed all numbers and percentages from your work experience while keeping your bullet points strong and professional.";
-
-      await logFastPathTurn(aiReply, updatedCv, 'numbers-removal-interceptor');
-
-      return Response.json({
-        reply: aiReply,
-        cv: updatedCv,
-      });
-    }
-
-    // 2c. Direct Date & Tenure / Duration Update Handler (MUST RUN BEFORE INSTITUTION ACTIONS)
-    // e.g. "change the duration of the university : Jan 2022- Feb 2026", "update university dates to 2022 - 2026", "change tenure to Jan 2022 - Present",
-    // "i completed intermediate on 2022 and started 2020", "started in 2020 and completed 2022"
-    const hasYearNumbers = /\b(19\d\d|20\d\d)\b/.test(lastMsgLower);
-    const hasDateKeywords = /\b(dates?|tenure|duration|timeline|period|years?)\b/i.test(lastMsgLower);
-    const hasStartEndVerbs = /\b(started|start|began|enrolled|joined|completed|complete|ended|end|finished|graduated|passed)\b/i.test(lastMsgLower);
-    const hasRangeHyphen = /\b(19\d\d|20\d\d)\s*(?:-|–|—|to|until)\s*(?:19\d\d|20\d\d|present|current)\b/i.test(lastMsgLower);
-
-    const isDateTenureUpdate =
-      (hasDateKeywords || hasRangeHyphen || (hasStartEndVerbs && hasYearNumbers)) &&
-      !isNamedRemovalReq &&
-      !isFullSectionRemoval;
-
-    if (isDateTenureUpdate) {
-      let newStart = '';
-      let newEnd = '';
-
-      const MONTH_NAME = '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)';
-      const DATE_STR = `(?:${MONTH_NAME}\\s+)?\\d{4}`;
-      const DATE_END_STR = `(?:${MONTH_NAME}\\s+)?(?:\\d{4}|present|current)`;
-      const DATE_RANGE_RE = new RegExp(`\\b(${DATE_STR})\\s*(?:-|–|—|to|until)\\s*(${DATE_END_STR})\\b`, 'i');
-
-      // Pattern A: End mentioned first, then Start (e.g. "completed intermediate on 2022 and started 2020", "ended in 2022, started 2020")
-      const endStartMatch = lastUserMessage.match(
-        new RegExp(`\\b(?:completed|ended|finished|graduated|passed)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_STR})\\b.*?\\b(?:started|began|enrolled|joined)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_STR})\\b`, 'i')
-      );
-
-      // Pattern B: Start mentioned first, then End (e.g. "started intermediate in 2020 and completed 2022", "started 2020 and ended 2022")
-      const startEndMatch = lastUserMessage.match(
-        new RegExp(`\\b(?:started|began|enrolled|joined)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_STR})\\b.*?\\b(?:completed|ended|finished|graduated|passed|to|until)\\b.*?\\b(?:in|on|at)?\\s*\\b(${DATE_END_STR})\\b`, 'i')
-      );
-
-      // Pattern C: Hyphen or "to" / "until" range (e.g. "2020 - 2022", "from 2020 to 2022", "Jan 2022 - Feb 2026")
-      const dateRangeMatch = lastUserMessage.match(DATE_RANGE_RE);
-
-      if (endStartMatch) {
-        newEnd = endStartMatch[1].trim();
-        newStart = endStartMatch[2].trim();
-      } else if (startEndMatch) {
-        newStart = startEndMatch[1].trim();
-        newEnd = startEndMatch[2].trim();
-      } else if (dateRangeMatch) {
-        newStart = dateRangeMatch[1].trim();
-        newEnd = dateRangeMatch[2].trim();
-      } else {
-        // Pattern D: Two standalone 4-digit years in message
-        const allYears = Array.from(lastUserMessage.matchAll(/\b(19\d\d|20\d\d)\b/g)).map((m) => m[1]);
-        if (allYears.length >= 2) {
-          const y1 = parseInt(allYears[0], 10);
-          const y2 = parseInt(allYears[1], 10);
-          if (y1 < y2) {
-            newStart = String(y1);
-            newEnd = String(y2);
-          } else {
-            newStart = String(y2);
-            newEnd = String(y1);
-          }
-        }
-      }
-
-      if (newStart && newEnd) {
-        const formatWithExistingMonth = (newVal: string, oldVal?: string): string => {
-          if (/^[A-Za-z]{3,9}\s+\d{4}$/i.test(newVal)) return newVal;
-          if (/^\d{4}$/.test(newVal) && oldVal) {
-            const mMatch = oldVal.match(/^([A-Za-z]{3,9})\s+\d{4}$/);
-            if (mMatch) {
-              return `${mMatch[1]} ${newVal}`;
-            }
-          }
-          return newVal;
-        };
-
-        // Check if education is targeted
-        if (
-          (/\b(university|uni|college|school|intermediate|internmediate|degree|education|bachelor|master|phd|fast|habib|szabist|berkeley)\b/i.test(lastMsgLower) ||
-           !cv.workExperience || cv.workExperience.length === 0) &&
-          cv.education && cv.education.length > 0
-        ) {
-          const currentEdu = [...cv.education];
-          let targetIdx = 0;
-          if (/\b(college|intermediate|internmediate|school|diploma|a[- ]?level|o[- ]?level|fsc|matric)\b/i.test(lastMsgLower)) {
-            targetIdx = currentEdu.findIndex(e => /\b(college|intermediate|internmediate|school|diploma|a[- ]?level|o[- ]?level|fsc|matric|nixor|smi|dj)\b/i.test(`${e.institution} ${e.degree}`));
-            if (targetIdx === -1 && currentEdu.length > 1) targetIdx = 1;
-          } else {
-            targetIdx = currentEdu.findIndex(e => /\b(university|degree|bachelor|master|phd)\b/i.test(`${e.institution} ${e.degree}`));
-            if (targetIdx === -1) targetIdx = 0;
-          }
-
-          if (targetIdx !== -1 && targetIdx < currentEdu.length) {
-            const formattedStart = formatWithExistingMonth(newStart, currentEdu[targetIdx].start);
-            const formattedEnd = formatWithExistingMonth(newEnd, currentEdu[targetIdx].end);
-
-            currentEdu[targetIdx] = {
-              ...currentEdu[targetIdx],
-              start: formattedStart,
-              end: formattedEnd,
-            };
-
-            const updatedCv: CvData = { ...cv, education: currentEdu };
-            const targetLabel = currentEdu[targetIdx].institution || (/\b(intermediate|internmediate)\b/i.test(lastMsgLower) ? 'intermediate' : 'education');
-            const aiReply = `Done — updated your ${targetLabel} duration to ${formattedStart} – ${formattedEnd}.`;
-
-            await logFastPathTurn(aiReply, updatedCv, 'date-tenure-interceptor');
-
-            return Response.json({
-              reply: aiReply,
-              cv: updatedCv,
-            });
-          }
-        }
-
-        // Check if work experience is targeted
-        if (cv.workExperience && cv.workExperience.length > 0) {
-          const currentExp = [...cv.workExperience];
-          let targetIdx = findBestMatchIndex(currentExp, lastUserMessage, w => `${w.company} ${w.title}`);
-          if (targetIdx === -1) targetIdx = 0;
-
-          const formattedStart = formatWithExistingMonth(newStart, currentExp[targetIdx].start);
-          const formattedEnd = formatWithExistingMonth(newEnd, currentExp[targetIdx].end);
-
-          currentExp[targetIdx] = {
-            ...currentExp[targetIdx],
-            start: formattedStart,
-            end: formattedEnd,
-          };
-
-          const updatedCv: CvData = { ...cv, workExperience: currentExp };
-          const aiReply = `Done — updated your experience dates to ${formattedStart} – ${formattedEnd}.`;
-
-          await logFastPathTurn(aiReply, updatedCv, 'date-tenure-interceptor');
-
-          return Response.json({
-            reply: aiReply,
-            cv: updatedCv,
-          });
-        }
-      }
-    }
-
-    // 2d. Direct Social/Contact Links Removal (e.g. "remove github and kaggle", "remove github", "remove kaggle", "remove linkedin", "remove all links")
-    const isLinkRemoval = /\b(remove|delete|drop|clear|strip|hide)\b.*?\b(github|kaggle|linkedin|portfolio|website|links?|socials?)\b/i.test(lastMsgLower);
-
-    if (isLinkRemoval && cv.personalInfo) {
-      const updatedPersonal = { ...cv.personalInfo };
-      const removedLinks: string[] = [];
-
-      if (/\bgithub\b/i.test(lastMsgLower) || /\b(all\s+links|all\s+socials)\b/i.test(lastMsgLower)) {
-        updatedPersonal.github = '';
-        updatedPersonal.githubLabel = '';
-        removedLinks.push('GitHub');
-      }
-      if (/\bkaggle\b/i.test(lastMsgLower) || /\b(all\s+links|all\s+socials)\b/i.test(lastMsgLower)) {
-        updatedPersonal.kaggle = '';
-        updatedPersonal.kaggleLabel = '';
-        removedLinks.push('Kaggle');
-      }
-      if (/\blinkedin\b/i.test(lastMsgLower) || /\b(all\s+links|all\s+socials)\b/i.test(lastMsgLower)) {
-        updatedPersonal.linkedin = '';
-        updatedPersonal.linkedinLabel = '';
-        removedLinks.push('LinkedIn');
-      }
-
-      if (removedLinks.length > 0) {
-        const updatedCv: CvData = {
-          ...cv,
-          personalInfo: updatedPersonal,
-        };
-        const aiReply = `Done — removed ${removedLinks.join(' and ')} from your resume header.`;
-
-        await logFastPathTurn(aiReply, updatedCv, 'links-interceptor');
-
-        return Response.json({
-          reply: aiReply,
-          cv: updatedCv,
-        });
-      }
-    }
-
-    // 2d. Direct Social/Contact Link Addition Handler
-    // e.g. "add one more link at the top : Behance", "add behance link", "add a link for portfolio", "insert dribbble link"
-    const isLinkAddReq = /\b(add|insert|put|include|push)\b.*?\b(link|links|social|behance|dribbble|kaggle|github|linkedin|portfolio|youtube|twitter|leetcode|hackerrank|artstation)\b/i.test(lastMsgLower);
-
-    if (isLinkAddReq && cv.personalInfo) {
-      const platformMatch =
-        lastUserMessage.match(/\b(?:as|for|to|:|;|=)\s*([a-z0-9._-]+)(?:\s+link|\s+at\s+the\s+top)?$/i) ||
-        lastUserMessage.match(/\b(behance|dribbble|kaggle|github|linkedin|portfolio|youtube|twitter|x|leetcode|hackerrank|artstation|itch\.io|substack|medium|gitlab|bitbucket|website)\b/i);
-
-      if (platformMatch) {
-        const rawPlatform = (platformMatch[1] || '').trim();
-        if (rawPlatform && !/^(?:a|an|the|one|more|link|links|social|top|header|resume)$/i.test(rawPlatform)) {
-          const platformName = rawPlatform.charAt(0).toUpperCase() + rawPlatform.slice(1);
-          const updatedPersonal = { ...cv.personalInfo };
-          const domain = platformName.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const targetUrl = domain.includes('behance') ? 'https://behance.net/your-username' : `https://${domain}.com/your-username`;
-
-          if (!updatedPersonal.kaggle || !updatedPersonal.kaggle.trim()) {
-            updatedPersonal.kaggle = targetUrl;
-            updatedPersonal.kaggleLabel = platformName;
-          } else if (!updatedPersonal.github || !updatedPersonal.github.trim()) {
-            updatedPersonal.github = targetUrl;
-            updatedPersonal.githubLabel = platformName;
-          } else if (!updatedPersonal.linkedin || !updatedPersonal.linkedin.trim()) {
-            updatedPersonal.linkedin = targetUrl;
-            updatedPersonal.linkedinLabel = platformName;
-          } else {
-            updatedPersonal.kaggle = targetUrl;
-            updatedPersonal.kaggleLabel = platformName;
-          }
-
-          const updatedCv: CvData = {
-            ...cv,
-            personalInfo: updatedPersonal,
-          };
-          const aiReply = `Done — added ${platformName} link to the top header.`;
-
-          await logFastPathTurn(aiReply, updatedCv, 'links-interceptor');
-
-          return Response.json({
-            reply: aiReply,
-            cv: updatedCv,
-          });
-        }
-      }
-    }
-
-    // 2e. Direct Social/Contact Link Replacement & Label Update
-    // e.g. "update kaggle with behance", "change github to youtube", "replace kaggle with dribbble", "rename github to portfolio"
-    const isMultiInstructionForLink = lastUserMessage.includes(',') || /\band\b/i.test(lastUserMessage);
-    const mentionsOtherSectionsForLink = /\b(experience|work|job|bullet|project|projects|education|degree|school|university|college|cert|skills?|interests?)\b/i.test(lastUserMessage);
-
-    const linkUpdateMatch = (!isMultiInstructionForLink && !mentionsOtherSectionsForLink) ? (
-      /^\s*(?:update|change|replace|rename|set|swap|switch)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|link|social)\s*(?:link|social)?\s*(?:with|to|as|for|into)\s+(?:the\s+)?([a-z0-9\s._-]+)$/i.exec(lastUserMessage) ||
-      /^\s*(?:update|change|replace|rename|set|swap|switch)\s+(?:the\s+)?([a-z0-9._-]+)\s+(?:link|social)\s*(?:with|to|as|for|into)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|behance|dribbble|youtube|twitter|instagram|leetcode|hackerrank|artstation|itch\.io|substack|medium|gitlab|bitbucket|tryhackme)$/i.exec(lastUserMessage) ||
-      /^\s*(?:update|change|replace|rename|set|swap|switch)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|behance|dribbble|youtube|twitter|instagram|leetcode|hackerrank|artstation|itch\.io|substack|medium|gitlab|bitbucket|tryhackme)\s*(?:with|to|as|for|into)\s+(?:the\s+)?(github|kaggle|linkedin|portfolio|website|behance|dribbble|youtube|twitter|instagram|leetcode|hackerrank|artstation|itch\.io|substack|medium|gitlab|bitbucket|tryhackme|[a-z0-9._-]+)$/i.exec(lastUserMessage)
-    ) : null;
-
-    if (linkUpdateMatch && cv.personalInfo) {
-      const sourceSlot = linkUpdateMatch[1].toLowerCase().trim();
-      const targetLabelRaw = linkUpdateMatch[2].trim();
-      const targetLabel = targetLabelRaw.charAt(0).toUpperCase() + targetLabelRaw.slice(1);
-      const updatedPersonal = { ...cv.personalInfo };
-
-      if (/\b(kaggle|behance|artstation|leetcode|hackerrank|tryhackme|itch|medium|substack)\b/i.test(sourceSlot)) {
-        updatedPersonal.kaggleLabel = targetLabel;
-        updatedPersonal.kaggle = `https://${targetLabel.toLowerCase().replace(/\s+/g, '')}.net/your-username`;
-      } else if (/\b(linkedin|twitter|x)\b/i.test(sourceSlot)) {
-        updatedPersonal.linkedinLabel = targetLabel;
-        updatedPersonal.linkedin = `https://${targetLabel.toLowerCase().replace(/\s+/g, '')}.com/in/your-username`;
-      } else {
-        updatedPersonal.githubLabel = targetLabel;
-        updatedPersonal.github = `https://${targetLabel.toLowerCase().replace(/\s+/g, '')}.com/your-username`;
-      }
-
-      const updatedCv: CvData = {
-        ...cv,
-        personalInfo: updatedPersonal,
-      };
-      const aiReply = `Done — updated your link to ${targetLabel}.`;
-
-      await logFastPathTurn(aiReply, updatedCv, 'links-interceptor');
-
-      return Response.json({
-        reply: aiReply,
-        cv: updatedCv,
-      });
-    }
-
-    // 2f. Skills & Interests Customization / Filter / Replacement Handler
-    // e.g. "remove all the interests except playing cricket", "remove interests and only add playing cricket", "only keep python in skills", "remove html, css from skills"
-    const isSkillsOrInterestsAction = /\b(skills?|interests?|extracurricular|hobbies|hobby)\b/i.test(lastMsgLower) &&
-      /\b(remove|delete|drop|clear|strip|only|keep|except|add|set|change|update|replace)\b/i.test(lastMsgLower) &&
-      !/\b(work|experience|job|bullet|point|projects?|education|certifications?|as per my projects|as per)\b/i.test(lastMsgLower);
-
-    if (isSkillsOrInterestsAction) {
-      const isInterestsTarget = /\b(interests?|extracurricular|hobbies|hobby)\b/i.test(lastMsgLower);
-      const isSkillsTarget = /\b(skills?|technical\s+skills)\b/i.test(lastMsgLower);
-
-      const isExceptOrOnly = /\b(?:except|only\s+keep|only\s+add|keep\s+only|just\s+add|just\s+keep|and\s+only\s+add)\b/i.test(lastMsgLower);
-      const isClearAll = /\b(remove\s+all|delete\s+all|clear\s+all|drop\s+all|clear)\b/i.test(lastMsgLower) && !isExceptOrOnly;
-
-      const updatedAdditional = { ...(cv.additional ?? { skills: '', interests: '' }) };
-
-      if (isInterestsTarget) {
-        if (isClearAll) {
-          updatedAdditional.interests = '';
-          const updatedCv: CvData = { ...cv, additional: updatedAdditional };
-          const aiReply = 'Done — cleared your interests.';
-
-          await logFastPathTurn(aiReply, updatedCv, 'skills-interests-interceptor');
-
-          return Response.json({
-            reply: aiReply,
-            cv: updatedCv,
-          });
-        }
-
-        let targetContent = lastUserMessage;
-        if (isExceptOrOnly) {
-          const match = lastUserMessage.match(/\b(?:except|only\s+keep|only\s+add|keep\s+only|just\s+add|just\s+keep|and\s+only\s+add)\s+(.+?)$/i);
-          if (match && match[1]) {
-            targetContent = match[1];
-          }
-        } else if (/\b(?:to|as|is|=)\s+(.+?)$/i.test(lastUserMessage)) {
-          const match = lastUserMessage.match(/\b(?:to|as|is|=)\s+(.+?)$/i);
-          if (match && match[1]) {
-            targetContent = match[1];
-          }
-        }
-
-        const cleanedContent = targetContent
-          .replace(/\b(?:in\s+interests?|in\s+additional|to\s+interests?|section|from\s+interests?|please)\b/gi, '')
-          .trim();
-
-        if (cleanedContent.length > 0) {
-          if (isExceptOrOnly || /\b(set|change|replace)\b/i.test(lastMsgLower)) {
-            updatedAdditional.interests = cleanedContent;
-          } else if (/\b(add|insert|push)\b/i.test(lastMsgLower)) {
-            const current = (updatedAdditional.interests || '').split(',').map(s => s.trim()).filter(Boolean);
-            if (!current.some(c => c.toLowerCase() === cleanedContent.toLowerCase())) {
-              current.push(cleanedContent);
-            }
-            updatedAdditional.interests = current.join(', ');
-          } else if (/\b(remove|delete|drop)\b/i.test(lastMsgLower)) {
-            const current = (updatedAdditional.interests || '').split(',').map(s => s.trim()).filter(Boolean);
-            const filtered = current.filter(c => !cleanedContent.toLowerCase().includes(c.toLowerCase()));
-            updatedAdditional.interests = filtered.join(', ');
-          }
-
-          const updatedCv: CvData = { ...cv, additional: updatedAdditional };
-          const aiReply = `Done — updated your interests to "${updatedAdditional.interests}".`;
-
-          await logFastPathTurn(aiReply, updatedCv, 'skills-interests-interceptor');
-
-          return Response.json({
-            reply: aiReply,
-            cv: updatedCv,
-          });
-        }
-      } else if (isSkillsTarget) {
-        if (isClearAll) {
-          updatedAdditional.skills = '';
-          const updatedCv: CvData = { ...cv, additional: updatedAdditional };
-          const aiReply = 'Done — cleared your technical skills.';
-
-          await logFastPathTurn(aiReply, updatedCv, 'skills-interests-interceptor');
-
-          return Response.json({
-            reply: aiReply,
-            cv: updatedCv,
-          });
-        }
-
-        let targetContent = lastUserMessage;
-        if (isExceptOrOnly) {
-          const match = lastUserMessage.match(/\b(?:except|only\s+keep|only\s+add|keep\s+only|just\s+add|just\s+keep|and\s+only\s+add)\s+(.+?)$/i);
-          if (match && match[1]) {
-            targetContent = match[1];
-          }
-        } else if (/\b(?:to|as|is|=)\s+(.+?)$/i.test(lastUserMessage)) {
-          const match = lastUserMessage.match(/\b(?:to|as|is|=)\s+(.+?)$/i);
-          if (match && match[1]) {
-            targetContent = match[1];
-          }
-        }
-
-        const cleanedContent = targetContent
-          .replace(/\b(?:in\s+skills?|in\s+additional|to\s+skills?|section|from\s+skills?|technical\s+skills?|please)\b/gi, '')
-          .trim();
-
-        if (cleanedContent.length > 0) {
-          if (isExceptOrOnly || /\b(set|change|replace)\b/i.test(lastMsgLower)) {
-            updatedAdditional.skills = cleanedContent;
-          } else if (/\b(add|insert|push)\b/i.test(lastMsgLower)) {
-            const current = (updatedAdditional.skills || '').split(',').map(s => s.trim()).filter(Boolean);
-            if (!current.some(c => c.toLowerCase() === cleanedContent.toLowerCase())) {
-              current.push(cleanedContent);
-            }
-            updatedAdditional.skills = current.join(', ');
-          } else if (/\b(remove|delete|drop)\b/i.test(lastMsgLower)) {
-            const current = (updatedAdditional.skills || '').split(',').map(s => s.trim()).filter(Boolean);
-            const removeItems = cleanedContent.split(',').map(s => s.trim().toLowerCase());
-            const filtered = current.filter(c => !removeItems.some(r => r === c.toLowerCase() || c.toLowerCase().includes(r)));
-            updatedAdditional.skills = filtered.join(', ');
-          }
-
-          const updatedCv: CvData = { ...cv, additional: updatedAdditional };
-          const aiReply = `Done — updated your technical skills to "${updatedAdditional.skills}".`;
-
-          await logFastPathTurn(aiReply, updatedCv, 'skills-interests-interceptor');
-
-          return Response.json({
-            reply: aiReply,
-            cv: updatedCv,
-          });
-        }
-      }
-    }
-
-    // 3. Ordinal Specific Item Removal (e.g. "remove the second education", "remove 2nd education", "remove the first project", "remove 3rd certification")
-    const ORDINAL_RE = /\b(remove|delete|drop|clear)\b.*?\b(?:the\s+)?(first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th|last)\s+(project|certification|cert|certificate|education|educaton|experience|workshop|job)\b/i;
-    const ordMatch = lastUserMessage.match(ORDINAL_RE);
-
-    if (ordMatch) {
-      const posRaw = ordMatch[2].toLowerCase();
-      const secRaw = ordMatch[3].toLowerCase();
-      const cvKey = SECTION_KEY[secRaw];
-
-      if (cvKey) {
-        const arr = [...((cv[cvKey] as unknown[]) ?? [])];
-        let targetIdx = -1;
-
-        if (posRaw === 'last') {
-          targetIdx = arr.length - 1;
-        } else if (WORD_NUMS[posRaw] !== undefined) {
-          targetIdx = WORD_NUMS[posRaw] - 1;
-        }
-
-        if (targetIdx >= 0 && targetIdx < arr.length) {
-          arr.splice(targetIdx, 1);
-          const updatedCv: CvData = { ...cv, [cvKey]: arr };
-          const label = secRaw === 'cert' || secRaw === 'certificate' || secRaw === 'certification' ? 'certification' : secRaw;
-          const aiReply = `Done — removed the ${posRaw} ${label} from your resume.`;
-
-          await logFastPathTurn(aiReply, updatedCv, 'ordinal-removal-interceptor');
-
-          return Response.json({
-            reply: aiReply,
-            cv: updatedCv,
-          });
-        }
-      }
-    }
-
-    // 4. Pattern A: Reduction to target length ("reduce/keep/limit/cap/set/make/cut X to N")
-    const REDUCE_RE1 = /\b(reduce|keep|limit|cap|set|make|cut|trim|shrink)\b.*?\b(project|certification|cert|certificate|education|educaton|experience|workshop|job)s?\b.*?\b(to|at|only)?\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/i;
-    const REDUCE_RE2 = /\b(reduce|keep|limit|cap|set|make|cut|trim|shrink)\b.*?\b(only\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b.*?\b(project|certification|cert|certificate|education|educaton|experience|workshop|job)s?\b/i;
-
-    // 5. Pattern B: Removal of N items ("remove/delete/drop/clear 2 certificates")
-    const REMOVAL_RE = /\b(remove|delete|drop|clear)\b(?:\s+(?:the\s+)?)?(all|(last|first)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)|(\d+|one|two|three|four|five|six|seven|eight|nine|ten))?\s+(?:the\s+)?(project|certification|cert|certificate|education|educaton|experience|workshop|job)s?\b/i;
-
-    const redMatch1 = lastUserMessage.match(REDUCE_RE1);
-    const redMatch2 = lastUserMessage.match(REDUCE_RE2);
-    const remMatch  = lastUserMessage.match(REMOVAL_RE);
-
-    if (redMatch1 || redMatch2) {
-      const match = redMatch1 || redMatch2;
-      const sectionRaw = (redMatch1 ? match?.[2] : match?.[4])?.toLowerCase();
-      const rawCount   = redMatch1 ? match?.[4] : match?.[3];
-      const targetLen  = parseCountVal(rawCount);
-      const cvKey      = sectionRaw ? SECTION_KEY[sectionRaw] : undefined;
-
-      if (cvKey && targetLen !== undefined) {
-        const arr = (cv[cvKey] as unknown[]) ?? [];
-        const updated = arr.slice(0, Math.min(targetLen, arr.length));
-        const updatedCv: CvData = { ...cv, [cvKey]: updated };
-        const label = sectionRaw === 'cert' || sectionRaw === 'certificate' || sectionRaw === 'certification' ? 'certification' : sectionRaw;
-        const aiReply = `Done — reduced your ${label}s to ${targetLen}.`;
-
-        await logFastPathTurn(aiReply, updatedCv, 'count-reduction-interceptor');
-
-        return Response.json({
-          reply: aiReply,
-          cv: updatedCv,
-        });
-      }
-    } else if (remMatch) {
-      const allFlag    = remMatch[2]?.toLowerCase() === 'all';
-      const position   = remMatch[3]?.toLowerCase();  // 'last' | 'first' | undefined
-      const rawCount   = remMatch[4] ?? remMatch[5];  // digit string or word
-      const sectionRaw = remMatch[6]?.toLowerCase();
-      const cvKey      = sectionRaw ? SECTION_KEY[sectionRaw] : undefined;
-      const count      = parseCountVal(rawCount);
-
-      if (cvKey) {
-        const arr = (cv[cvKey] as unknown[]) ?? [];
-        let updated: unknown[];
-        const numToRemove = count ?? 1;
-
-        if (allFlag) {
-          updated = [];
-        } else if (position === 'first') {
-          updated = arr.slice(Math.min(numToRemove, arr.length));
-        } else {
-          const n = Math.min(numToRemove, arr.length);
-          updated = arr.slice(0, arr.length - n);
-        }
-
-        const updatedCv: CvData = { ...cv, [cvKey]: updated };
-        const label = sectionRaw === 'cert' || sectionRaw === 'certificate' || sectionRaw === 'certification' ? 'certification' : sectionRaw;
-        const plural = numToRemove !== 1 ? 's' : '';
-        const replyText = allFlag
-          ? `Done — removed all ${label}s from your resume.`
-          : `Done — removed ${numToRemove} ${label}${plural} from your resume.`;
-
-        await logFastPathTurn(replyText, updatedCv, 'count-removal-interceptor');
-
-        return Response.json({
-          reply: replyText,
-          cv: updatedCv,
-        });
-      }
-    }
-    // ── Direct Contact Field Handlers ──────────────────────────────────────
-    const emailMatch = lastUserMessage.match(/\b(?:change|update|set)?\s*(?:the\s+)?email\s*(?:to|:|=)?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/i);
-    if (emailMatch && emailMatch[1]) {
-      const updatedCv: CvData = {
-        ...cv,
-        personalInfo: {
-          ...cv.personalInfo,
-          email: emailMatch[1],
-        },
-      };
-      const aiReply = `I've updated your email to ${emailMatch[1]}.`;
-      await logFastPathTurn(aiReply, updatedCv, 'contact-interceptor');
-      return Response.json({
-        reply: aiReply,
-        cv: updatedCv,
-      });
-    }
-
-    const phoneMatch = lastUserMessage.match(/\b(?:change|update|set)?\s*(?:the\s+)?phone\s*(?:to|:|=)?\s*(\+?[\d\s-]{7,20})\b/i);
-    if (phoneMatch && phoneMatch[1]) {
-      const updatedCv: CvData = {
-        ...cv,
-        personalInfo: {
-          ...cv.personalInfo,
-          phone: phoneMatch[1].trim(),
-        },
-      };
-      const aiReply = `I've updated your phone number to ${phoneMatch[1].trim()}.`;
-      await logFastPathTurn(aiReply, updatedCv, 'contact-interceptor');
-      return Response.json({
-        reply: aiReply,
-        cv: updatedCv,
-      });
-    }
-  }
+    // ───────────────────────────────────────────────────────────────────────
+    // All resume editing and data manipulation is handled directly by the LLM
+    // via RFC 6902 JSON Patches to prevent brittle regex false-positives and data loss.
     // ───────────────────────────────────────────────────────────────────────
 
     const startTime = Date.now();
@@ -1655,6 +826,20 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       /\b(for|as|into|to)\b.*?\b(role|position|job|title|bidder|engineer|developer|designer|analyst|manager|consultant|freelancer|editor|executive|specialist|lead|architect|artist|writer|marketer|officer|scientist|intern|product\s+management|management)\b/i.test(msgLower) ||
       /\b(ats[- ]?friendly|ats[- ]?optimized|ats[- ]?compliant)\b/i.test(msgLower) ||
       /\b(transition\s+resume|pivoting\s+from|pivot\s+from|career\s+transition|career\s+switch|just\s+keep\s+what\s+information|remove\s+what\s+was\s+already\s+written|only\s+what\s+i\s+(?:have\s+)?given|keep\s+only\s+what\s+i\s+gave)\b/i.test(msgLower);
+
+    const isSingleEduStatement =
+      lastUserMessage.length < 120 &&
+      !lastUserMessage.includes('\n') &&
+      !/\b(and\s+my\s+name|and\s+i\s+worked|and\s+my\s+skills|projects?|work\s*experience|certifications?)\b/i.test(lastMsgLower) &&
+      (/\b(?:i\s+)?(?:have\s+|haev\s+|had\s+|did\s+)?(?:done|completed|studied|attended)?\s*(?:my\s+)?(?:intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|college|collage|matric|high\s*school)\b/i.test(lastMsgLower) ||
+       /\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\s+(?:a[- ]?levels?|o[- ]?levels?|intermediate|internmediate|college|collage|fsc|matric)\b/i.test(lastMsgLower));
+
+    const isMultiSentenceOrStory =
+      !isSingleEduStatement && (
+        lastUserMessage.length > 120 ||
+        /\b(my name is|i am an?|i have been working|i worked|i have created|i graduated|transform\s+(?:the|this|my)?\s*(?:whole)?\s*resume|build\s+(?:me\s+)?(?:a\s+)?resume|create\s+(?:a\s+)?resume|craft\s+(?:a\s+)?(?:transition\s+)?resume|transition\s+resume|pivoting\s+from|pivot\s+from|career\s+switch|career\s+transition|switch\s+to|as per the information|just\s+keep\s+what\s+information|remove\s+what\s+was\s+already\s+written|only\s+what\s+i\s+(?:have\s+)?given|keep\s+only\s+what)\b/i.test(lastMsgLower) ||
+        (/\bi have done\b/i.test(lastMsgLower) && !/\b(intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|college|collage|matric|bachelor|master|bscs|be|bs)\b/i.test(lastMsgLower))
+      );
 
     // Generalized Role Transformation & Resume Generation:
     // Only true full role prompts or multi-sentence background descriptions trigger a total rewrite.
