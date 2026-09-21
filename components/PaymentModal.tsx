@@ -267,7 +267,7 @@ export function PaymentModal({ reason, onApproved, onClose }: PaymentModalProps)
             return (
               <div key={i} className="flex justify-start min-w-0">
                 <div
-                  className={`rounded-2xl rounded-bl-sm px-4 py-3 text-xs max-w-[90%] border break-words [overflow-wrap:anywhere] break-all ${
+                  className={`rounded-2xl rounded-bl-sm px-4 py-3 text-xs max-w-[90%] border [word-break:normal] [overflow-wrap:break-word] break-words ${
                     msg.tone === 'success'
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                       : msg.tone === 'error'

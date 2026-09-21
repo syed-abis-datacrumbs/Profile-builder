@@ -76,7 +76,7 @@ const MessageRow = React.memo(function MessageRow({ message }: { message: Msg })
   return (
     <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} min-w-0`}>
       <div
-        className={`rounded-2xl text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] break-all ${
+        className={`rounded-2xl text-sm sm:text-base leading-relaxed whitespace-pre-wrap [word-break:normal] [overflow-wrap:break-word] break-words ${
           message.role === 'user'
             ? 'bg-slate-100 text-slate-900 border border-slate-200/80 px-4 py-3 max-w-[85%] font-medium'
             : 'bg-white text-slate-800 p-4.5 max-w-[98%] border border-slate-200/60 shadow-2xs space-y-2'

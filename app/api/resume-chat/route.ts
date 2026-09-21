@@ -223,7 +223,7 @@ Rules:
 - If the user asks to remove/delete an entry (a certification, education entry, project, work experience, workshop, etc.), remove that WHOLE object from its array. Never leave it in place with its fields blanked out — an empty entry left behind still shows up in the resume as an empty placeholder slot, which looks broken. IMPORTANT: When you remove entries, you MUST actually produce a shorter array in the JSON — if the current array has 4 items and the user says remove 2, the output array MUST have exactly 2 items. Do NOT claim you removed something while keeping the array length the same. That is a critical failure.
 - CRITICAL — Unambiguous quantity removals (remove first/last N): Phrases like "remove the last 2 projects", "remove the first 3 certifications", "delete the last project", "remove 3 points from experience" are CLEAR and unambiguous. Act on them immediately without asking.
   - For arrays (projects, certifications): Take array length minus N.
-  - For string bullets ("bullets"): Split by newline, count existing lines C, subtract N (C - N). If C - N > 0 (e.g. 4 exist and remove 3), output exactly that number of remaining lines (1 bullet). If N >= C (e.g. 3 exist and user asks to remove 3 points), output EXACTLY 0 bullets by setting value: "". Never retain a bullet when user asks to remove all of them! Always verify your output line count is correct before responding.
+  - For string bullets ("bullets"): Split the CURRENT workExperience[index].bullets in the input JSON by newline (\\n), count existing lines C, and subtract N (C - N). If C - N > 0 (e.g. 4 exist in the input JSON and user says remove 2 points), output EXACTLY the top C - N remaining lines (2 bullets). ALWAYS count lines from the input JSON payload, NEVER from previous chat text! Only set value: "" if N >= C or the user explicitly asks to remove all bullets.
 - CRITICAL — Ambiguous removal requests: The ONLY ambiguous case is when the user writes a bare number with no positional word, e.g. "remove 2 projects" or "delete 3 certifications" — this is ambiguous because "2" could mean the 2nd item (ordinal) OR two items (quantity). In this case ONLY, you MUST ask for clarification before making any deletion. Return the cv completely unchanged and in your "reply" ask: "Do you mean remove the 2nd project specifically, or remove two projects from the list? If you want to remove specific ones, which ones?" Do NOT ask for clarification when the user says "last 2", "first 2", "last one", "all", or names a specific entry — those are clear.
 - CRITICAL — Courses vs Education: A "course", "certification", or "certificate" is NEVER an education entry. It must ALWAYS be added to the "certifications" array as { "name": "<course/certificate name>", "organization": "<provider name>" }. The "education" array is strictly for formal academic degrees (e.g. Bachelor's, Master's, Matric, Intermediate). If the user says "I did a course in X from Y" or "add certificate X from Y", put it in "certifications", not "education". If you have already (incorrectly) placed a course inside "education", remove it from "education" and add it to "certifications" instead.
 - CRITICAL — Date & Period Updates: When the user requests date or timeline adjustments (e.g., "working for 6 months", "started BSCS in Jan 2022 and ended in Feb 2026", "change dates of X to Y", "update experience dates"):
@@ -278,11 +278,13 @@ Rules:
 - CRITICAL — Condense to One Page ("make it 1 page", "fit on one page", "fit in 1 page", "condense", "shorter", "overflow", "too long", "single page", "trim"):
   When the user asks to fit the resume on one page (or asks to make it shorter/condense it):
   1. "summary": Condense to maximum 2 concise sentences, under 40 words total.
-  2. "workExperience": Maximum 3 high-impact bullets per role (maximum 5 bullets total across all roles), each bullet under 20 words. Prioritize bullets with quantified results (numbers, percentages) over generic descriptions.
-  3. "projects": Keep at most 2 projects, maximum 2 bullets each, under 20 words per bullet. CRITICAL: Whenever you shorten project bullets, YOU MUST ALSO REWRITE AND SHORTEN the project's 'content' field to match — do NOT leave 'content' with un-shortened sentences!
-  4. "additional.skills": Maximum 12-14 items, keep only the most relevant/senior ones so it fits on 1-2 lines.
-  5. "additional.interests": Maximum 3-4 items.
-  6. Do NOT add any new bullets, skills, interests, or content anywhere else in the resume while condensing.
+  2. "workExperience": Maximum 2 roles, max 3 high-impact bullets per role (maximum 5 bullets total across all roles), each bullet under 20 words.
+  3. "projects": Keep EXACTLY at most 2 projects, maximum 2 bullets each, under 20 words per bullet. Emit a patch to remove any 3rd or 4th project!
+  4. "workshops": (For student resumes) Keep EXACTLY at most 2 workshops, each 1 short sentence! Emit a patch to remove any 3rd workshop!
+  5. "certifications": Keep EXACTLY at most 2 certifications! Emit a patch to remove 3rd and 4th certifications!
+  6. "additional.skills": Maximum 10-12 items so it fits on 1-2 lines.
+  7. "additional.interests": Maximum 3 items.
+  8. Do NOT add any new bullets, skills, interests, or content anywhere else in the resume while condensing.
 - CRITICAL — Filling Page 1 White Space ("fill the page", "fill remaining space", "increase content so space gets filled", "no empty space at end", "page has space at the end") [ONLY when user explicitly asks to fill white space, NEVER when asking to condense or fit to 1 page]:
   1. ALL CONTENT MUST RESIDE 100% ON PAGE 1! NEVER OVERFLOW OR SPILL ANY SECTION (SUCH AS ADDITIONAL) ONTO PAGE 2!
   2. To eliminate empty white space at the bottom of Page 1:
@@ -893,7 +895,7 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       additional: nextCv.additional ?? cv.additional ?? defaultAdditional,
     };
 
-    const reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.';
+    let reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.';
 
     // Fallback: If summary is still blank or unchanged from initial template, extract from AI reply
     if (!safeCv.summary || safeCv.summary === cv.summary) {
@@ -996,72 +998,37 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       return false;
     });
 
-    // ── Broadened Keyword & Entity Detection ─────────────────────────────
-    const isCertEdit =
-      /\b(cert|certification|certs|certificates|certificate|credential|credentials|license|licenses|course|courses|bootcamp|bootcamps)\b/i.test(msgLower) ||
-      mentionsCertEntity;
-
-    const isProjEdit =
-      (/\b(project|projects|repo|repos|repository|repositories|webapp|portfolio)\b/i.test(msgLower) &&
-        !/\b(as per\s+(?:my\s+)?projects?|based on\s+(?:my\s+)?projects?)\b/i.test(msgLower)) ||
-      mentionsProjEntity;
-
-    const isWorkEdit =
-      /\b(work|experience|experiences|job|jobs|bullet|bullets|point|points|company|companies|role|roles|title|titles|position|positions|firm|firms|employer|employers|tenure|employment|internship|internships|promoted|promotion)\b/i.test(msgLower) ||
-      mentionsWorkEntity;
-
-    const isEduEdit =
-      /\b(education|degree|degrees|school|schools|university|universities|college|colleges|educaton|academic|academics|gpa|major|majors|minor|graduated|graduation|bachelor|bachelors|master|masters|phd|matric|intermediate|diploma|studied|studying|study|b\.?e\.?|b\.?s\.?|m\.?s\.?|b\.?tech|m\.?tech|bsc|msc|ned|neduet|fast|nust|giki|lums|iba)\b/i.test(msgLower) ||
-      mentionsEduEntity;
+    // ── Simplified High-Level Intent Classification ───────────────────────
+    const isCondenseReq =
+      /\b(one[- ]?page|1[- ]?page|single[- ]?page|fit\s+(?:on|in)|condense|shorten|trim|overflow|too long)\b/i.test(msgLower) ||
+      msgLower.includes('one page') || msgLower.includes('1 page') || msgLower.includes('single page');
 
     const isPageFillReq =
-      /\b(fill|expand|increase)\b.*?\b(page|gap|space|empty|bottom|content)\b/i.test(msgLower) ||
-      /\b(gap|space|empty)\b.*?\b(fill|expand|increase)\b/i.test(msgLower) ||
-      (msgLower.includes('fill') && msgLower.includes('page')) ||
-      (msgLower.includes('increase') && msgLower.includes('content'));
-
-    const isFullRolePrompt =
-      /\b(transform|tranform|switch|convert|rewrite|rebuild|generate|make|create|craft|transition|pivot|pivoting)\b.*?\b(resume|cv|profile|for|as|into|from|to)\b/i.test(msgLower) ||
-      /\b(for|as|into|to)\b.*?\b(role|position|job|title|bidder|engineer|developer|designer|analyst|manager|consultant|freelancer|editor|executive|specialist|lead|architect|artist|writer|marketer|officer|scientist|intern|product\s+management|management)\b/i.test(msgLower) ||
-      /\b(ats[- ]?friendly|ats[- ]?optimized|ats[- ]?compliant)\b/i.test(msgLower) ||
-      /\b(transition\s+resume|pivoting\s+from|pivot\s+from|career\s+transition|career\s+switch|just\s+keep\s+what\s+information|remove\s+what\s+was\s+already\s+written|only\s+what\s+i\s+(?:have\s+)?given|keep\s+only\s+what\s+i\s+gave)\b/i.test(msgLower);
-
-    const isSingleEduStatement =
-      lastUserMessage.length < 120 &&
-      !lastUserMessage.includes('\n') &&
-      !/\b(and\s+my\s+name|and\s+i\s+worked|and\s+my\s+skills|projects?|work\s*experience|certifications?)\b/i.test(lastMsgLower) &&
-      (/\b(?:i\s+)?(?:have\s+|haev\s+|had\s+|did\s+)?(?:done|completed|studied|attended)?\s*(?:my\s+)?(?:intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|college|collage|matric|high\s*school)\b/i.test(lastMsgLower) ||
-       /\b(?:i\s+(?:have\s+not|haven'?t|did\s+not|didn'?t|do\s+not|don'?t|never)\s+(?:done|had|taken|got|have|completed)|no|without)\s+(?:a[- ]?levels?|o[- ]?levels?|intermediate|internmediate|college|collage|fsc|matric)\b/i.test(lastMsgLower));
-
-    const isMultiSentenceOrStory =
-      !isSingleEduStatement && (
-        lastUserMessage.length > 120 ||
-        /\b(my name is|i am an?|i have been working|i worked|i have created|i graduated|transform\s+(?:the|this|my)?\s*(?:whole)?\s*resume|build\s+(?:me\s+)?(?:a\s+)?resume|create\s+(?:a\s+)?resume|craft\s+(?:a\s+)?(?:transition\s+)?resume|transition\s+resume|pivoting\s+from|pivot\s+from|career\s+switch|career\s+transition|switch\s+to|as per the information|just\s+keep\s+what\s+information|remove\s+what\s+was\s+already\s+written|only\s+what\s+i\s+(?:have\s+)?given|keep\s+only\s+what)\b/i.test(lastMsgLower) ||
-        (/\bi have done\b/i.test(lastMsgLower) && !/\b(intermediate|internmediate|fsc|a[- ]?levels?|o[- ]?levels?|college|collage|matric|bachelor|master|bscs|be|bs)\b/i.test(lastMsgLower))
+      !isCondenseReq && (
+        /\b(fill|expand|increase)\b.*?\b(page|gap|space|empty|bottom|content)\b/i.test(msgLower) ||
+        /\b(gap|space|empty)\b.*?\b(fill|expand|increase)\b/i.test(msgLower)
       );
 
-    // Generalized Role Transformation & Resume Generation:
-    // Only true full role prompts or multi-sentence background descriptions trigger a total rewrite.
-    // Page fill requests, section edits, or minor requests never trigger a full role rewrite.
-    const isRoleTransform = !isPageFillReq && (isFullRolePrompt || isMultiSentenceOrStory);
+    const isFullRolePrompt =
+      !isCondenseReq && (
+        /\b(transform|tranform|switch|convert|rewrite|rebuild|generate|make|create|craft|transition|pivot|pivoting)\b.*?\b(resume|cv|profile|for|as|into|from|to)\b/i.test(msgLower) ||
+        /\b(transition\s+resume|pivoting\s+from|pivot\s+from|career\s+transition|career\s+switch)\b/i.test(msgLower)
+      );
 
-    if (!isRoleTransform && !isPatchMode) {
-      if (!isProjEdit && cv.projects) {
-        safeCv.projects = cv.projects;
-      }
-      if (!isCertEdit && cv.certifications) {
-        safeCv.certifications = cv.certifications;
-      }
-      if (!isWorkEdit && cv.workExperience && cvType !== 'student') {
-        safeCv.workExperience = cv.workExperience;
-      }
-      if (!isEduEdit && cv.education) {
-        safeCv.education = cv.education;
-      }
-      // If user previously removed certifications (empty array), NEVER resurrect them on non-cert prompts!
-      if (!isCertEdit && (!cv.certifications || cv.certifications.length === 0)) {
-        safeCv.certifications = [];
-      }
+    const isRoleTransform = !isPageFillReq && !isCondenseReq && (isFullRolePrompt || lastUserMessage.length > 300);
+
+    // Section locking safety net (ONLY for full JSON mode when not in patch mode, role transform, or condense request)
+    if (!isRoleTransform && !isCondenseReq && !isPatchMode) {
+      const isCertEdit = /\b(cert|certification|certs|certificates|credential|credentials|course|bootcamp)\b/i.test(msgLower) || mentionsCertEntity;
+      const isProjEdit = /\b(project|projects|repo|repository|portfolio)\b/i.test(msgLower) || mentionsProjEntity;
+      const isWorkEdit = /\b(work|experience|job|bullet|point|company|role|title|internship)\b/i.test(msgLower) || mentionsWorkEntity;
+      const isEduEdit = /\b(education|degree|school|university|college|gpa|major|graduated|bachelor|master|matric|intermediate|diploma)\b/i.test(msgLower) || mentionsEduEntity;
+
+      if (!isProjEdit && cv.projects) safeCv.projects = cv.projects;
+      if (!isCertEdit && cv.certifications) safeCv.certifications = cv.certifications;
+      if (!isWorkEdit && cv.workExperience && cvType !== 'student') safeCv.workExperience = cv.workExperience;
+      if (!isEduEdit && cv.education) safeCv.education = cv.education;
+      if (!isCertEdit && (!cv.certifications || cv.certifications.length === 0)) safeCv.certifications = [];
     }
 
     // ── Resilient Work Experience Bullet Point Addition Handler ─────────
@@ -1109,6 +1076,39 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
           const addedBullet =
             'Spearheaded key production workflows and multimedia initiatives, improving delivery turnaround time and client satisfaction by <strong>35%</strong>.';
           safeCv.workExperience[0].bullets = [...prevBullets, addedBullet].join('\n');
+        }
+      }
+    }
+
+    // ── Resilient Work Experience Bullet Point Removal Handler ─────────
+    // When the user explicitly requests to remove N bullet points (e.g. "remove 2 points", "remove 3 bullets", "remove 2 more points"),
+    // calculate remaining count (C - N) against the current input CV and keep exactly the remaining top bullets!
+    if (
+      isRemoveBulletReq &&
+      cv.workExperience &&
+      cv.workExperience.length > 0 &&
+      safeCv.workExperience &&
+      safeCv.workExperience.length > 0
+    ) {
+      const removeMatch =
+        lastUserMessage.match(/\b(?:remove|delete|drop|cut|trim|omit|eliminate)\s+(\d+)\s*(?:more\s+)?(?:bullet|bullets|point|points)?\b/i) ||
+        lastUserMessage.match(/\b(\d+)\s*(?:more\s+)?(?:bullet|bullets|point|points)\b/i);
+
+      if (removeMatch) {
+        const numToRemove = parseInt(removeMatch[1], 10);
+        if (!isNaN(numToRemove) && numToRemove > 0) {
+          const prevBullets = (cv.workExperience[0].bullets || '')
+            .split('\n')
+            .map((b) => b.trim())
+            .filter(Boolean);
+
+          if (prevBullets.length > 0) {
+            const remainingCount = Math.max(0, prevBullets.length - numToRemove);
+            safeCv.workExperience[0].bullets = prevBullets.slice(0, remainingCount).join('\n');
+            if (remainingCount > 0 && /\bno\s+experience\s+points?\s+remain\b/i.test(reply)) {
+              reply = `Removed ${numToRemove} experience point(s) from ${safeCv.workExperience[0].company || 'work experience'}, leaving ${remainingCount} key bullet(s).`;
+            }
+          }
         }
       }
     }
@@ -1382,289 +1382,51 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       }
     }
 
-    // Auto-fix: One Page Fitting / Condensing request handler (ensures clean 1-page fit while preserving highest-impact content)
-    const isCondenseRequest = (/\b(one|1)\s*page\b|\bsingle\s*page\b|shorter|condense|too long|overflow|spilling|trim|fit\s*(?:in|on)\s*(?:one|1)?\s*page/i.test(msgLower) || /\bfit\s+(?:in|to)\s+1\b/i.test(msgLower)) && !isPageFillReq;
+    // ── Passive Safety & Structure Sanitization ─────────────────────────
+    // Ensures clean JSON data structure without modifying or slicing user content.
+    // If non-placeholder real/mock entries exist in an array, automatically purge generic template placeholders.
+    safeCv.workExperience = safeCv.workExperience ?? [];
+    safeCv.projects = (safeCv.projects ?? []).map(syncProjectContent);
+    safeCv.education = safeCv.education ?? [];
+    safeCv.certifications = safeCv.certifications ?? [];
 
-    if (isCondenseRequest) {
-      // 1. Work Experience: Rank-based trimming (max 3 bullets per job, max 5 bullets total across all jobs)
-      let totalBulletsAllowed = 5;
-      safeCv.workExperience = (safeCv.workExperience ?? []).map((w, idx) => {
-        const rawBullets = (w.bullets && w.bullets.trim()) ? w.bullets : (cv.workExperience?.[idx]?.bullets || '');
-        const jobMax = Math.min(3, Math.max(1, totalBulletsAllowed));
-        const trimmed = trimBulletsByRank(rawBullets, jobMax);
-        const count = trimmed.split('\n').filter((b) => b.trim().length > 0).length;
-        totalBulletsAllowed = Math.max(1, totalBulletsAllowed - count);
-        return { ...w, bullets: trimmed };
-      });
+    const isRealItem = (str?: string) => Boolean(str && str.trim().length > 0 && !isPlaceholderToken(str));
 
-      // 2. Projects: Keep at most 2 projects, max 2 bullets each, sync content
-      if (safeCv.projects && safeCv.projects.length > 0) {
-        safeCv.projects = safeCv.projects.slice(0, 2).map((proj, idx) => {
-          const rawBullets = (proj.bullets && proj.bullets.trim()) ? proj.bullets : (cv.projects?.[idx]?.bullets || '');
-          const trimmedBullets = trimBulletsByRank(rawBullets, 2);
-          return syncProjectContent({ ...proj, bullets: trimmedBullets });
-        });
+    if (safeCv.projects.some((p) => isRealItem(p.content) || isRealItem(p.title))) {
+      safeCv.projects = safeCv.projects.filter((p) => isRealItem(p.content) || isRealItem(p.title));
+    }
+
+    if (safeCv.education.some((e) => isRealItem(e.institution) || isRealItem(e.degree))) {
+      safeCv.education = safeCv.education.filter((e) => isRealItem(e.institution) || isRealItem(e.degree));
+    }
+
+    if (safeCv.certifications.some((c) => isRealItem(c.name) || isRealItem(c.organization))) {
+      safeCv.certifications = safeCv.certifications.filter((c) => isRealItem(c.name) || isRealItem(c.organization));
+    }
+
+    if (safeCv.workExperience.some((w) => isRealItem(w.company) || isRealItem(w.title))) {
+      safeCv.workExperience = safeCv.workExperience.filter((w) => isRealItem(w.company) || isRealItem(w.title));
+    }
+
+    // ── Passive 1-Page Bounds Enforcement for Condense Requests ─────────
+    if (isCondenseReq) {
+      if (safeCv.projects.length > 2) {
+        safeCv.projects = safeCv.projects.slice(0, 2);
       }
-
-      // 3. Summary: Cap at 1 punchy sentence (or max 35 words) so it never consumes 4+ lines
-      if (safeCv.summary && safeCv.summary.trim()) {
-        const sentences = safeCv.summary.match(/[^.!?]+[.!?]+(?:\s+|$)/g) || [safeCv.summary];
-        if (sentences.length > 1) {
-          const firstWords = sentences[0].trim().split(/\s+/).length;
-          if (firstWords >= 16 || sentences.slice(0, 2).join(' ').split(/\s+/).length > 35) {
-            safeCv.summary = sentences[0].trim();
-          } else {
-            safeCv.summary = sentences.slice(0, 2).join(' ').trim();
-          }
-        }
+      if (safeCv.workshops && safeCv.workshops.length > 2) {
+        safeCv.workshops = safeCv.workshops.slice(0, 2);
       }
-
-      // 4. Certifications: In condense mode, cap at 2 items (1 clean single row instead of 2 stacked rows)
-      if (safeCv.certifications && safeCv.certifications.length > 2) {
+      if (safeCv.certifications.length > 2) {
         safeCv.certifications = safeCv.certifications.slice(0, 2);
       }
-
-      // 5. Skills: In condense mode, cap at maximum 10 core items so it fits on 2 lines
-      if (safeCv.additional?.skills) {
-        const skillList = safeCv.additional.skills.split(',').map((s) => s.trim()).filter(Boolean);
-        if (skillList.length > 10) {
-          safeCv.additional.skills = skillList.slice(0, 10).join(', ');
-        }
-      }
-
-      // 6. Interests: Cap at maximum 3 items
-      if (safeCv.additional?.interests) {
-        const interestList = safeCv.additional.interests.split(',').map((s) => s.trim()).filter(Boolean);
-        if (interestList.length > 3) {
-          safeCv.additional.interests = interestList.slice(0, 3).join(', ');
-        }
-      }
-    }
-
-    if (/\b(add|more)\b.*?\bbullet/i.test(msgLower) || /\bmore\s+points\b/i.test(msgLower)) {
       if (safeCv.workExperience.length > 0) {
-        const currentBullets = (safeCv.workExperience[0].bullets || '').split('\n').filter((b) => b.trim().length > 0);
-        if (currentBullets.length < 5) {
-          const extraBullets = [
-            'Automated end-to-end testing pipelines using Jest and Cypress, <strong>increasing code coverage by 45%</strong>.',
-            'Optimized PostgreSQL database queries and indexing, <strong>reducing query execution latency by 55%</strong>.',
-          ];
-          safeCv.workExperience[0].bullets = [...currentBullets, ...extraBullets].join('\n');
-        }
-      }
-    }
-
-    // Auto-fix: Add project request handler
-    if (/\b(add|create|insert|include)\b.*?\bproject/i.test(msgLower) || /\bmore\s+project/i.test(msgLower)) {
-      const currentProjects = safeCv.projects ?? cv.projects ?? [];
-      const prevProjects = cv.projects ?? [];
-      
-      if (currentProjects.length <= prevProjects.length) {
-        const extraProject = {
-          content: '<strong>Automated Performance & Analytics Dashboard</strong> (Python, SQL, Tableau) – Developed an analytics tool to track key performance metrics, <strong>improving reporting efficiency by 35%</strong>.',
-        };
-        safeCv.projects = [...currentProjects, extraProject];
-      }
-    }
-
-    // Auto-fix: Universal Role Transformation Content Density & Page 1 Full Fill Engine
-    // Ensures ANY role transformation (Sizing Specialist in Textile, Email Marketer, Software Engineer, Upwork Bidder, etc.) fills Page 1 100% top-to-bottom
-    if (isRoleTransform && !isProjEdit) {
-      if (cvType !== 'student') {
-        safeCv.workExperience = (safeCv.workExperience ?? []).slice(0, 1).map((w) => {
-          const bulletLines = (w.bullets || '').split('\n').filter((b) => b.trim().length > 0);
-          const enriched = bulletLines.map((b) => {
-            if (b.length < 135 && !b.toLowerCase().includes('optimizing') && !b.toLowerCase().includes('ensuring')) {
-              return b.replace(/\.$/, '') + ', optimizing workflow efficiency and operational performance.';
-            }
-            return b;
-          });
-
-          if (enriched.length < 4) {
-            enriched.push(
-              'Collaborated with cross-functional teams to implement quality assurance protocols, <strong>increasing operational efficiency by 25%</strong> and reducing waste.'
-            );
+        safeCv.workExperience = safeCv.workExperience.slice(0, 2).map((w) => {
+          const lines = (w.bullets || '').split('\n').filter(Boolean);
+          if (lines.length > 3) {
+            return { ...w, bullets: lines.slice(0, 3).join('\n') };
           }
-          return { ...w, bullets: enriched.join('\n') };
+          return w;
         });
-      } else {
-        safeCv.workExperience = [];
-        if (!safeCv.workshops || safeCv.workshops.length < 2) {
-          const context = `${lastUserMessage} ${safeCv.summary || ''} ${(safeCv.projects || []).map((p) => p.content || '').join(' ')}`;
-          safeCv.workshops = getDefaultStudentWorkshops(context);
-        }
-      }
-
-      safeCv.projects = (safeCv.projects ?? []).slice(0, 3).map((p) => {
-        if (p.content.length < 140 && !p.content.includes('delivering') && !p.content.includes('achieving')) {
-          return { content: p.content.replace(/\.$/, '') + ', achieving high operational reliability and seamless workflow execution.' };
-        }
-        return p;
-      });
-
-      if (safeCv.additional?.interests) {
-        const currentInt = safeCv.additional.interests;
-        if (!currentInt.includes('Continuous Process Improvement') && currentInt.split(',').length < 6) {
-          safeCv.additional.interests = currentInt + ', Continuous Process Improvement, Industry Best Practices';
-        }
-      }
-    }
-
-    // Auto-fix: Ensure every single bullet line in workExperience contains a percentage (%) or number
-    // ONLY during full role transformation or when explicitly editing work experience bullets
-    if ((isRoleTransform || isWorkEdit) && cvType !== 'student') {
-      safeCv.workExperience = (safeCv.workExperience ?? []).map((w) => {
-        const bulletLines = (w.bullets || '').split('\n');
-        const enrichedLines = bulletLines.map((line, idx) => {
-          const trimmed = line.trim();
-          if (!trimmed) return line;
-
-          // Check if line already contains any number or percentage
-          if (/\d+|%/i.test(trimmed)) return line;
-
-          // Clean trailing period
-          const clean = trimmed.replace(/\.$/, '').trim();
-          const defaultMetrics = [
-            ' — <strong>increasing overall project efficiency by 25%</strong>.',
-            ' — <strong>uncovering key trends that boosted decision accuracy by 40%</strong>.',
-            ' — <strong>improving decision-making speed by 30%</strong>.',
-            ' — <strong>reducing manual processing time by 35%</strong>.',
-            ' — <strong>boosting team productivity by 20%</strong>.',
-          ];
-          const metric = defaultMetrics[idx % defaultMetrics.length];
-          return `${clean}${metric}`;
-        });
-        return { ...w, bullets: enrichedLines.join('\n') };
-      });
-    }
-
-    // Role Transformation entity population (ONLY when explicitly transforming/building for a target role)
-    if (isRoleTransform) {
-      if (safeCv.education) {
-        safeCv.education = safeCv.education.map((edu, idx) => {
-          let inst = edu.institution;
-          let deg = edu.degree;
-          if (isPlaceholderToken(inst)) {
-            inst = idx === 0 ? 'University of California, Berkeley' : 'State College Preparatory';
-          }
-          if (isPlaceholderToken(deg)) {
-            deg = idx === 0 ? 'B.S. in Business Administration & Management' : 'Intermediate / Pre-University Diploma (Honors)';
-          }
-          return {
-            ...edu,
-            institution: inst,
-            degree: deg,
-          };
-        });
-
-        // Only provide starter education if doing a full role transformation from an empty state
-        if (safeCv.education.length === 0) {
-          safeCv.education = [
-            {
-              institution: 'University of California, Berkeley',
-              degree: 'B.S. in Business Administration & Management',
-              start: '2020',
-              end: '2024',
-            },
-            {
-              institution: 'State College Preparatory',
-              degree: 'Intermediate / Pre-University Diploma (Honors)',
-              start: '2018',
-              end: '2020',
-            }
-          ];
-        }
-      }
-
-      if (safeCv.workExperience && cvType !== 'student') {
-        safeCv.workExperience = safeCv.workExperience.map((exp) => ({
-          ...exp,
-          company: isPlaceholderToken(exp.company) ? (msgLower.includes('sales') ? 'Apex Enterprise Solutions' : msgLower.includes('marketing') ? 'Vanguard Growth Media' : msgLower.includes('product') ? 'Nexus Tech Innovations' : 'CloudScale Technologies') : exp.company,
-          title: isPlaceholderToken(exp.title) ? (msgLower.includes('sales') ? 'Vice President of Enterprise Sales' : msgLower.includes('marketing') ? 'Senior Marketing Director' : msgLower.includes('product') ? 'Senior Product Manager' : 'Senior Software Engineer') : exp.title,
-        }));
-      }
-
-      if (safeCv.projects) {
-        const salesProjs = [
-          '<strong>Enterprise Pipeline Scaling Architecture</strong> (Salesforce, Clari, HubSpot) – Engineered outbound sales engine closing $12M in enterprise ARR and expanding account retention by 35%.',
-          '<strong>Strategic Account Penetration Framework</strong> (Gong.io, ZoomInfo, LinkedIn Sales Navigator) – Led targeted enterprise campaigns converting 42 Fortune 500 accounts.',
-          '<strong>Global Revenue Optimization Engine</strong> (Tableau, Stripe, PowerBI) – Unified global sales analytics to accelerate deal cycle time by 28% and boost average contract value.'
-        ];
-        const marketingProjs = [
-          '<strong>Omnichannel Growth & Acquisition Funnel</strong> (Google Ads, Meta Ads, GA4) – Executed multi-channel acquisition generating 65,000 qualified MQLs with a 34% conversion rate.',
-          '<strong>Lifecycle Email & Retention Engine</strong> (Klaviyo, Marketo, HubSpot) – Automated behavioral segmentation campaigns driving $4.2M in recurring customer revenue.',
-          '<strong>Brand Performance & SEO Authority Campaign</strong> (Ahrefs, Semrush, WordPress) – Scaled organic inbound search traffic by 180% and lowered blended CAC by 40%.'
-        ];
-        const productProjs = [
-          '<strong>Autonomous Workflow & Integration Engine</strong> (React, Python, Jira, Mixpanel) – Spearheaded core automation suite adopted by 85,000 daily active users.',
-          '<strong>Real-Time Analytics & User Journey Tracker</strong> (Next.js, PostgreSQL, Amplitude) – Architected real-time event pipeline increasing 30-day user retention by 25%.',
-          '<strong>Enterprise API & Webhook Infrastructure</strong> (Node.js, Docker, AWS) – Led developer platform roadmap reducing partner integration time from weeks to 2 days.'
-        ];
-        const generalProjs = [
-          '<strong>High-Performance Distributed Microservices</strong> (Next.js, Python, PostgreSQL, Docker) – Architected scalable cloud infrastructure serving 50,000 daily active requests with sub-100ms latency.',
-          '<strong>Real-Time Collaboration & Data Pipeline</strong> (TypeScript, WebSockets, Redis) – Developed live multi-user synchronization layer handling 10,000 concurrent socket connections.',
-          '<strong>Automated CI/CD & Security Compliance Suite</strong> (GitHub Actions, Terraform, AWS) – Built zero-downtime deployment pipeline cutting release cycle time by 60%.'
-        ];
-
-        const pool = msgLower.includes('sales') ? salesProjs : msgLower.includes('marketing') ? marketingProjs : msgLower.includes('product') ? productProjs : generalProjs;
-
-        safeCv.projects = safeCv.projects.map((proj, idx) => {
-          if (isPlaceholderToken(proj.content)) {
-            return { content: pool[idx % pool.length] };
-          }
-          return proj;
-        });
-
-        // Ensure distinct projects if any duplicate contents exist
-        const seen = new Set<string>();
-        safeCv.projects = safeCv.projects.map((proj, idx) => {
-          if (seen.has(proj.content)) {
-            return { content: pool[(idx + 1) % pool.length] };
-          }
-          seen.add(proj.content);
-          return proj;
-        });
-      }
-
-      if (safeCv.certifications) {
-        const salesCerts = [
-          { name: 'Certified Sales Executive (CSE)', organization: 'Sales & Marketing Executives International' },
-          { name: 'Enterprise Sales Strategy & Negotiation', organization: 'Harvard Division of Continuing Education' },
-          { name: 'Salesforce Certified Administrator', organization: 'Salesforce' },
-          { name: 'HubSpot Inbound Sales Certified', organization: 'HubSpot Academy' },
-        ];
-        const marketingCerts = [
-          { name: 'Certified Digital Marketing Professional', organization: 'Digital Marketing Institute' },
-          { name: 'Google Analytics & Ads Search Certification', organization: 'Google Skillshop' },
-          { name: 'HubSpot Inbound Marketing Certified', organization: 'HubSpot Academy' },
-          { name: 'Meta Certified Digital Marketing Associate', organization: 'Meta Blueprint' },
-        ];
-        const productCerts = [
-          { name: 'Certified Scrum Product Owner (CSPO)', organization: 'Scrum Alliance' },
-          { name: 'Product Management Certificate', organization: 'General Assembly' },
-          { name: 'Agile Certified Practitioner (PMI-ACP)', organization: 'Project Management Institute' },
-          { name: 'Google Analytics Certification', organization: 'Google' },
-        ];
-        const generalCerts = [
-          { name: 'AWS Certified Solutions Architect', organization: 'Amazon Web Services' },
-          { name: 'Professional Scrum Master (PSM I)', organization: 'Scrum.org' },
-          { name: 'Google Cloud Professional Cloud Architect', organization: 'Google Cloud' },
-          { name: 'HashiCorp Certified Terraform Associate', organization: 'HashiCorp' },
-        ];
-
-        const certPool = msgLower.includes('sales') ? salesCerts : msgLower.includes('marketing') ? marketingCerts : msgLower.includes('product') ? productCerts : generalCerts;
-
-        safeCv.certifications = safeCv.certifications.map((cert, idx) => {
-          if (isPlaceholderToken(cert.name) || isPlaceholderToken(cert.organization)) {
-            return certPool[idx % certPool.length];
-          }
-          return cert;
-        });
-
-        // Only provide starter certifications if doing a full role transformation from an empty state
-        if (safeCv.certifications.length === 0) {
-          safeCv.certifications = certPool.slice(0, 2);
-        }
       }
     }
 
