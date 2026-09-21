@@ -182,6 +182,24 @@ function SectionContentEditor({
           );
         }
 
+        // Check if line is a markdown heading: `### Heading` or `#### Heading`
+        const headingMatch = line.match(/^(\s*#{1,6}\s*)(.*)$/);
+        if (headingMatch) {
+          const hashes = headingMatch[1];
+          const headingTitle = headingMatch[2];
+          return (
+            <div key={idx} className="leading-relaxed text-slate-200 pt-1 font-semibold">
+              <InlineField
+                value={headingTitle}
+                editable={editable}
+                placeholder="Heading title…"
+                onCommit={(newTitle) => handleLineCommit(idx, `${hashes}${newTitle}`)}
+                className="text-white font-semibold"
+              />
+            </div>
+          );
+        }
+
         // Check if line is bold heading with separator: `**Heading** — Description`
         const boldMatch = line.match(/^(\s*\*\*[^*]+\*\*\s*—\s*)(.*)$/);
         if (boldMatch) {

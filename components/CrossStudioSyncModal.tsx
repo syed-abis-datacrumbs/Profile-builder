@@ -160,7 +160,7 @@ export function CrossStudioSyncModal({ isOpen, onClose, cv }: CrossStudioSyncMod
                       .map((b) => `- ${b.replace(/^[•\-\*]\s*/, '')}`)
                       .join('\n')
                   : '';
-                return `#### ${w.title} @ ${w.company} (${w.start} - ${w.end})\n${cleanBullets}\n`;
+                return `### ${w.title} @ ${w.company} (${w.start} - ${w.end})\n${cleanBullets}\n`;
               })
               .join('\n');
 
