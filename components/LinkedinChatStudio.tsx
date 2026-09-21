@@ -659,9 +659,9 @@ export const LinkedinChatStudio: React.FC<{
         {/* Chat Scroll Container */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4 bg-white text-sm">
           {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} min-w-0`}>
               <div
-                className={`rounded-2xl text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${
+                className={`rounded-2xl text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] break-all ${
                   m.role === 'user'
                     ? 'bg-slate-100 text-slate-900 border border-slate-200/80 px-4 py-3 max-w-[85%] font-medium'
                     : 'bg-white text-slate-800 p-4.5 max-w-[98%] border border-slate-200/60 shadow-2xs space-y-2'

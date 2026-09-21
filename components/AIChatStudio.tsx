@@ -183,13 +183,13 @@ export const AIChatStudio: React.FC<AIChatStudioProps> = ({
             </div>
 
             <div
-              className={`p-4 rounded-2xl text-xs leading-relaxed space-y-2 ${
+              className={`p-4 rounded-2xl text-xs leading-relaxed space-y-2 break-words [overflow-wrap:anywhere] break-all min-w-0 ${
                 msg.sender === 'user'
                   ? 'bg-indigo-600 text-white shadow-md'
                   : 'bg-slate-900 border border-slate-800 text-slate-200 shadow-xl'
               }`}
             >
-              <p className="whitespace-pre-wrap">{msg.text}</p>
+              <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] break-all">{msg.text}</p>
               
               {msg.actionTaken && (
                 <div className="flex items-center gap-1.5 pt-2 border-t border-slate-800 text-[11px] font-semibold text-emerald-400">
