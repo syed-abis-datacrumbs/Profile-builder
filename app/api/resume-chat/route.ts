@@ -12,7 +12,7 @@ export function getSystemPrompt(cvType: 'professional' | 'student' = 'profession
   const schemaBlock = isStudent
     ? `Resume JSON schema for STUDENT RESUME (keep this exact shape and keys — do NOT include a "cvType" key; the app controls that separately and will ignore it if you send one):
 {
-  "summary": "2-3 sentence impactful summary tailored to the target role",
+  "summary": "2-3 sentence impactful summary tailored to the target role (CRITICAL: if input resume has no summary section, keep summary as empty string \"\" unless user explicitly asks to add summary)",
   "personalInfo": { "fullName": "", "phone": "", "email": "", "linkedin": "", "linkedinLabel": "Linkedin", "github": "", "githubLabel": "GitHub", "kaggle": "", "kaggleLabel": "Kaggle" },
   "education": [ { "institution": "", "degree": "", "start": "", "end": "", "location": "City, State or Country" } ],
   "workExperience": [],
@@ -32,7 +32,7 @@ export function getSystemPrompt(cvType: 'professional' | 'student' = 'profession
 4. NEVER return an empty "workshops" array ([]) for a student resume!`
     : `Resume JSON schema for PROFESSIONAL RESUME (keep this exact shape and keys — do NOT include a "cvType" key; the app controls that separately and will ignore it if you send one):
 {
-  "summary": "2-3 sentence impactful professional summary tailored to the target role",
+  "summary": "2-3 sentence impactful professional summary tailored to the target role (CRITICAL: if input resume has no summary section, keep summary as empty string \"\" unless user explicitly asks to add summary)",
   "personalInfo": { "fullName": "", "phone": "", "email": "", "linkedin": "", "linkedinLabel": "Linkedin", "github": "", "githubLabel": "GitHub", "kaggle": "", "kaggleLabel": "Kaggle" },
   "education": [ { "institution": "", "degree": "", "start": "", "end": "", "location": "City, State or Country" } ],
   "workExperience": [ { "company": "", "title": "", "start": "", "end": "", "location": "City, State or Country", "bullets": "one bullet per line\\nseparated by newlines" } ],
@@ -848,11 +848,28 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
       (c, index, self) => index === self.findIndex((t) => (t.name || '').toLowerCase() === (c.name || '').toLowerCase())
     );
 
+    const initialHasSummary = Boolean(cv.summary && cv.summary.trim().length > 0);
+    const isRemoveSummaryReq = /\b(?:remove|delete|drop|cut|clear|omit|no)\b.*?\bsummary\b/i.test(lastMsgLower);
+    const userRequestedSummary = !isRemoveSummaryReq && (
+      /\b(?:add|include|create|put|insert|write|need|show|generate|give|want|make)\s+(?:a\s+)?summary\b/i.test(lastMsgLower) ||
+      /\b(?:with|has)\s+(?:a\s+)?summary\b/i.test(lastMsgLower) ||
+      lastMsgLower.includes('summary')
+    );
+
+    let finalSummary = '';
+    if (isRemoveSummaryReq) {
+      finalSummary = '';
+    } else if (!initialHasSummary && !userRequestedSummary) {
+      finalSummary = '';
+    } else {
+      finalSummary = (nextCv.summary && nextCv.summary.trim()) ? nextCv.summary : (cv.summary || '');
+    }
+
     const safeCv: CvData = {
       ...nextCv,
       cvType,
       theme: cv.theme || nextCv.theme || 'classic',
-      summary: (nextCv.summary && nextCv.summary.trim()) ? nextCv.summary : (cv.summary || ''),
+      summary: finalSummary,
       personalInfo: nextCv.personalInfo ?? cv.personalInfo ?? defaultPersonalInfo,
       education: cleanEducation,
       workExperience: cvType === 'student' ? [] : (nextCv.workExperience ?? cv.workExperience ?? []).filter(
@@ -897,11 +914,13 @@ You can share your information all at once or tell me step-by-step (e.g., *"My n
 
     let reply = typeof parsed.reply === 'string' ? parsed.reply : 'Done — updated your resume.';
 
-    // Fallback: If summary is still blank or unchanged from initial template, extract from AI reply
-    if (!safeCv.summary || safeCv.summary === cv.summary) {
-      const summaryMatch = reply.match(/(?:PROFESSIONAL\s+SUMMARY|SUMMARY)\s*[:\n\-]+\s*([\s\S]+?)(?=\n\s*(?:[A-Z\s]{4,}:|$))/i);
-      if (summaryMatch && summaryMatch[1]?.trim()) {
-        safeCv.summary = summaryMatch[1].trim();
+    // Fallback: If summary is allowed (initial template had summary OR user requested summary), and summary is blank/unchanged, extract from AI reply
+    if ((initialHasSummary || userRequestedSummary) && !isRemoveSummaryReq) {
+      if (!safeCv.summary || safeCv.summary === cv.summary) {
+        const summaryMatch = reply.match(/(?:PROFESSIONAL\s+SUMMARY|SUMMARY)\s*[:\n\-]+\s*([\s\S]+?)(?=\n\s*(?:[A-Z\s]{4,}:|$))/i);
+        if (summaryMatch && summaryMatch[1]?.trim()) {
+          safeCv.summary = summaryMatch[1].trim();
+        }
       }
     }
 
