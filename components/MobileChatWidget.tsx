@@ -78,6 +78,13 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
   onUpgradeToPro,
 }) => {
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    }
+  }, [messages, loading, isOpen]);
 
   React.useEffect(() => {
     if (!input && textareaRef.current) {
@@ -201,7 +208,7 @@ export const MobileChatWidget: React.FC<MobileChatWidgetProps> = ({
               </div>
 
               {/* Chat Scroll Container */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40 text-sm">
+              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40 text-sm">
                 {messages.length === 0 && !loading && (
                   <div className="pt-2 space-y-2">
                     <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">

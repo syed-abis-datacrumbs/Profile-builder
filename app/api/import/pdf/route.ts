@@ -112,12 +112,12 @@ You must return a valid JSON object matching EXACTLY this structure:
         "start": string (e.g. "Jan 2022"),
         "end": string (e.g. "Present" or "Dec 2023"),
         "location": string (city, state/country or "Remote"),
-        "bullets": string (Multiple bullet points separated by newline characters "\\n". Do NOT include leading bullet symbols, dashes, numbers, or asterisks at the start of lines — provide plain text lines only. Bold key metrics or technologies using "<strong>...</strong>" or "**...**" syntax, e.g. "Spearheaded the migration of <strong>50+ microservices</strong> to Kubernetes, reducing latency by <strong>35%</strong>.")
+        "bullets": string (Multiple bullet points separated by newline characters "\\n". Do NOT include leading bullet symbols, dashes, numbers, or asterisks at the start of lines — provide plain text lines only. Bold key metrics or technologies using "**...**" markdown syntax, e.g. "Spearheaded the migration of **50+ microservices** to Kubernetes, reducing latency by **35%**.")
       }
     ],
     "projects": [
       {
-        "content": string (Format strictly as: "<strong>Project Title</strong> (Key Technologies) – Concise 1-2 sentence description highlighting impact and architecture. Do NOT include leading bullets or dashes."),
+        "content": string (Format strictly as: "**Project Title** (Key Technologies) – Concise 1-2 sentence description highlighting impact and architecture. Do NOT include leading bullets or dashes."),
         "link": string (optional live demo or repository URL if found, else ""),
         "linkLabel": string (e.g. "[Live Demo]" or "[GitHub]" or "")
       }

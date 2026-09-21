@@ -77,27 +77,26 @@ export const GithubChatStudio: React.FC<{
   isPro?: boolean;
   onOpenImport?: () => void;
 }> = ({ github, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt, isPro, onOpenImport }) => {
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const hasLoadedFromStorage = useRef(false);
-
-  useEffect(() => {
+  const [messages, setMessages] = useState<Msg[]>(() => {
+    if (typeof window === 'undefined') return [];
     try {
       const saved = localStorage.getItem('profile_builder_github_chat');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
+          return parsed;
         }
       }
     } catch {}
-    hasLoadedFromStorage.current = true;
-  }, []);
+    return [];
+  });
 
   useEffect(() => {
-    if (!hasLoadedFromStorage.current) return;
     if (!isLoggedIn) return;
     if (typeof window !== 'undefined') {
-      localStorage.setItem('profile_builder_github_chat', JSON.stringify(messages));
+      try {
+        localStorage.setItem('profile_builder_github_chat', JSON.stringify(messages));
+      } catch {}
     }
   }, [messages, isLoggedIn]);
 

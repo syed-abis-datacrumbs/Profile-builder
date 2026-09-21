@@ -14,6 +14,8 @@ import {
   buildInitialRichProfile,
   buildEmptyRichProfile,
   removeTemplateFromRichProfile,
+  sanitizeRichProfile,
+  cleanPlainText,
 } from '../lib/linkedinRichProfile';
 import { toast } from '../lib/toast';
 import { useWorkspace } from '../context/WorkspaceContext';
@@ -52,7 +54,7 @@ export function LinkedinRoute() {
       if (savedProfile) {
         const parsed = JSON.parse(savedProfile);
         if (parsed && ((parsed.experience?.length ?? 0) > 0 || parsed.headline || parsed.about)) {
-          return parsed;
+          return sanitizeRichProfile(parsed);
         }
       }
     } catch {}
@@ -266,48 +268,62 @@ export function LinkedinRoute() {
           if (imported.cvData) {
             const cv = imported.cvData;
             const rich = buildEmptyRichProfile();
-            if (cv.personalInfo?.fullName) rich.fullName = cv.personalInfo.fullName;
-            if (imported.linkedinData?.headline) rich.headline = imported.linkedinData.headline;
-            if (cv.workExperience?.[0]?.title) rich.title = cv.workExperience[0].title;
-            if (cv.workExperience?.[0]?.company) rich.currentCompany = cv.workExperience[0].company;
-            if (cv.workExperience?.[0]?.location) rich.location = cv.workExperience[0].location;
-            if (cv.education?.[0]?.institution) rich.school = cv.education[0].institution;
-            if (cv.summary) rich.about = cv.summary;
+            if (cv.personalInfo?.fullName) rich.fullName = cleanPlainText(cv.personalInfo.fullName);
+            if (imported.linkedinData?.headline) rich.headline = cleanPlainText(imported.linkedinData.headline);
+            else if (cv.summary) rich.headline = cleanPlainText(cv.summary).slice(0, 200);
+
+            if (cv.workExperience?.[0]?.title) rich.title = cleanPlainText(cv.workExperience[0].title);
+            if (cv.workExperience?.[0]?.company) rich.currentCompany = cleanPlainText(cv.workExperience[0].company);
+            if (cv.workExperience?.[0]?.location) rich.location = cleanPlainText(cv.workExperience[0].location);
+            if (cv.education?.[0]?.institution) rich.school = cleanPlainText(cv.education[0].institution);
+
+            if (imported.linkedinData?.about) rich.about = cleanPlainText(imported.linkedinData.about);
+            else if (cv.summary) rich.about = cleanPlainText(cv.summary);
+
             if (cv.additional?.skills) {
-              rich.skills = cv.additional.skills.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 15);
+              rich.skills = cv.additional.skills
+                .split(',')
+                .map((s) => cleanPlainText(s))
+                .filter(Boolean)
+                .slice(0, 15);
             }
             if (cv.workExperience?.length) {
               rich.experience = cv.workExperience.map((we) => ({
-                title: we.title,
-                company: we.company,
-                start: we.start,
-                end: we.end,
+                title: cleanPlainText(we.title),
+                company: cleanPlainText(we.company),
+                start: cleanPlainText(we.start),
+                end: cleanPlainText(we.end),
                 description: we.bullets
-                  ? we.bullets.replace(/^[•\-\*]\s*/gm, '').replace(/\*\*(.*?)\*\*/g, '$1').trim()
+                  ? we.bullets
+                      .split('\n')
+                      .map((line) => cleanPlainText(line))
+                      .filter(Boolean)
+                      .join('\n')
                   : '',
               }));
             }
             if (cv.education?.length) {
               rich.education = cv.education.map((ed) => ({
-                school: ed.institution,
-                degree: ed.degree,
+                school: cleanPlainText(ed.institution),
+                degree: cleanPlainText(ed.degree),
                 fieldOfStudy: '',
-                start: ed.start,
-                end: ed.end,
+                start: cleanPlainText(ed.start),
+                end: cleanPlainText(ed.end),
               }));
             }
-            setLinkedinRichProfile(rich);
+            const cleanRich = sanitizeRichProfile(rich);
+            setLinkedinRichProfile(cleanRich);
             try {
-              localStorage.setItem('profile_builder_linkedin_profile', JSON.stringify(rich));
+              localStorage.setItem('profile_builder_linkedin_profile', JSON.stringify(cleanRich));
               localStorage.setItem('profile_builder_linkedin_mode', 'studio');
             } catch {}
             setLinkedinMode('studio');
           } else if (imported.linkedinData) {
             setLinkedinData((prev) => ({
               ...prev,
-              headline: imported.linkedinData.headline || prev.headline,
-              about: imported.linkedinData.about || prev.about,
-              keySkills: imported.linkedinData.keySkills || prev.keySkills,
+              headline: cleanPlainText(imported.linkedinData.headline) || prev.headline,
+              about: cleanPlainText(imported.linkedinData.about) || prev.about,
+              keySkills: (imported.linkedinData.keySkills || []).map((s: string) => cleanPlainText(s)),
             }));
             setLinkedinMode('studio');
           }

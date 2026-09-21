@@ -224,6 +224,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasSentInitialPromptRef = useRef(false);
 
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages, loading]);
+
   const [revision, setRevision] = useState(0);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);

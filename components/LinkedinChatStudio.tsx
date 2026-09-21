@@ -185,33 +185,32 @@ export const LinkedinChatStudio: React.FC<{
   onOpenCopyDrawer?: () => void;
   onOpenImport?: () => void;
 }> = ({ profile, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt, isPro, onOpenCopyDrawer, onOpenImport }) => {
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      role: 'assistant',
-      content:
-        'Loaded your profile from the template. Click any text on the right to edit it directly, or ask me — e.g. "make my headline more keyword-rich", "add a bullet about leading a team", or "add Python to skills".',
-    },
-  ]);
-  const hasLoadedFromStorage = useRef(false);
-
-  useEffect(() => {
+  const [messages, setMessages] = useState<Msg[]>(() => {
+    if (typeof window === 'undefined') return [];
     try {
       const saved = localStorage.getItem('profile_builder_linkedin_chat');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
+          return parsed;
         }
       }
     } catch {}
-    hasLoadedFromStorage.current = true;
-  }, []);
+    return [
+      {
+        role: 'assistant',
+        content:
+          'Loaded your profile from the template. Click any text on the right to edit it directly, or ask me — e.g. "make my headline more keyword-rich", "add a bullet about leading a team", or "add Python to skills".',
+      },
+    ];
+  });
 
   useEffect(() => {
-    if (!hasLoadedFromStorage.current) return;
     if (!isLoggedIn) return;
     if (typeof window !== 'undefined') {
-      localStorage.setItem('profile_builder_linkedin_chat', JSON.stringify(messages));
+      try {
+        localStorage.setItem('profile_builder_linkedin_chat', JSON.stringify(messages));
+      } catch {}
     }
   }, [messages, isLoggedIn]);
 

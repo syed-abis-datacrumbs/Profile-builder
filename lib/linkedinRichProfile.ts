@@ -218,6 +218,69 @@ export function removeTemplateFromRichProfile(_profile?: LinkedinRichProfile): L
   };
 }
 
+/** Removes HTML tags, entity references, and markdown bold/bullet formatting for plain text fields like LinkedIn. */
+export function cleanPlainText(str?: string | null): string {
+  if (!str) return '';
+  return str
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/^[•\-\*]\s*/gm, '')
+    .trim();
+}
+
+/** Cleans all HTML/markdown bold tags (like <strong>) from all text fields in a LinkedinRichProfile. */
+export function sanitizeRichProfile(profile: LinkedinRichProfile): LinkedinRichProfile {
+  if (!profile) return profile;
+  return {
+    ...profile,
+    fullName: cleanPlainText(profile.fullName),
+    title: cleanPlainText(profile.title),
+    headline: cleanPlainText(profile.headline),
+    location: cleanPlainText(profile.location),
+    currentCompany: cleanPlainText(profile.currentCompany),
+    school: cleanPlainText(profile.school),
+    about: cleanPlainText(profile.about),
+    skills: (profile.skills || []).map((s) => cleanPlainText(s)).filter(Boolean),
+    experience: (profile.experience || []).map((exp) => ({
+      ...exp,
+      title: cleanPlainText(exp.title),
+      company: cleanPlainText(exp.company),
+      start: cleanPlainText(exp.start),
+      end: cleanPlainText(exp.end),
+      description: exp.description
+        ? exp.description
+            .split('\n')
+            .map((line) => cleanPlainText(line))
+            .join('\n')
+        : '',
+    })),
+    education: (profile.education || []).map((edu) => ({
+      ...edu,
+      school: cleanPlainText(edu.school),
+      degree: cleanPlainText(edu.degree),
+      fieldOfStudy: cleanPlainText(edu.fieldOfStudy),
+      start: cleanPlainText(edu.start),
+      end: cleanPlainText(edu.end),
+    })),
+    certifications: (profile.certifications || []).map((cert) => ({
+      ...cert,
+      name: cleanPlainText(cert.name),
+      organization: cleanPlainText(cert.organization),
+      date: cleanPlainText(cert.date),
+    })),
+    projects: (profile.projects || []).map((proj) => ({
+      ...proj,
+      title: cleanPlainText(proj.title),
+      description: cleanPlainText(proj.description),
+    })),
+  };
+}
+
 /** Returns a blank/initial profile with "Your name" placeholder state and Lorem Ipsum in About. */
 export function buildEmptyRichProfile(): LinkedinRichProfile {
   return removeTemplateFromRichProfile();
