@@ -9,6 +9,7 @@ import { AuthModal } from './AuthModal';
 import { UpgradeModal } from './UpgradeModal';
 import { PaymentModal } from './PaymentModal';
 import { ImportComingSoonModal } from './ImportComingSoonModal';
+import { WelcomeTourModal } from './WelcomeTourModal';
 import { useWorkspace } from '../context/WorkspaceContext';
 
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
@@ -36,6 +37,9 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
     setShowProCelebrationModal,
     isImportComingSoonOpen,
     setIsImportComingSoonOpen,
+    isTourOpen,
+    openTour,
+    closeTour,
   } = useWorkspace();
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -60,6 +64,19 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
     };
   }, [mainContentRef]);
 
+  // First-visit auto-trigger for welcome product tour
+  useEffect(() => {
+    try {
+      const tourSeen = localStorage.getItem('profile_builder_tour_seen');
+      if (!tourSeen) {
+        const timer = setTimeout(() => {
+          openTour();
+        }, 800);
+        return () => clearTimeout(timer);
+      }
+    } catch {}
+  }, [openTour]);
+
   return (
     <div className="min-h-screen flex bg-[#FAFAFA] text-slate-900 font-sans">
       {/* ImagineArt Style Left Sidebar */}
@@ -81,6 +98,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         onOpenUpgrade={() => openPaymentModal()}
         onOpenAskExpert={() => {}}
         onOpenRemoveWatermark={() => openPaymentModal('Remove the watermark from your Resume, LinkedIn, and GitHub downloads')}
+        onOpenTour={openTour}
         isMobileOpen={isMobileNavOpen}
         onCloseMobile={() => setIsMobileNavOpen(false)}
       />
@@ -131,6 +149,11 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
       <UpgradeModal
         isOpen={isUpgradeOpen}
         onClose={() => setIsUpgradeOpen(false)}
+      />
+
+      <WelcomeTourModal
+        isOpen={isTourOpen}
+        onClose={closeTour}
       />
 
       {isPaymentModalOpen && (

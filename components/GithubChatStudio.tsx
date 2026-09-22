@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo, Bug, Copy, LayoutTemplate, Trash2, Upload, AlertTriangle, Code2 } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Download, Check, Image, X, ChevronDown, Plus, Edit2, Undo, Redo, Bug, Copy, LayoutTemplate, Trash2, Upload, AlertTriangle, Code2, HelpCircle } from 'lucide-react';
+import { useWorkspace } from '../context/WorkspaceContext';
 import toast from '@/lib/toast';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { GithubProfileData } from '../types';
@@ -77,6 +78,7 @@ export const GithubChatStudio: React.FC<{
   isPro?: boolean;
   onOpenImport?: () => void;
 }> = ({ github, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt, isPro, onOpenImport }) => {
+  const { openTour } = useWorkspace();
   const [messages, setMessages] = useState<Msg[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -849,6 +851,16 @@ export const GithubChatStudio: React.FC<{
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
+            {/* Replay Tour / Help Button */}
+            <button
+              type="button"
+              onClick={openTour}
+              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200/80 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+              title="Feature Guide & Product Tour"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+            </button>
+
             {/* Undo / Redo */}
             <div className="flex items-center gap-0.5 border border-slate-200 rounded-lg p-0.5 bg-slate-50">
               <button

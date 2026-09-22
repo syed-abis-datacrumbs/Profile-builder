@@ -34,6 +34,7 @@ interface ImagineSidebarProps {
   onOpenUpgrade?: () => void;
   onOpenAskExpert?: () => void;
   onOpenRemoveWatermark?: () => void;
+  onOpenTour?: () => void;
   unlocked?: boolean | null;
   /** Mobile drawer visibility — owned by the page so the top bar can toggle it. */
   isMobileOpen?: boolean;
@@ -61,6 +62,7 @@ interface SidebarBodyProps {
   onOpenUpgrade?: () => void;
   onOpenAskExpert?: () => void;
   onOpenRemoveWatermark?: () => void;
+  onOpenTour?: () => void;
   unlocked?: boolean | null;
   /** The desktop rail and the mobile drawer are both mounted at once, so the
       active-pill layout animation needs a distinct id per instance — sharing
@@ -84,6 +86,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
   onOpenUpgrade,
   onOpenAskExpert,
   onOpenRemoveWatermark,
+  onOpenTour,
   unlocked,
   layoutIdSuffix,
   isCollapsed = false,
@@ -295,6 +298,17 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                 <button
                   onClick={() => {
                     setIsSettingsOpen(false);
+                    if (onOpenTour) onOpenTour();
+                  }}
+                  className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-slate-100/80 text-slate-700 transition-colors text-left cursor-pointer"
+                >
+                  <HelpCircle className="w-4 h-4 shrink-0" />
+                  <span>Product Tour</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(false);
                     window.open('https://wa.me/923292020497', '_blank');
                   }}
                   className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-slate-100/80 text-slate-700 transition-colors text-left cursor-pointer"
@@ -388,6 +402,7 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   onOpenUpgrade,
   onOpenAskExpert,
   onOpenRemoveWatermark,
+  onOpenTour,
   unlocked,
   isMobileOpen = false,
   onCloseMobile
@@ -449,6 +464,7 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
     onOpenUpgrade,
     onOpenAskExpert,
     onOpenRemoveWatermark,
+    onOpenTour,
     unlocked,
   };
 

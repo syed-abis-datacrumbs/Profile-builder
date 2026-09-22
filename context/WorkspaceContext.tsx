@@ -54,6 +54,10 @@ export interface WorkspaceContextType {
   setShowProCelebrationModal: (open: boolean) => void;
   isImportComingSoonOpen: boolean;
   setIsImportComingSoonOpen: (open: boolean) => void;
+  isTourOpen: boolean;
+  setIsTourOpen: (open: boolean) => void;
+  openTour: () => void;
+  closeTour: () => void;
 
   // Shared profile data
   resumeData: ResumeData;
@@ -111,6 +115,10 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [showProCelebrationModal, setShowProCelebrationModal] = useState(false);
   const [isImportComingSoonOpen, setIsImportComingSoonOpen] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
+
+  const openTour = () => setIsTourOpen(true);
+  const closeTour = () => setIsTourOpen(false);
 
   // Shared profile data state
   const [resumeData, setResumeData] = useState<ResumeData>(defaultResumeData);
@@ -345,6 +353,10 @@ export function WorkspaceProvider({ children, initialUser }: WorkspaceProviderPr
         setShowProCelebrationModal,
         isImportComingSoonOpen,
         setIsImportComingSoonOpen,
+        isTourOpen,
+        setIsTourOpen,
+        openTour,
+        closeTour,
         resumeData,
         setResumeData,
         githubData,
