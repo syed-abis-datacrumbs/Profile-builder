@@ -31,9 +31,9 @@ export const ImportButton: React.FC<ImportButtonProps> = ({
         className={`px-2.5 sm:px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 ${className}`.trim()}
         title={title}
       >
-        <Upload className="w-3.5 h-3.5 text-slate-500" />
-        <span className="hidden sm:inline">Import</span>
-        <span>PDF / GitHub</span>
+        <Upload className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+        <span className="hidden sm:inline">PDF / GitHub</span>
+        <span className="sm:hidden">Import</span>
       </button>
     );
   }

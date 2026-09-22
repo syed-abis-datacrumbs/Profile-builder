@@ -160,4 +160,71 @@ describe('applyJsonPatches - Resilient JSON Patch Engine', () => {
     expect(res.success).toBe(true);
     expect(res.document.certifications).toEqual(['AWS', 'Azure']);
   });
+
+  it('removes the first project from customSections content without deleting content key when op: "remove" is emitted without value', () => {
+    const doc = {
+      customSections: [
+        {
+          title: '🚀 Featured Projects',
+          content:
+            '### Distributed Task Queue (Go, Redis) – Built a fault-tolerant task queue.\n\n### Real-Time Chat Backend (Node.js, WebSockets, MongoDB) – Engineered a scalable chat service.\n\n',
+        },
+      ],
+    };
+
+    // LLM emitted op: "remove" on /customSections/0/content without value to remove the first project
+    const patches = [{ op: 'remove', path: '/customSections/0/content' }];
+
+    const res = applyJsonPatches(doc, patches);
+    expect(res.success).toBe(true);
+    expect(res.document.customSections[0].content).toBeDefined();
+    expect(res.document.customSections[0].content).not.toContain('Distributed Task Queue');
+    expect(res.document.customSections[0].content).toContain('Real-Time Chat Backend');
+  });
+
+  it('removes project matching value when op: "remove" specifies value string', () => {
+    const doc = {
+      customSections: [
+        {
+          title: '🚀 Featured Projects',
+          content:
+            '### Distributed Task Queue (Go, Redis) – Built a fault-tolerant task queue.\n\n### Real-Time Chat Backend (Node.js, WebSockets, MongoDB) – Engineered a scalable chat service.\n\n### CI/CD Pipeline Automation – Automated build and deploy.',
+        },
+      ],
+    };
+
+    const patches = [
+      {
+        op: 'remove',
+        path: '/customSections/0/content',
+        value: '### CI/CD Pipeline Automation – Automated build and deploy.',
+      },
+    ];
+
+    const res = applyJsonPatches(doc, patches);
+    expect(res.success).toBe(true);
+    expect(res.document.customSections[0].content).toContain('Distributed Task Queue');
+    expect(res.document.customSections[0].content).toContain('Real-Time Chat Backend');
+    expect(res.document.customSections[0].content).not.toContain('CI/CD Pipeline Automation');
+  });
+
+  it('removes target index when path uses array-like notation on content string (/customSections/0/content/0)', () => {
+    const doc = {
+      customSections: [
+        {
+          title: '🚀 Featured Projects',
+          content:
+            '### Project Alpha – First project.\n\n### Project Beta – Second project.\n\n### Project Gamma – Third project.',
+        },
+      ],
+    };
+
+    const patches = [{ op: 'remove', path: '/customSections/0/content/0' }];
+
+    const res = applyJsonPatches(doc, patches);
+    expect(res.success).toBe(true);
+    expect(res.document.customSections[0].content).not.toContain('Project Alpha');
+    expect(res.document.customSections[0].content).toContain('Project Beta');
+    expect(res.document.customSections[0].content).toContain('Project Gamma');
+  });
 });

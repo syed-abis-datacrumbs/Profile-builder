@@ -328,14 +328,14 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
           />
 
           {/* Bottom Bar inside Prompt Box */}
-          <div className="flex items-center justify-between border-t border-slate-100 pt-3 gap-2">
+          <div className="flex items-center justify-between border-t border-slate-100 pt-3 gap-2 min-w-0">
             
             {/* Left Controls */}
-            <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0 shrink">
               {attachedTemplate ? (
                 <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-slate-900 text-white text-xs font-semibold shadow-2xs min-w-0 max-w-full">
                   <GithubIcon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate max-w-[100px] xs:max-w-[140px] sm:max-w-[200px] md:max-w-none">{attachedTemplate.name}</span>
+                  <span className="truncate max-w-[85px] xs:max-w-[130px] sm:max-w-[200px] md:max-w-none">{attachedTemplate.name}</span>
                   <button
                     type="button"
                     onClick={onClearAttachedTemplate}
@@ -348,7 +348,8 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
               ) : (
                 <span className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs shrink-0">
                   <GithubIcon className="w-3.5 h-3.5 text-white shrink-0" />
-                  <span>GitHub README</span>
+                  <span className="hidden sm:inline">GitHub README</span>
+                  <span className="sm:hidden">GitHub</span>
                 </span>
               )}
 
@@ -356,9 +357,9 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
             </div>
 
             {/* Right Controls */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 xs:gap-2 shrink-0 ml-auto">
               <span
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100/70 border border-slate-200/80 shrink-0 select-none"
+                className="px-2 py-1 xs:px-2.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100/70 border border-slate-200/80 shrink-0 select-none whitespace-nowrap"
               >
                 {selectedModel}
               </span>

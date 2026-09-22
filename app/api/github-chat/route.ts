@@ -42,6 +42,10 @@ JSON Patch Path Guide & Examples:
   { "op": "replace", "path": "/showStatsCard", "value": false }
 - Update custom section content (e.g. Featured Projects at index 1):
   { "op": "replace", "path": "/customSections/1/content", "value": "..." }
+- Remove a project from custom section content (e.g. remove first project from Featured Projects at index 0):
+  { "op": "replace", "path": "/customSections/0/content", "value": "<remaining markdown string with the first project removed>" }
+  OR
+  { "op": "remove", "path": "/customSections/0/content", "value": "### Title Of Project To Remove..." }
 - Add a new custom section:
   { "op": "add", "path": "/customSections/-", "value": { "title": "🏆 Achievements", "content": "..." } }
 

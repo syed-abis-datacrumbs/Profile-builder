@@ -80,10 +80,19 @@ function applySingleOp(doc: unknown, operation: JsonPatchOperation): void {
   const op = operation.op.toLowerCase();
   let path = operation.path;
 
-  // Resilient normalization for LLMs targeting string fields (bullets, skills, interests, description) with array-like notation:
-  // e.g. /workExperience/0/bullets/- or /workExperience/0/bullets/0 -> /workExperience/0/bullets
-  const arrayOnStringMatch = path.match(/^(.+\/(?:bullets|skills|interests|description))\/(?:-|\d+)$/);
+  // Resilient normalization for LLMs targeting string fields (bullets, skills, interests, description, content, summary, about) with array-like notation:
+  // e.g. /workExperience/0/bullets/- or /customSections/0/content/0 -> /customSections/0/content
+  let targetIndexForStringField: number | null = null;
+  const arrayOnStringMatch = path.match(/^(.+\/(?:bullets|skills|interests|description|content|summary|about))\/(?:-|\d+|first|last)$/i);
   if (arrayOnStringMatch) {
+    const rawIdxStr = path.slice(arrayOnStringMatch[1].length + 1);
+    if (rawIdxStr === '0' || rawIdxStr.toLowerCase() === 'first') {
+      targetIndexForStringField = 0;
+    } else if (rawIdxStr.toLowerCase() === 'last' || rawIdxStr === '-') {
+      targetIndexForStringField = -1;
+    } else if (!isNaN(parseInt(rawIdxStr, 10))) {
+      targetIndexForStringField = parseInt(rawIdxStr, 10);
+    }
     path = arrayOnStringMatch[1];
   }
 
@@ -120,7 +129,7 @@ function applySingleOp(doc: unknown, operation: JsonPatchOperation): void {
           }
         }
       } else if (isObject(parent)) {
-        if ((key === 'bullets' || key === 'description') && typeof parent[key] === 'string' && typeof operation.value === 'string') {
+        if ((key === 'bullets' || key === 'description' || key === 'content') && typeof parent[key] === 'string' && typeof operation.value === 'string') {
           const existingText = parent[key].trim();
           const incomingText = operation.value.trim();
           if (!existingText) {
@@ -187,17 +196,43 @@ function applySingleOp(doc: unknown, operation: JsonPatchOperation): void {
         parent.splice(idx, 1);
       } else if (isObject(parent)) {
         const opVal = (operation as { value?: unknown }).value;
-        if (typeof parent[key] === 'string' && typeof opVal === 'string' && opVal.trim().length > 0) {
-          // Model provided a `value` in `remove` to indicate lines to subtract, NOT wipe the entire property!
-          const removeLines = new Set(
-            opVal.split('\n').map((l) => l.trim().toLowerCase()).filter(Boolean)
-          );
-          const currentLines = parent[key].split('\n');
-          const remainingLines = currentLines.filter(
-            (line) => !removeLines.has(line.trim().toLowerCase())
-          );
-          if (remainingLines.length > 0) {
-            parent[key] = remainingLines.join('\n');
+        const isStringProp = typeof parent[key] === 'string';
+
+        if (isStringProp) {
+          const currentStr = parent[key] as string;
+
+          if (typeof opVal === 'string' && opVal.trim().length > 0) {
+            const removeText = opVal.trim();
+            const removeLines = new Set(
+              removeText.split('\n').map((l) => l.trim().toLowerCase()).filter(Boolean)
+            );
+            const currentLines = currentStr.split('\n');
+            const remainingLines = currentLines.filter(
+              (line) => !removeLines.has(line.trim().toLowerCase())
+            );
+            parent[key] = remainingLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+          } else {
+            // Model emitted `remove` on a string property (e.g. /customSections/0/content or /workExperience/0/bullets) WITHOUT value
+            let blocks: string[];
+            if (currentStr.includes('### ')) {
+              blocks = currentStr.split(/(?=\n*###\s+)/).map((b) => b.trim()).filter(Boolean);
+            } else {
+              blocks = currentStr.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+            }
+
+            if (blocks.length > 1) {
+              let removeIdx = targetIndexForStringField !== null ? targetIndexForStringField : 0;
+              if (removeIdx === -1 || removeIdx >= blocks.length) {
+                removeIdx = blocks.length - 1;
+              }
+              if (removeIdx >= 0 && removeIdx < blocks.length) {
+                blocks.splice(removeIdx, 1);
+              }
+              parent[key] = blocks.join('\n\n');
+            } else {
+              // Preserve key as empty string instead of deleting schema property
+              parent[key] = '';
+            }
           }
         } else {
           delete parent[key];
