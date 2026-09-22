@@ -175,10 +175,10 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
           />
 
           {/* Bottom Bar inside Prompt Box */}
-          <div className="flex items-center justify-between border-t border-slate-100 pt-3 gap-2 min-w-0">
+          <div className="flex items-center justify-between border-t border-slate-100 pt-3 gap-2.5 sm:gap-3 min-w-0">
             
             {/* Left Controls */}
-            <div className="flex items-center gap-1.5 min-w-0 shrink">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 shrink">
               {attachedTemplate ? (
                 <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold shadow-2xs min-w-0 max-w-full">
                   <FileText className="w-3.5 h-3.5 shrink-0" />
@@ -204,9 +204,9 @@ export const ResumeLandingView: React.FC<ResumeLandingViewProps> = ({
             </div>
 
             {/* Right Controls */}
-            <div className="flex items-center gap-1.5 xs:gap-2 shrink-0 ml-auto">
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto">
               <span
-                className="px-2 py-1 xs:px-2.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100/70 border border-slate-200/80 shrink-0 select-none whitespace-nowrap"
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100/70 border border-slate-200/80 shrink-0 select-none whitespace-nowrap"
               >
                 {selectedModel}
               </span>
