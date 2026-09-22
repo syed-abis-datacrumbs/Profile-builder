@@ -6,9 +6,6 @@ import {
   Send,
   Sparkles,
   Loader2,
-  Bold,
-  Italic,
-  Underline,
   Download,
   ChevronDown,
   FileText,
@@ -314,21 +311,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   };
 
 
-  const [fmt, setFmt] = useState({ bold: false, italic: false, underline: false, strikethrough: false });
-  const refreshFmt = () => {
-    try {
-      const b = document.queryCommandState('bold');
-      const i = document.queryCommandState('italic');
-      const u = document.queryCommandState('underline');
-      const s = document.queryCommandState('strikeThrough');
-      setFmt((prev) => (prev.bold === b && prev.italic === i && prev.underline === u && prev.strikethrough === s ? prev : { bold: b, italic: i, underline: u, strikethrough: s }));
-    } catch { }
-  };
 
-  useEffect(() => {
-    document.addEventListener('selectionchange', refreshFmt);
-    return () => document.removeEventListener('selectionchange', refreshFmt);
-  }, []);
 
   // None of the resume's bullets are real <ul>/<li> elements (each line is
   // its own single-line editable field with a hand-drawn "•"), so the
@@ -1384,33 +1367,6 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               >
                 <Redo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
-            </div>
-
-            <div className="hidden xl:block h-4 w-px bg-slate-200 mx-0.5" />
-
-            {/* Formatting Icons */}
-            <div className="hidden xl:flex items-center gap-0">
-              {([
-                { cmd: 'bold', Icon: Bold, label: 'Bold' },
-                { cmd: 'italic', Icon: Italic, label: 'Italic' },
-                { cmd: 'underline', Icon: Underline, label: 'Underline' },
-              ] as const).map(({ cmd, Icon, label }) => (
-                <button
-                  key={cmd}
-                  title={label}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    document.execCommand(cmd);
-                    refreshFmt();
-                  }}
-                  className={`w-6 sm:w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${fmt[cmd as keyof typeof fmt]
-                      ? 'bg-slate-200 text-slate-900 font-semibold'
-                      : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                </button>
-              ))}
             </div>
           </div>
 
