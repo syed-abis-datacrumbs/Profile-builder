@@ -1088,18 +1088,23 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             <ImportButton onClick={onOpenImport} />
 
             {/* Sync to LinkedIn & GitHub Button */}
-            {onOpenSync && (
-              <button
-                type="button"
-                onClick={onOpenSync}
-                className="h-7 px-2 sm:px-2.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-xs font-semibold text-indigo-700 transition-colors border border-indigo-200 flex items-center justify-center gap-1.5 leading-none cursor-pointer shrink-0"
-                title="Sync resume details to LinkedIn and GitHub profiles"
-              >
-                <RefreshCw className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span className="hidden 2xl:inline">Sync Profiles</span>
-                <span className="hidden xl:inline 2xl:hidden">Sync</span>
-              </button>
-            )}
+            {/* Set HIDE_SYNC_BUTTON to false when ready to enable in production */}
+            {(() => {
+              const HIDE_SYNC_BUTTON = true;
+              if (HIDE_SYNC_BUTTON || !onOpenSync) return null;
+              return (
+                <button
+                  type="button"
+                  onClick={onOpenSync}
+                  className="h-7 px-2 sm:px-2.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-xs font-semibold text-indigo-700 transition-colors border border-indigo-200 flex items-center justify-center gap-1.5 leading-none cursor-pointer shrink-0"
+                  title="Sync resume details to LinkedIn and GitHub profiles"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span className="hidden 2xl:inline">Sync Profiles</span>
+                  <span className="hidden xl:inline 2xl:hidden">Sync</span>
+                </button>
+              );
+            })()}
 
             {/* Clear Button (Bin logo only) */}
             <div className="relative shrink-0">

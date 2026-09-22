@@ -14,14 +14,18 @@ export interface ImportButtonProps {
  * Standardized Import button for MOMENTUM.
  * - 'toolbar' (default): Displayed in studio headers without text (icon only, h-7 w-7).
  * - 'landing': Displayed in landing views inside the prompt bar.
+ *
+ * Set HIDE_IMPORT_BUTTON to false when ready to make live in production.
  */
+const HIDE_IMPORT_BUTTON = true;
+
 export const ImportButton: React.FC<ImportButtonProps> = ({
   onClick,
   title = 'Import from PDF or GitHub',
   className = '',
   variant = 'toolbar',
 }) => {
-  if (!onClick) return null;
+  if (HIDE_IMPORT_BUTTON || !onClick) return null;
 
   if (variant === 'landing') {
     return (
