@@ -293,18 +293,18 @@ export const GithubEditor: React.FC<GithubEditorProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 hover:text-white text-xs font-semibold transition-all"
+              title={copied ? 'Copied!' : 'Copy Code'}
+              className="w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 hover:text-white transition-all flex items-center justify-center cursor-pointer shrink-0"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied!' : 'Copy Code'}</span>
             </button>
 
             <button
               onClick={handleDownloadMarkdown}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20"
+              title="Download README.md"
+              className="w-7 h-7 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Download README.md</span>
             </button>
           </div>
         </div>

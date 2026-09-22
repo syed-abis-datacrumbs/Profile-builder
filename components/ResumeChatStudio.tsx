@@ -1089,79 +1089,6 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               );
             })()}
 
-            {/* Clear Button (Bin logo only) */}
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowClearConfirm((v) => !v)}
-                className="h-7 w-7 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors border border-rose-200 flex items-center justify-center cursor-pointer shrink-0"
-                title="Clear resume data"
-              >
-                <Trash2 className="w-3.5 h-3.5 shrink-0" />
-              </button>
-
-              {showClearConfirm && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowClearConfirm(false)} />
-                  <div className="absolute top-full left-0 mt-2 w-64 sm:w-72 max-w-[calc(100vw-24px)] bg-white border border-slate-200 rounded-2xl shadow-2xl z-[100] p-3.5 space-y-3 text-xs whitespace-normal animate-in fade-in zoom-in-95">
-                    <div className="flex items-start gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
-                        <AlertTriangle className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-900 text-xs">Clear everything?</p>
-                        <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
-                          Are you sure you want to clear all sections and reset your content?
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
-                      <button
-                        type="button"
-                        onClick={() => setShowClearConfirm(false)}
-                        className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowClearConfirm(false);
-                          external({
-                            cvType: cv.cvType || 'professional',
-                            personalInfo: {
-                              fullName: '',
-                              phone: '',
-                              email: '',
-                              linkedin: '',
-                              linkedinLabel: '',
-                              github: '',
-                              githubLabel: '',
-                              kaggle: '',
-                              kaggleLabel: '',
-                            },
-                            education: [],
-                            workExperience: [],
-                            workshops: [],
-                            projects: [],
-                            certifications: [],
-                            additional: {
-                              skills: '',
-                              interests: '',
-                            },
-                          });
-                          showToast('Template removed');
-                        }}
-                        className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer shadow-xs"
-                      >
-                        Yes, Clear
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
             {/* Resume Save/Load Dropdown */}
             <div className="relative">
               <button
@@ -1345,6 +1272,79 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               )}
             </div>
 
+            {/* Clear Button (Bin logo only) */}
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm((v) => !v)}
+                className="h-7 w-7 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors border border-rose-200 flex items-center justify-center cursor-pointer shrink-0"
+                title="Clear resume data"
+              >
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+              </button>
+
+              {showClearConfirm && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowClearConfirm(false)} />
+                  <div className="absolute top-full left-0 mt-2 w-64 sm:w-72 max-w-[calc(100vw-24px)] bg-white border border-slate-200 rounded-2xl shadow-2xl z-[100] p-3.5 space-y-3 text-xs whitespace-normal animate-in fade-in zoom-in-95">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <AlertTriangle className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-900 text-xs">Clear everything?</p>
+                        <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
+                          Are you sure you want to clear all sections and reset your content?
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setShowClearConfirm(false)}
+                        className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowClearConfirm(false);
+                          external({
+                            cvType: cv.cvType || 'professional',
+                            personalInfo: {
+                              fullName: '',
+                              phone: '',
+                              email: '',
+                              linkedin: '',
+                              linkedinLabel: '',
+                              github: '',
+                              githubLabel: '',
+                              kaggle: '',
+                              kaggleLabel: '',
+                            },
+                            education: [],
+                            workExperience: [],
+                            workshops: [],
+                            projects: [],
+                            certifications: [],
+                            additional: {
+                              skills: '',
+                              interests: '',
+                            },
+                          });
+                          showToast('Template removed');
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer shadow-xs"
+                      >
+                        Yes, Clear
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="hidden sm:block h-4 w-px bg-slate-200" />
 
             {/* Undo / Redo */}
@@ -1405,12 +1405,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
                 type="button"
                 onClick={() => setDlMenu((o) => !o)}
                 disabled={!!downloading}
-                className="h-7 px-2.5 sm:px-3 rounded-lg bg-slate-900 text-white text-xs font-bold shadow-xs hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 leading-none text-center cursor-pointer disabled:opacity-70 shrink-0"
+                title={downloading ? (downloading === 'pdf' ? 'Downloading PDF…' : 'Downloading PNG…') : 'Download Resume'}
+                className="w-7 h-7 rounded-lg bg-slate-900 text-white shadow-xs hover:bg-slate-800 transition-all flex items-center justify-center cursor-pointer disabled:opacity-70 shrink-0"
               >
                 {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                <span className="leading-none">
-                  {downloading ? (downloading === 'pdf' ? 'PDF…' : 'PNG…') : 'Download'}
-                </span>
               </button>
 
               {dlMenu && (

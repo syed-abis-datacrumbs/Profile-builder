@@ -354,16 +354,16 @@ export const GithubLandingView: React.FC<GithubLandingViewProps> = ({
               )}
 
               <ImportButton variant="landing" onClick={onOpenImport} />
-            </div>
 
-            {/* Right Controls */}
-            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto">
               <span
                 className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100/70 border border-slate-200/80 shrink-0 select-none whitespace-nowrap"
               >
                 {selectedModel}
               </span>
+            </div>
 
+            {/* Right Controls */}
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto">
               <motion.button
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.95 }}
