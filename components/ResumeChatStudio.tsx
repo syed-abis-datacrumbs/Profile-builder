@@ -133,7 +133,6 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
   // derived from fieldLabel (the loaded template's name), so it stays
   // consistent everywhere without threading a colour prop around.
   const accent = getResumeAccentColor(fieldLabel ? { label: fieldLabel } : null);
-  const { openTour } = useWorkspace();
 
   const [messages, setMessages] = useState<Msg[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -1375,16 +1374,6 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
 
           {/* Right Controls Group */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
-
-            {/* Replay Tour / Help Button */}
-            <button
-              type="button"
-              onClick={openTour}
-              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200/80 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-              title="Feature Guide & Product Tour"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-            </button>
 
             {/* Professional / Student Pill */}
             <div className="h-7 flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5 border border-slate-200 shrink-0">

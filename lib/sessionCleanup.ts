@@ -30,8 +30,8 @@ export function clearWorkspaceSession(options?: { skipEvent?: boolean }): void {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i);
       if (k && (k.startsWith('cached_pro_') || k.startsWith('profile_builder_'))) {
-        // Retain user's sidebar collapsed/expanded preference
-        if (k === 'profile_builder_sidebar_collapsed') continue;
+        // Retain user's sidebar collapsed/expanded preference and tour_seen flag
+        if (k === 'profile_builder_sidebar_collapsed' || k === 'profile_builder_tour_seen') continue;
         localStorage.removeItem(k);
       }
     }

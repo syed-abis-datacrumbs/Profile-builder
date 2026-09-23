@@ -64,18 +64,6 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
     };
   }, [mainContentRef]);
 
-  // First-visit auto-trigger for welcome product tour
-  useEffect(() => {
-    try {
-      const tourSeen = localStorage.getItem('profile_builder_tour_seen');
-      if (!tourSeen) {
-        const timer = setTimeout(() => {
-          openTour();
-        }, 800);
-        return () => clearTimeout(timer);
-      }
-    } catch {}
-  }, [openTour]);
 
   return (
     <div className="min-h-screen flex bg-[#FAFAFA] text-slate-900 font-sans">
@@ -99,6 +87,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         onOpenAskExpert={() => {}}
         onOpenRemoveWatermark={() => openPaymentModal('Remove the watermark from your Resume, LinkedIn, and GitHub downloads')}
         onOpenTour={openTour}
+        onCloseTour={closeTour}
         isMobileOpen={isMobileNavOpen}
         onCloseMobile={() => setIsMobileNavOpen(false)}
       />

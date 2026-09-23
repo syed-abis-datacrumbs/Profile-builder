@@ -35,6 +35,7 @@ interface ImagineSidebarProps {
   onOpenAskExpert?: () => void;
   onOpenRemoveWatermark?: () => void;
   onOpenTour?: () => void;
+  onCloseTour?: () => void;
   unlocked?: boolean | null;
   /** Mobile drawer visibility — owned by the page so the top bar can toggle it. */
   isMobileOpen?: boolean;
@@ -63,6 +64,7 @@ interface SidebarBodyProps {
   onOpenAskExpert?: () => void;
   onOpenRemoveWatermark?: () => void;
   onOpenTour?: () => void;
+  onCloseTour?: () => void;
   unlocked?: boolean | null;
   /** The desktop rail and the mobile drawer are both mounted at once, so the
       active-pill layout animation needs a distinct id per instance — sharing
@@ -87,6 +89,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
   onOpenAskExpert,
   onOpenRemoveWatermark,
   onOpenTour,
+  onCloseTour,
   unlocked,
   layoutIdSuffix,
   isCollapsed = false,
@@ -321,6 +324,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                   <button
                     onClick={async () => {
                       setIsSettingsOpen(false);
+                      if (onCloseTour) onCloseTour();
                       clearWorkspaceSession({ skipEvent: true });
                       await signOut({ redirectUrl: '/' });
                     }}
@@ -403,6 +407,7 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
   onOpenAskExpert,
   onOpenRemoveWatermark,
   onOpenTour,
+  onCloseTour,
   unlocked,
   isMobileOpen = false,
   onCloseMobile
@@ -465,6 +470,7 @@ export const ImagineSidebar: React.FC<ImagineSidebarProps> = ({
     onOpenAskExpert,
     onOpenRemoveWatermark,
     onOpenTour,
+    onCloseTour,
     unlocked,
   };
 

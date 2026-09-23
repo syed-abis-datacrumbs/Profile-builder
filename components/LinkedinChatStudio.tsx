@@ -187,7 +187,6 @@ export const LinkedinChatStudio: React.FC<{
   onOpenCopyDrawer?: () => void;
   onOpenImport?: () => void;
 }> = ({ profile, onChange, onBack, isLoggedIn, onRequireAuth, initialPrompt, isPro, onOpenCopyDrawer, onOpenImport }) => {
-  const { openTour } = useWorkspace();
   const [messages, setMessages] = useState<Msg[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -1004,16 +1003,6 @@ export const LinkedinChatStudio: React.FC<{
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
-            {/* Replay Tour / Help Button */}
-            <button
-              type="button"
-              onClick={openTour}
-              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200/80 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-              title="Feature Guide & Product Tour"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-            </button>
-
             {/* 1-Click Copy Package Drawer Button */}
             {onOpenCopyDrawer && (
               <button

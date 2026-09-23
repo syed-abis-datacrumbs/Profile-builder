@@ -20,6 +20,8 @@ import {
   Loader2
 } from 'lucide-react';
 
+import { useWorkspace } from '../context/WorkspaceContext';
+
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -115,6 +117,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   const { isLoaded: signInLoaded, signIn, setActive } = useSignIn();
   const { isLoaded: signUpLoaded, signUp } = useSignUp();
+  const { openTour } = useWorkspace();
 
   const [mode, setMode] = useState<Mode>('signIn');
   const [step, setStep] = useState<Step>('form');
@@ -203,6 +206,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const finishWithSession = async (sessionId: string | null | undefined) => {
     if (!sessionId || !setActive) return;
     await setActive({ session: sessionId });
+    if (mode === 'signUp') {
+      try {
+        localStorage.setItem('profile_builder_tour_seen', 'true');
+      } catch {}
+      setTimeout(() => {
+        openTour();
+      }, 400);
+    }
     onSuccess();
     onClose();
   };
@@ -791,6 +802,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     </div>
                   )}
                 </div>
+
+                {/* Clerk Smart CAPTCHA Container */}
+                <div id="clerk-captcha" />
 
                 {/* Primary CTA Submit Button */}
                 <motion.button
