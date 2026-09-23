@@ -208,17 +208,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (!sessionId || !setActive) return;
     await setActive({ session: sessionId });
 
-    // Auto-trigger tour on sign-up (commented out for future feature additions)
-    /*
     if (mode === 'signUp') {
       try {
-        localStorage.setItem('profile_builder_tour_seen', 'true');
+        localStorage.removeItem('profile_builder_resume_tour_seen');
       } catch {}
-      setTimeout(() => {
-        openTour();
-      }, 400);
     }
-    */
 
     onSuccess();
     onClose();

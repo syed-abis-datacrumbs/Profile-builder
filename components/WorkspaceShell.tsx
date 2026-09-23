@@ -10,6 +10,7 @@ import { UpgradeModal } from './UpgradeModal';
 import { PaymentModal } from './PaymentModal';
 import { ImportComingSoonModal } from './ImportComingSoonModal';
 import { WelcomeTourModal } from './WelcomeTourModal';
+import { ResumeInteractiveTour } from './ResumeInteractiveTour';
 import { useWorkspace } from '../context/WorkspaceContext';
 
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
@@ -155,10 +156,17 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         onClose={() => setIsUpgradeOpen(false)}
       />
 
-      <WelcomeTourModal
-        isOpen={isTourOpen}
-        onClose={closeTour}
-      />
+      {activeTab === 'resume' ? (
+        <ResumeInteractiveTour
+          isOpen={isTourOpen}
+          onClose={closeTour}
+        />
+      ) : (
+        <WelcomeTourModal
+          isOpen={isTourOpen}
+          onClose={closeTour}
+        />
+      )}
 
       {isPaymentModalOpen && (
         <PaymentModal

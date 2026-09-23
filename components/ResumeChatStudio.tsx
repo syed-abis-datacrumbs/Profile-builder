@@ -1014,7 +1014,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               </span>
             </button>
           ) : (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
+            <div id="tour-prompt-input" className="bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 flex items-center gap-2 focus-within:border-slate-400 focus-within:bg-white transition-all shadow-2xs">
               <textarea
                 ref={chatTextareaRef}
                 rows={1}
@@ -1061,6 +1061,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 overflow-visible">
             {/* Resume Templates Button */}
             <button
+              id="tour-templates"
               type="button"
               onClick={() => setShowTemplateModal(true)}
               className="h-7 w-7 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors border border-slate-200/80 flex items-center justify-center shrink-0 cursor-pointer"
@@ -1092,7 +1093,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             })()}
 
             {/* Resume Save/Load Dropdown */}
-            <div className="relative">
+            <div id="tour-save-resume" className="relative">
               <button
                 onClick={toggleResumeMenu}
                 className="h-7 px-2 rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 transition-colors border border-slate-200/80 flex items-center justify-center gap-1 cursor-pointer shrink-0"
@@ -1350,7 +1351,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             <div className="hidden sm:block h-4 w-px bg-slate-200" />
 
             {/* Undo / Redo */}
-            <div className="flex items-center gap-0.5 border border-slate-200 rounded-lg p-0.5 bg-slate-50">
+            <div id="tour-undo-redo" className="flex items-center gap-0.5 border border-slate-200 rounded-lg p-0.5 bg-slate-50">
               <button
                 type="button"
                 title="Undo (Ctrl+Z)"
@@ -1376,7 +1377,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
 
             {/* Professional / Student Pill */}
-            <div className="h-7 flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5 border border-slate-200 shrink-0">
+            <div id="tour-mode-toggle" className="h-7 flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5 border border-slate-200 shrink-0">
               {(['professional', 'student'] as const).map((t) => (
                 <button
                   key={t}
@@ -1484,9 +1485,10 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
               <Bug className="w-5 h-5" />
             </button>
             
-            <div className="hidden md:flex items-center">
+            <div className="flex items-center">
               {/* Left Pill: Clicking opens Target Job Modal */}
             <button
+              id="tour-target-job"
               onClick={() => setTargetJobModalOpen(true)}
               className="h-14 pl-5 pr-7 rounded-l-full bg-white border border-r-0 border-slate-200 shadow-2xl text-base font-bold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer flex items-center gap-3"
             >
@@ -1497,7 +1499,7 @@ export const ResumeChatStudio: React.FC<ResumeChatStudioProps> = ({
             </button>
 
             {/* Right Circle: Clicking Recalculates Score and Sends Recommendations */}
-            <div className="relative">
+            <div id="tour-ats-score" className="relative">
               <button
                 onClick={() => handleCheckAts()}
                 disabled={atsLoading}
