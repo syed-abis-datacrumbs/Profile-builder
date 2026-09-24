@@ -1,9 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
+  // Disable double-rendering in React dev mode to eliminate browser lag on large Studio components
+  reactStrictMode: false,
+
+  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium', '@prisma/client', 'prisma'],
   
-  // Optimize large package imports (lucide-react, framer-motion, clerk) so bundler doesn't process thousands of unused modules
+  // Tree-shake heavy package imports (lucide-react, framer-motion, clerk) so dev/build bundler doesn't process thousands of unused modules
   experimental: {
     optimizePackageImports: [
       'lucide-react',
@@ -16,7 +19,7 @@ const nextConfig: NextConfig = {
   // Disable browser source maps in production to cut build time & bundle size
   productionBrowserSourceMaps: false,
 
-  // Skip TypeScript type-check step during production compilation (use `bun x tsc --noEmit` separately)
+  // Skip TypeScript type-check step during compilation
   typescript: {
     ignoreBuildErrors: true,
   },

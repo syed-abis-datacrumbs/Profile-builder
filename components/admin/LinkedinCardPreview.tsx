@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { LinkedinIcon } from '@/components/icons';
 import type { NormalizedLinkedinProfile } from '@/lib/admin/previewNormalizers';
+import { getHeadshotForName } from '@/lib/linkedinRichProfile';
 
 interface Props {
   profile: NormalizedLinkedinProfile;
@@ -49,18 +50,16 @@ export function LinkedinCardPreview({ profile }: Props) {
           {/* Avatar Row */}
           <div className="flex justify-between items-end -mt-16 sm:-mt-20 mb-4">
             <div className="relative">
-              {profile.headshotUrl && profile.headshotUrl !== '/images/linkedin-templates/pfp/sample-headshot.png' ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={profile.headshotUrl}
-                  alt={profile.fullName}
-                  className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-md object-cover bg-white"
-                />
-              ) : (
-                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-md flex items-center justify-center text-3xl font-extrabold text-white bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600">
-                  {initials || 'IN'}
-                </div>
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={
+                  profile.headshotUrl && !profile.headshotUrl.includes('sample-headshot.png')
+                    ? profile.headshotUrl
+                    : getHeadshotForName(profile.fullName)
+                }
+                alt={profile.fullName}
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-md object-cover bg-white"
+              />
 
               {profile.openToWork && (
                 <div className="absolute -bottom-1 -right-1 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white font-extrabold text-[10px] uppercase tracking-wider shadow-md border-2 border-white">
@@ -208,31 +207,40 @@ export function LinkedinCardPreview({ profile }: Props) {
       {/* 5. Projects Section */}
       {profile.projects && profile.projects.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <FolderGit2 className="w-4 h-4 text-indigo-600" />
-            Projects
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-[18px] font-bold text-[#191919]">
+              Projects ({profile.projects.length})
+            </h2>
+          </div>
 
-          <div className="grid grid-cols-1 gap-3">
+          <div className="space-y-3.5">
             {profile.projects.map((proj, i) => (
-              <div key={i} className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-900">{proj.title}</span>
-                  {proj.link && (
-                    <a
-                      href={proj.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                    >
-                      <span>View</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
+              <div
+                key={i}
+                className="border border-slate-200/90 rounded-xl p-3.5 bg-white flex flex-col sm:flex-row gap-3.5 items-start"
+              >
+                <div className="w-full sm:w-[180px] h-[110px] rounded-lg overflow-hidden bg-slate-900 border border-slate-200/60 shrink-0 relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={
+                      proj.image ||
+                      (i % 2 === 0
+                        ? '/images/featured-thumbnail/project thumbnail.png'
+                        : '/images/featured-thumbnail/featured thumbnail 1.png')
+                    }
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[15px] font-bold text-[#191919] leading-tight block">{proj.title}</span>
+                  <p className="text-[12px] text-slate-500 font-normal mt-0.5">
+                    {proj.date || (i === 0 ? 'May 2022 – Nov 2022' : 'Jun 2021 – Nov 2021')}
+                  </p>
+                  {proj.description && (
+                    <p className="text-[12.5px] text-slate-700 leading-snug mt-1 line-clamp-3">{proj.description}</p>
                   )}
                 </div>
-                {proj.description && (
-                  <p className="text-xs text-slate-600 leading-relaxed">{proj.description}</p>
-                )}
               </div>
             ))}
           </div>

@@ -50,7 +50,52 @@ export interface LinkedinRichProfile {
 
 export const PFP_GRADIENT_IDS = Array.from({ length: 10 }, (_, i) => `gradient-${i + 1}`);
 
-export const DEFAULT_HEADSHOT_URL = '/images/linkedin-templates/pfp/sample-headshot.png';
+export const FEMALE_HEADSHOT_URL = '/images/linkedin-templates/pfp/sample-headshot.png';
+export const MALE_HEADSHOT_URL = '/images/github-profile/git-profile-1.png';
+export const DEFAULT_HEADSHOT_URL = FEMALE_HEADSHOT_URL;
+
+export function isMaleName(name: string): boolean {
+  if (!name) return false;
+  const lower = name.toLowerCase();
+  
+  const femaleKeywords = [
+    'zoya', 'areeba', 'hira', 'kiran', 'rimsha', 'nimra', 'laiba', 
+    'maryam', 'marium', 'sadia', 'anum', 'ayesha', 'sana', 'mahnoor', 
+    'fatima', 'zainab', 'ananya', 'iqra', 'kinza', 'alishba', 'bisma', 
+    'hadiya', 'fabiha', 'esha', 'bushra', 'sumaira', 'sidra', 'samra', 
+    'komal', 'mehak', 'amna', 'maria', 'natasha', 'alizeh', 'saman', 
+    'rabia', 'maham', 'tuba', 'farah', 'nida', 'fariha', 'hafsa', 
+    'tayyaba', 'aliza', 'fiza', 'yumna', 'umme', 'sobia', 'nadia', 
+    'uzma', 'samina', 'shazia', 'rubab', 'rida', 'hina', 'asma', 
+    'sehar', 'tania', 'sarah', 'emily', 'jessica', 'amanda', 
+    'sophia', 'jane', 'alice', 'hannah', 'chloe', 'emma', 'olivia', 
+    'ava', 'isabella', 'mia', 'charlotte', 'amelia', 'harper', 'evelyn', 
+    'abigail', 'ella', 'elizabeth', 'camila', 'luna', 'sofia', 'avery', 
+    'mila', 'aria', 'scarlett', 'penelope', 'layla', 'victoria', 
+    'madison', 'eleanor', 'grace', 'nora', 'riley', 'zoey', 'hazel', 
+    'lily', 'ellie', 'violet', 'lillian', 'zoe', 'stella', 'aurora', 
+    'natalie', 'emilia', 'everly', 'leah', 'aubrey', 'willow', 'addison', 
+    'lucy', 'audrey', 'bella', 'nova', 'claire', 'skylar', 'peyton', 
+    'sadie', 'hailey', 'eva', 'naomi', 'elena', 'mary', 'patricia', 
+    'jennifer', 'linda', 'barbara', 'susan', 'karen', 'lisa', 'nancy', 
+    'betty', 'margaret', 'sandra', 'ashley', 'kimberly', 'donna', 
+    'michelle', 'carol', 'dorothy', 'melissa', 'deborah', 'stephanie', 
+    'rebecca', 'sharon', 'laura', 'cynthia', 'kathleen', 'amy', 'angela', 
+    'shirley', 'anna', 'brenda', 'pamela', 'nicole'
+  ];
+
+  for (const femaleName of femaleKeywords) {
+    if (new RegExp(`\\b${femaleName}\\b`, 'i').test(lower)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function getHeadshotForName(fullName: string): string {
+  return isMaleName(fullName) ? MALE_HEADSHOT_URL : FEMALE_HEADSHOT_URL;
+}
 
 function resolveFieldValue(
   field: CoverArtField,
@@ -118,7 +163,7 @@ export function buildInitialRichProfile(templateId: string): LinkedinRichProfile
     coverTemplateId,
     coverFieldValues: buildCoverFieldValues(coverTemplateId, identity),
     pfpGradientId,
-    headshotUrl: DEFAULT_HEADSHOT_URL,
+    headshotUrl: getHeadshotForName(sample.fullName),
   };
 }
 
@@ -127,6 +172,7 @@ export function buildDefaultRichProfile(userName?: string): LinkedinRichProfile 
   const profile = buildInitialRichProfile(linkedinCovers[0].id);
   if (userName && userName.trim()) {
     profile.fullName = userName.trim();
+    profile.headshotUrl = getHeadshotForName(userName.trim());
   }
   return profile;
 }

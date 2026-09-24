@@ -37,6 +37,10 @@ import {
   Target,
   Copy,
   HelpCircle,
+  Play,
+  ThumbsUp,
+  Repeat,
+  BarChart2,
 } from 'lucide-react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import toast from '@/lib/toast';
@@ -58,6 +62,9 @@ import {
   PLACEHOLDER_ACTIVITY,
   PLACEHOLDER_RECOMMENDATIONS,
   DEFAULT_HEADSHOT_URL,
+  FEMALE_HEADSHOT_URL,
+  MALE_HEADSHOT_URL,
+  getHeadshotForName,
 } from '../lib/linkedinRichProfile';
 import { linkedinCovers } from '../lib/linkedinCovers';
 import { CoverArtField, computeFitScale, coverFontSize, overageCeiling } from '../lib/linkedinCoverArt';
@@ -80,16 +87,45 @@ import {
 const featuredItems = [
   {
     type: 'Post',
-    title: 'The Future of AI in SaaS',
+    title: 'The Future of AI in SaaS: How we replaced manual CV screening ...',
     description: 'A deep dive into how generative AI is transforming B2B software products.',
-    image: '/images/featured-thumbnail/certificate logo.png'
+    image: '/images/featured-thumbnail/certificate logo.png',
+    hasVideo: false,
+    reactionsCount: '80',
+    commentsCount: '3 comments',
+    reactions: ['👍', '❤️', '👏'],
   },
   {
-    type: 'Article',
-    title: 'Scaling Node.js to 1M Users',
+    type: 'Post',
+    title: 'This one change made my AI workflows 10x faster....',
     description: 'My experience re-architecting our monolithic backend into microservices.',
-    image: '/images/featured-thumbnail/project thumbnail.png'
-  }
+    image: '/images/featured-thumbnail/project thumbnail.png',
+    hasVideo: false,
+    reactionsCount: '71',
+    commentsCount: '225 comments',
+    reactions: ['👍', '💡', '❤️'],
+  },
+];
+
+const activityPosts = [
+  {
+    id: 'act-1',
+    timeAgo: '3w',
+    text: '90% of university graduates are completely invisible to recruiters — not due to a lack of talent, but... more',
+    image: '/images/featured-thumbnail/featured thumbnail 1.png',
+    reactionsText: 'Falak Muhammad a... · 3 comments · 1 repost',
+    reactions: ['👍', '❤️', '👏'],
+    impressions: '2,466 impressions',
+  },
+  {
+    id: 'act-2',
+    timeAgo: '1mo',
+    text: '🤖 Connecting an LLM to n8n is not the same as building an AI product.... more',
+    image: '/images/featured-thumbnail/project thumbnail.png',
+    reactionsText: 'Paras Aijaz and 41 others',
+    reactions: ['👍', '💡'],
+    impressions: '1,435 impressions',
+  },
 ];
 
 interface Msg {
@@ -226,6 +262,7 @@ export const LinkedinChatStudio: React.FC<{
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showAllSkills, setShowAllSkills] = useState(false);
+  const [showAllProjects, setShowAllProjects] = useState(false);
   const [isAddingSkill, setIsAddingSkill] = useState(false);
   const [newSkillInput, setNewSkillInput] = useState('');
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
@@ -1261,7 +1298,11 @@ export const LinkedinChatStudio: React.FC<{
                       {profile.headshotUrl ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img
-                          src={profile.headshotUrl}
+                          src={
+                            (!profile.headshotUrl || profile.headshotUrl === FEMALE_HEADSHOT_URL || profile.headshotUrl === MALE_HEADSHOT_URL)
+                              ? getHeadshotForName(profile.fullName)
+                              : profile.headshotUrl
+                          }
                           alt={profile.fullName}
                           className="absolute inset-0 w-full h-full object-cover object-top z-10"
                         />
@@ -1484,32 +1525,62 @@ export const LinkedinChatStudio: React.FC<{
             </div>
 
             {/* ── CARD 3: Featured ── */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative">
+              {/* Header with Title and Plus/Edit Icons */}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[18px] font-bold text-[#191919]">Featured</h2>
+                <h2 className="text-[20px] font-bold text-[#191919]">Featured</h2>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+                    title="Add featured item"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    className="p-1.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+                    title="Edit featured items"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              {/* Mobile: horizontal snap carousel, like LinkedIn's own app —
-                  each card keeps its own bounds inside the section's padding
-                  (no negative-margin bleed, which clipped the first card
-                  against the section's rounded corner), sized so the next one
-                  peeks and reads as swipeable. Scrollbar hidden: the peeking
-                  card is the affordance. Reverts to the grid from sm up. */}
-              <div className="flex snap-x snap-mandatory overflow-x-auto gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:overflow-visible sm:grid sm:grid-cols-2 lg:grid-cols-3">
-                {featuredItems.map((item, idx) => (
-                  <div key={idx} className="snap-start shrink-0 w-[85%] sm:w-auto border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs flex flex-col">
-                    <div className="h-[135px] w-full relative overflow-hidden bg-slate-900">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={item.image} alt="" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="p-3.5 flex-1 flex flex-col justify-between">
+
+              {/* Featured Posts Grid Container (2 Large Cards) */}
+              <div className="relative group">
+                <div className="flex snap-x snap-mandatory overflow-x-auto gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2">
+                  {featuredItems.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="snap-start shrink-0 w-[88%] sm:w-auto border border-slate-200/90 rounded-2xl p-4 bg-white shadow-2xs flex flex-col justify-between hover:border-slate-300 transition-all cursor-pointer"
+                    >
+                      {/* Top Label & Snippet Title */}
                       <div>
-                        <span className="text-[12px] text-slate-500 font-medium">{item.type}</span>
-                        <h3 className="text-[14px] font-semibold text-[#191919] leading-snug line-clamp-2 mt-1">{item.title}</h3>
-                        <p className="text-[12px] text-slate-600 line-clamp-2 mt-1.5 leading-normal">{item.description}</p>
+                        <span className="text-[12px] text-slate-500 font-normal block mb-1">{item.type}</span>
+                        <h3 className="text-[14px] sm:text-[15px] font-semibold text-[#191919] leading-snug line-clamp-2 min-h-[42px]">
+                          {item.title}
+                        </h3>
+                      </div>
+
+                      {/* Large Thumbnail Image Box matching LinkedIn Featured dimensions */}
+                      <div className="h-[145px] sm:h-[175px] w-full relative overflow-hidden bg-slate-900 rounded-xl my-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={item.image} alt="" className="w-full h-full object-cover" />
+                      </div>
+
+                      {/* Reactions & Comments Footer Bar */}
+                      <div className="flex items-center text-[12px] text-slate-500 font-normal pt-1 whitespace-nowrap overflow-hidden">
+                        <div className="flex items-center -space-x-1 mr-2 shrink-0">
+                          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] border border-white z-3">👍</span>
+                          <span className="w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center text-[9px] border border-white z-2">{item.reactions[1] || '❤️'}</span>
+                          <span className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] border border-white z-1">{item.reactions[2] || '👏'}</span>
+                        </div>
+                        <span className="whitespace-nowrap">{item.reactionsCount} · {item.commentsCount}</span>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -1537,78 +1608,146 @@ export const LinkedinChatStudio: React.FC<{
               </div>
 
               {/* Filter pills */}
-              <div className="flex items-center gap-2 mt-3 mb-4">
-                <span className="px-3.5 py-1 rounded-full bg-[#01754F] text-white text-xs font-bold">
+              <div className="flex items-center gap-2 mt-3 mb-4 overflow-x-auto [scrollbar-width:none]">
+                <span className="px-3.5 py-1 rounded-full bg-[#01754F] text-white text-xs font-bold shrink-0 cursor-pointer">
                   Posts
                 </span>
-                <span className="px-3.5 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer">
+                <span className="px-3.5 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold shrink-0 cursor-pointer">
                   Comments
                 </span>
-                <span className="px-3.5 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer">
+                <span className="px-3.5 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold shrink-0 cursor-pointer">
+                  Videos
+                </span>
+                <span className="px-3.5 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold shrink-0 cursor-pointer">
                   Images
                 </span>
               </div>
 
-              {/* Example Post Preview with Image */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 relative bg-slate-100 shrink-0 flex items-center justify-center">
-                    {profile.headshotUrl ? (
-                      <>
-                        {profile.pfpGradientId && profile.pfpGradientId !== 'none' && (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={`/images/linkedin-templates/pfp/${profile.pfpGradientId}/background.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                        )}
+              {/* Activity Posts Carousel / Grid */}
+              <div className="relative group">
+                <div className="flex snap-x snap-mandatory overflow-x-auto gap-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2">
+                  {activityPosts.map((post) => (
+                    <div
+                      key={post.id}
+                      className="snap-start shrink-0 w-[88%] sm:w-auto border border-slate-200/90 rounded-2xl p-3.5 bg-white shadow-2xs flex flex-col justify-between hover:border-slate-300 transition-all"
+                    >
+                      {/* Post Header: Avatar, Name, Headline, Time */}
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 relative bg-slate-100 shrink-0 flex items-center justify-center">
+                              {profile.headshotUrl ? (
+                                <>
+                                  {profile.pfpGradientId && profile.pfpGradientId !== 'none' && (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img src={`/images/linkedin-templates/pfp/${profile.pfpGradientId}/background.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                                  )}
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={
+                                      (!profile.headshotUrl || profile.headshotUrl === FEMALE_HEADSHOT_URL || profile.headshotUrl === MALE_HEADSHOT_URL)
+                                        ? getHeadshotForName(profile.fullName)
+                                        : profile.headshotUrl
+                                    }
+                                    alt=""
+                                    className="absolute inset-0 w-full h-full object-cover object-top"
+                                  />
+                                </>
+                              ) : (
+                                <User className="w-4 h-4 text-slate-400" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[13px] font-bold text-[#191919] leading-tight flex items-center gap-1 truncate">
+                                <Edit
+                                  value={profile.fullName}
+                                  onCommit={(v) => set({ fullName: v })}
+                                  placeholder="Your name"
+                                  className="truncate"
+                                />
+                                <span className="text-slate-400 font-normal text-[11px] shrink-0">• You</span>
+                              </div>
+                              {/* Headline below User Name */}
+                              <p className="text-[11px] text-slate-500 line-clamp-1 leading-tight font-normal">
+                                {profile.headline || 'Software Engineer | AI & Cloud Architecture'}
+                              </p>
+                              <span className="text-[10.5px] text-slate-400 font-normal">{post.timeAgo}</span>
+                            </div>
+                          </div>
+                          <button type="button" className="p-1 rounded-full hover:bg-slate-100 text-slate-400 cursor-pointer">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Post Text Snippet */}
+                        <p className="text-[12.5px] text-slate-800 leading-snug line-clamp-2 my-2 min-h-[36px]">
+                          {post.text}
+                        </p>
+                      </div>
+
+                      {/* Post Media Thumbnail */}
+                      <div className="h-[135px] w-full relative overflow-hidden bg-slate-900 rounded-xl my-2">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={profile.headshotUrl} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
-                      </>
-                    ) : (
-                      <User className="w-5 h-5 text-slate-400" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[14px] font-bold text-[#191919] leading-tight flex items-center gap-1.5 flex-wrap">
-                      <Edit
-                        value={profile.fullName}
-                        onCommit={(v) => set({ fullName: v })}
-                        placeholder="Your name"
-                        className="truncate"
-                      />
-                      <span className="text-slate-400 font-normal text-xs">• You</span>
+                        <img src={post.image} alt="" className="w-full h-full object-cover" />
+                      </div>
+
+                      {/* Reaction & Comments Line */}
+                      <div className="flex items-center text-[11px] text-slate-500 font-normal pt-1 whitespace-nowrap overflow-hidden">
+                        <div className="flex items-center -space-x-1 mr-1.5 shrink-0">
+                          <span className="w-3.5 h-3.5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[8px] border border-white z-3">👍</span>
+                          {post.reactions[1] && (
+                            <span className="w-3.5 h-3.5 rounded-full bg-rose-500 text-white flex items-center justify-center text-[8px] border border-white z-2">{post.reactions[1]}</span>
+                          )}
+                          {post.reactions[2] && (
+                            <span className="w-3.5 h-3.5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[8px] border border-white z-1">{post.reactions[2]}</span>
+                          )}
+                        </div>
+                        <span className="truncate">{post.reactionsText}</span>
+                      </div>
+
+                      {/* Action Buttons Bar: Like, Comment, Repost, Send (Logos only) */}
+                      <div className="border-t border-slate-100 mt-2.5 pt-2 flex items-center justify-around text-slate-500">
+                        <button type="button" className="p-1.5 hover:bg-slate-100 rounded-full transition cursor-pointer text-slate-600 hover:text-slate-900" title="Like">
+                          <ThumbsUp className="w-4 h-4" />
+                        </button>
+                        <button type="button" className="p-1.5 hover:bg-slate-100 rounded-full transition cursor-pointer text-slate-600 hover:text-slate-900" title="Comment">
+                          <MessageSquare className="w-4 h-4" />
+                        </button>
+                        <button type="button" className="p-1.5 hover:bg-slate-100 rounded-full transition cursor-pointer text-slate-600 hover:text-slate-900" title="Repost">
+                          <Repeat className="w-4 h-4" />
+                        </button>
+                        <button type="button" className="p-1.5 hover:bg-slate-100 rounded-full transition cursor-pointer text-slate-600 hover:text-slate-900" title="Send">
+                          <Send className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Impressions & View Analytics Bar */}
+                      <div className="border-t border-slate-100 mt-2 pt-2 flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-1 text-slate-600 font-semibold">
+                          <BarChart2 className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{post.impressions}</span>
+                        </div>
+                        <button type="button" className="text-[#0A66C2] font-semibold hover:underline cursor-pointer">
+                          View analytics
+                        </button>
+                      </div>
                     </div>
-                    <div className="text-[12px] text-slate-500 mt-0.5 flex items-center gap-1">
-                      <span>2w • Edited</span>
-                      <span>•</span>
-                      <Globe className="w-3 h-3 text-slate-400" />
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
-                <p className="text-[13px] text-slate-800 leading-relaxed whitespace-pre-wrap">
-                  Excited to share insights from our latest milestone! Designing robust, production-grade systems and prioritizing modular architecture always delivers long-term impact. Here is a preview of the latest deployment pipeline:
-                </p>
-
-                <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-900 max-h-64">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/images/featured-thumbnail/project thumbnail.png" alt="example post media" className="w-full h-full object-cover" />
-                </div>
-
-                {/* Reaction metrics */}
-                <div className="flex items-center justify-between text-[12px] text-slate-500 pt-2 border-t border-slate-100">
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-flex items-center -space-x-1">
-                      <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px]">👍</span>
-                      <span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[9px]">❤️</span>
-                      <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[9px]">💡</span>
-                    </span>
-                    <span className="ml-1 font-medium">142</span>
-                  </div>
-                  <span>28 comments · 6 reposts</span>
-                </div>
+                {/* Right Scroll Arrow Button matching LinkedIn desktop UI */}
+                <button
+                  type="button"
+                  className="hidden sm:flex absolute -right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white border border-slate-200 shadow-md items-center justify-center text-slate-700 hover:bg-slate-50 hover:shadow-lg transition-all z-10 cursor-pointer"
+                  title="Scroll right"
+                >
+                  <ChevronRight className="w-4 h-4 text-slate-600" />
+                </button>
               </div>
 
+              {/* Show All Posts Link */}
               <div className="border-t border-slate-100 pt-3.5 mt-4 text-center">
-                <button className="text-[14px] font-semibold text-[#0A66C2] hover:underline flex items-center justify-center gap-1 w-full cursor-pointer">
+                <button type="button" className="text-[14px] font-semibold text-[#0A66C2] hover:underline flex items-center justify-center gap-1 w-full cursor-pointer">
                   <span>Show all posts</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -1810,32 +1949,66 @@ export const LinkedinChatStudio: React.FC<{
             {/* ── CARD 7: Projects ── */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-[18px] font-bold text-[#191919]">Projects</h2>
-                <button
-                  type="button"
-                  onClick={() =>
-                    set({
-                      projects: [
-                        ...projectsList,
-                        { title: '', description: '' },
-                      ],
-                    })
-                  }
-                  className="flex items-center gap-1 text-xs font-semibold text-[#0A66C2] hover:underline cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add project</span>
-                </button>
+                <h2 className="text-[18px] font-bold text-[#191919]">
+                  Projects {projectsList.length > 0 && `(${projectsList.length})`}
+                </h2>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      set({
+                        projects: [
+                          ...projectsList,
+                          { title: '', description: '' },
+                        ],
+                      })
+                    }
+                    className="p-1.5 rounded-full hover:bg-slate-100 text-slate-600 transition cursor-pointer"
+                    title="Add project"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    className="p-1.5 rounded-full hover:bg-slate-100 text-slate-600 transition cursor-pointer"
+                    title="Edit projects"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              <div className="space-y-6">
-                {projectsList.map((proj, i) => (
-                  <div key={i} className="flex gap-4 items-start">
-                    <div className="w-12 h-12 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                      <FolderGit2 className="w-6 h-6" />
+
+              <div className="space-y-3.5">
+                {(showAllProjects ? projectsList : projectsList.slice(0, 2)).map((proj, i) => (
+                  <div
+                    key={i}
+                    className="border border-slate-200/90 rounded-xl p-3.5 sm:p-4 bg-white hover:border-slate-300 transition-all flex flex-col sm:flex-row gap-4 items-start relative group"
+                  >
+                    {/* Project Device Mockup Thumbnail on Left */}
+                    <div className="w-full sm:w-[210px] h-[125px] rounded-lg overflow-hidden bg-slate-900 border border-slate-200/60 shrink-0 relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={
+                          proj.image ||
+                          (i % 2 === 0
+                            ? '/images/featured-thumbnail/project thumbnail.png'
+                            : '/images/featured-thumbnail/featured thumbnail 1.png')
+                        }
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <div className="flex-1 min-w-0">
+
+                    {/* Project Details on Right */}
+                    <div className="flex-1 min-w-0 w-full">
                       <div className="flex items-start justify-between gap-2">
-                        <Edit block value={proj.title} onCommit={(v) => setProject(i, { title: v })} placeholder="Project title" className="text-[16px] font-semibold text-[#191919] leading-tight flex-1" />
+                        <Edit
+                          block
+                          value={proj.title}
+                          onCommit={(v) => setProject(i, { title: v })}
+                          placeholder="Project title"
+                          className="text-[15px] sm:text-[16px] font-bold text-[#191919] leading-tight flex-1"
+                        />
                         <button
                           type="button"
                           onClick={() => {
@@ -1851,25 +2024,48 @@ export const LinkedinChatStudio: React.FC<{
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <Edit block value={proj.description} onCommit={(v) => setProject(i, { description: v })} placeholder="Brief project description and achievements" className="text-[14px] text-slate-700 mt-1 leading-relaxed" />
 
-                      {/* Attached Project Media Thumbnail Card */}
-                      <div className="mt-3.5 border border-slate-200 rounded-xl p-2.5 bg-slate-50/80 flex items-center gap-3 max-w-md">
-                        <div className="w-20 h-14 rounded-lg overflow-hidden bg-slate-900 shrink-0">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src="/images/featured-thumbnail/project thumbnail.png" alt="" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-semibold text-[#191919] line-clamp-1">{proj.title || 'Project Demo & Code Repo'}</p>
-                          <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                            <ExternalLink className="w-3 h-3" /> github.com / live app
-                          </span>
-                        </div>
+                      {/* Project Date Range */}
+                      <p className="text-[12.5px] text-slate-500 font-normal mt-0.5">
+                        {proj.date || (i === 0 ? 'May 2022 – Nov 2022' : 'Jun 2021 – Nov 2021')}
+                      </p>
+
+                      {/* Project Description */}
+                      <div className="mt-1.5 text-[13px] text-slate-700 leading-snug">
+                        <Edit
+                          block
+                          value={proj.description}
+                          onCommit={(v) => setProject(i, { description: v })}
+                          placeholder="Brief project description and achievements"
+                          className="text-[13px] text-slate-700 leading-snug"
+                        />
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+
+              {/* Bottom Footer: Show all / Show less (Only if > 2 projects) */}
+              {projectsList.length > 2 && (
+                <div className="border-t border-slate-100 pt-3.5 mt-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllProjects(!showAllProjects)}
+                    className="text-[14px] font-semibold text-[#0A66C2] hover:underline flex items-center justify-center gap-1 w-full cursor-pointer"
+                  >
+                    <span>
+                      {showAllProjects
+                        ? 'Show less'
+                        : `Show all ${projectsList.length} projects`}
+                    </span>
+                    <ChevronRight
+                      className={`w-4 h-4 transition-transform ${
+                        showAllProjects ? '-rotate-90' : 'rotate-90'
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ── CARD 8: Skills ── */}

@@ -6,6 +6,7 @@ import { LinkedinPremiumBadge } from './icons';
 import { linkedinCovers, getDefaultPfpGradientId } from '../lib/linkedinCovers';
 import { linkedinTemplateSamples } from '../lib/linkedinTemplateSamples';
 import { COVER_ART, CoverArtField, getCoverArtId, computeFitScale, coverFontSize } from '../lib/linkedinCoverArt';
+import { getHeadshotForName } from '../lib/linkedinRichProfile';
 
 // Gallery card preview, rendered live from the same template data the real
 // preview uses — not a screenshot. The screenshots this replaces were captures
@@ -172,7 +173,7 @@ export const LinkedinTemplateThumbnail: React.FC<{ templateId: string; index: nu
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/images/linkedin-templates/pfp/${gradientId}/background.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/images/linkedin-templates/pfp/sample-headshot.png" alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
+              <img src={getHeadshotForName(sample.fullName)} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
             </div>
             <div className="flex items-center gap-1.5 pt-2.5">
               <LinkedinPremiumBadge className="w-5 h-5" />

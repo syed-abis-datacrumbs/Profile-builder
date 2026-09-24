@@ -23,6 +23,11 @@ export interface LinkedinTemplateSampleCertification {
 export interface LinkedinTemplateSampleProject {
   title: string;
   description: string;
+  start?: string;
+  end?: string;
+  date?: string;
+  image?: string;
+  link?: string;
 }
 
 export interface LinkedinTemplateSampleAward {
