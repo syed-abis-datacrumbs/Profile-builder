@@ -302,7 +302,8 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                   </button>
                 )}
 
-                {/* Product Tour Menu Item with Sub-menu */}
+                {/* Product Tour Menu Item (Commented out for local testing of future tour features) */}
+                {/*
                 <div className="relative">
                   <button
                     type="button"
@@ -367,6 +368,7 @@ const SidebarBody: React.FC<SidebarBodyProps> = ({
                     </div>
                   )}
                 </div>
+                */}
 
                 <button
                   onClick={() => {
