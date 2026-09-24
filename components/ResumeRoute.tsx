@@ -14,6 +14,7 @@ import { LmsResumeSample, LMS_RESUME_SAMPLES } from '../lib/resumeSamples';
 import { CvData, cvMarkdownToHtml } from '../lib/cvTypes';
 import { DEFAULT_PLACEHOLDER_CV } from '../lib/defaultData';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { useUser } from '@clerk/nextjs';
 
 export function ResumeRoute() {
   const {
@@ -21,6 +22,7 @@ export function ResumeRoute() {
     setMobileHeaderRight,
     mainContentRef,
     setIsFullBleed,
+    userId,
     isLoggedIn,
     firstName,
     displayFullName,
@@ -69,9 +71,11 @@ export function ResumeRoute() {
     return 'Your Resume';
   });
 
+  const { user: clerkUser } = useUser();
   const [isATSOpen, setIsATSOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSyncOpen, setIsSyncOpen] = useState(false);
+  const [hasCheckedDbTour, setHasCheckedDbTour] = useState(false);
 
   // Sync isFullBleed with workspace shell
   useEffect(() => {
@@ -158,42 +162,71 @@ export function ResumeRoute() {
     return () => window.removeEventListener('workspace_open_resume_studio_tour', handleOpenStudioForTour);
   }, [resumeMode, studioCv, openTour]);
 
-  // Auto-trigger interactive tour for first-time visitors / new users visiting Resume Chat
-  useEffect(() => {
-    if (typeof window === 'undefined' || !isLoggedIn) return;
-    try {
-      const tourSeen = localStorage.getItem('profile_builder_resume_tour_seen');
-      if (tourSeen) return;
+  // Trigger studio mode and start the step-by-step interactive tour
+  const triggerStudioTour = () => {
+    if (!studioCv) {
+      const sample = LMS_RESUME_SAMPLES[0] || DEFAULT_PLACEHOLDER_CV;
+      const cleanCv = cvMarkdownToHtml(sample.data as CvData);
+      if (!cleanCv.cvType) cleanCv.cvType = 'professional';
+      setStudioCv(cleanCv);
+      setStudioLabel(sample.label || 'Your Resume');
+    }
+    setResumeMode('studio');
 
-      // Step 1: Ensure Studio view is active so target DOM elements exist
-      if (resumeMode !== 'studio') {
-        if (!studioCv) {
-          const sample = LMS_RESUME_SAMPLES[0] || DEFAULT_PLACEHOLDER_CV;
-          const cleanCv = cvMarkdownToHtml(sample.data as CvData);
-          if (!cleanCv.cvType) cleanCv.cvType = 'professional';
-          setStudioCv(cleanCv);
-          setStudioLabel(sample.label || 'Your Resume');
+    let attempts = 0;
+    const poll = setInterval(() => {
+      attempts++;
+      const target = document.getElementById('tour-prompt-input');
+      if (target || attempts > 25) {
+        clearInterval(poll);
+        if (target) {
+          openTour();
         }
-        setResumeMode('studio');
-        return;
       }
+    }, 100);
+  };
 
-      // Step 2: Once studio mode is active, wait for DOM target to mount before opening tour modal
-      let attempts = 0;
-      const poll = setInterval(() => {
-        attempts++;
-        const target = document.getElementById('tour-prompt-input');
-        if (target || attempts > 25) {
-          clearInterval(poll);
-          if (target) {
-            openTour();
-          }
+  // Auto-trigger interactive studio tour ONE TIME when user enters Resume Chat Studio for the first time
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isLoggedIn || !userId || resumeMode !== 'studio' || hasCheckedDbTour) return;
+
+    // Check Clerk unsafe metadata first for instant response
+    const clerkMetadataSeen = clerkUser?.unsafeMetadata?.tourSeen === true;
+    if (clerkMetadataSeen) {
+      setHasCheckedDbTour(true);
+      return;
+    }
+
+    // Check local storage fallback
+    const localSeen = localStorage.getItem('profile_builder_tour_seen') === 'true' || localStorage.getItem('profile_builder_resume_tour_seen') === 'true';
+    if (localSeen) {
+      setHasCheckedDbTour(true);
+      return;
+    }
+
+    // Fallback check against PostgreSQL database
+    fetch('/api/user/tour-status')
+      .then((r) => r.json())
+      .then((data: { tourSeen?: boolean }) => {
+        setHasCheckedDbTour(true);
+        if (!data?.tourSeen) {
+          let attempts = 0;
+          const poll = setInterval(() => {
+            attempts++;
+            const target = document.getElementById('tour-prompt-input');
+            if (target || attempts > 25) {
+              clearInterval(poll);
+              if (target) {
+                openTour();
+              }
+            }
+          }, 100);
         }
-      }, 100);
-
-      return () => clearInterval(poll);
-    } catch {}
-  }, [isLoggedIn, resumeMode, studioCv, openTour]);
+      })
+      .catch(() => {
+        setHasCheckedDbTour(true);
+      });
+  }, [isLoggedIn, userId, resumeMode, hasCheckedDbTour, clerkUser, openTour]);
 
   const handleOpenImport = () => {
     if (isAdmin) {

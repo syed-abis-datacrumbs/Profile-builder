@@ -206,6 +206,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
   const handleDismiss = () => {
     try {
       localStorage.setItem('profile_builder_tour_seen', 'true');
+      fetch('/api/user/tour-status', { method: 'POST' }).catch(() => {});
     } catch {}
     onClose();
   };

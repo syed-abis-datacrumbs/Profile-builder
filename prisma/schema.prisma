@@ -181,6 +181,7 @@ model ResumeProfile {
   userId            String   @unique
   fullNameEditsUsed Int      @default(0)
   downloadedNames   Json     @default("[]")
+  tourSeen          Boolean  @default(false)
   createdAt         DateTime @default(now()) @db.Timestamptz(3)
   updatedAt         DateTime @updatedAt @db.Timestamptz(3)
 
