@@ -64,7 +64,8 @@ bun run start
 
 ### Environment Variables (`.env`)
 Ensure the following keys exist in your `.env` file for local development:
-- `OPENAI_API_KEY`: API key for GPT-4o-mini powering the AI Chat Studios.
+- `OPENAI_API_KEY`: API key powering the AI Chat Studios.
+- `RESUME_CHAT_MODEL`: (Optional) Custom model override for the Resume Studio AI chat (e.g. `gpt-5.6-luna`, `gpt-4o-mini`). Defaults to `OPENAI_MODEL` or `gpt-4o-mini`. Fixed-temperature models (`luna`, `o1`, `o3`, `gpt-5`) automatically bypass custom temperature flags to prevent API parameter errors.
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` & `CLERK_SECRET_KEY`: Clerk user authentication.
 - `DATABASE_URL`: PostgreSQL connection string (Neon / pooling connection).
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`: Cloud image asset storage.
